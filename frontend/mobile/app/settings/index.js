@@ -143,7 +143,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.flex} edges={['top']}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}> 
+      <View style={[styles.header]}> 
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
@@ -351,7 +351,7 @@ export default function SettingsScreen() {
         {/* App Version */}
         <View style={styles.appInfo}>
           <Text style={styles.appInfoTitle}>ADMA Cameroun</Text>
-          <Text style={styles.appInfoVersion}>Version 2.0.0 (Adamaoua)</Text>
+          <Text style={styles.appInfoVersion}>Version 1.0.0 (Adamaoua)</Text>
         </View>
       </ScrollView>
 
