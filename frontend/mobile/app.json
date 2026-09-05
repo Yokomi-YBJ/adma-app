@@ -1,0 +1,94 @@
+{
+  "expo": {
+    "name": "Adma",
+    "slug": "adma",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAFBFC",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#5FC2BA",
+      "androidMode": "default"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "cm.adma.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Adma utilise votre caméra pour prendre une photo de profil.",
+        "NSPhotoLibraryUsageDescription": "Adma accède à vos photos pour votre fiche prestataire.",
+        "NSPhotoLibraryAddUsageDescription": "Adma peut enregistrer des photos.",
+        "NSLocationWhenInUseUsageDescription": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#5FC2BA"
+      },
+      "package": "cm.adma.app",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.ico",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#5FC2BA"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Adma accède à vos photos pour votre fiche prestataire.",
+          "cameraPermission": "Adma utilise votre caméra."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous.",
+          "locationWhenInUsePermission": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "scheme": "adma",
+    "extra": {
+      "eas": {
+        "projectId": "160b6466-2957-49fc-99dc-2314ea79fe59"
+      },
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+
+> adma-admin@1.0.0 build
+> vite build
+
+Bus error (core dumped)

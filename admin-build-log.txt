@@ -1,0 +1,6 @@
+
+> adma-admin@1.0.0 build
+> vite build
+
+vite v6.4.3 building for production...
+transforming...

@@ -1,0 +1,147 @@
+{
+  "appName": "Adma",
+  "tagline": "Yiyto gooto jofniido maa",
+  "welcome": "Jam waali",
+  "welcomeBack": "Jam waali tiiɗde",
+
+  "auth": {
+    "title": "Naatugol",
+    "subtitle": "Aan kalfinaali konte. Naatnu nimero ngam maa.",
+    "phoneLabel": "Nimero telefon",
+    "phonePlaceholder": "6XXXXXXXX",
+    "sendCode": "Neldu kooduure",
+    "otpTitle": "Tellemgol",
+    "otpSubtitle": "Kooduure nelnde +237 {{phone}}",
+    "otpPlaceholder": "000000",
+    "verify": "Tellu",
+    "resend": "Neldu kooduure kine",
+    "resendIn": "Neldu balɗe {{seconds}} sekunde",
+    "invalidPhone": "Nimero fenaande. Misaali: 6XXXXXXXX",
+    "otpSent": "Kooduure nelnde",
+    "otpInvalid": "Kooduure fenaande",
+    "otpExpired": "Kooduure balɗi. Ɗaɗnu kine."
+  },
+
+  "tabs": {
+    "home":      "Suudu",
+    "search":    "Yiyto",
+    "favorites": "Muuɗɗinaaɓe",
+    "profile":   "Mi"
+  },
+
+  "home": {
+    "location": "Ngaoundere, Kamerun",
+    "searchPlaceholder": "Yiyto jofniido...",
+    "categories": "Juulirɗe",
+    "recommended": "Jofniiɓe muuɗɗinaaɓe",
+    "seeAll": "Yiy heddiiɓe"
+  },
+
+  "search": {
+    "title": "Yiyto",
+    "placeholder": "Ɗoo, golle, fartaŋŋe...",
+    "filters": "Suɓanɗe",
+    "noResults": "Alaa jofniido yiyaaɗo",
+    "all": "Fow"
+  },
+
+  "provider": {
+    "verified": "Tellaama",
+    "trustScore": "Jimmre tiiɗnde",
+    "reviews": "Miijooji",
+    "noReviews": "Alaa miijooji",
+    "description": "Haala dow",
+    "contact": "Naaw",
+    "call": "Noddu",
+    "whatsapp": "WhatsApp",
+    "share": "Hirsu",
+    "report": "Fida",
+    "leaveReview": "Haal miijooji maa"
+  },
+
+  "trustBadge": {
+    "new":      "Keso",
+    "caution":  "Santu",
+    "correct":  "Ummi",
+    "reliable": "Tiiɗnde"
+  },
+
+  "create": {
+    "title": "Hollu karɗi am",
+    "next": "Yeeso",
+    "back": "Ɓooyde",
+    "submit": "Tellu karɗi am",
+    "categoryLabel": "Juulorde *",
+    "nameLabel": "Innde karɗi *",
+    "specialtyLabel": "Fartaŋŋe *",
+    "descriptionLabel": "Haala dow",
+    "cityLabel": "Ngesa *",
+    "neighborhoodLabel": "Kuuje *",
+    "phoneOnly": "Telefon tan",
+    "whatsappOnly": "WhatsApp tan",
+    "both": "Ɗiɗo",
+    "addPhoto": "Sos foto",
+    "available": "Woodi",
+    "busy": "Kalfinaama",
+    "unavailable": "Alaa"
+  },
+
+  "review": {
+    "title": "Haala miijooji",
+    "recommend": "Mi muuɗɗinii",
+    "neutral": "Nde fow",
+    "discourage": "Mi muuɗɗinaali",
+    "commentPlaceholder": "Haala ko njiyɗaa...",
+    "submit": "Neldu miijooji"
+  },
+
+  "favorites": {
+    "title": "Muuɗɗinaaɓe",
+    "empty": "Alaa muuɗɗinaaɓe",
+    "loginRequired": "Naatu ngam yiy muuɗɗinaaɓe maa"
+  },
+
+  "profile": {
+    "title": "Mi",
+    "myCard": "Karɗi am",
+    "createCard": "Hollu karɗi am",
+    "logout": "Yaltu",
+    "version": "Nduumirgal 1.0.0"
+  },
+
+  "subscription": {
+    "title": "Jotondirɗe",
+    "perMonth": "/lewru",
+    "pay": "Hol",
+    "success": "Jotondirde woni"
+  },
+
+  "notifications": {
+    "title": "Kaaɗunde",
+    "empty": "Alaa kaaɗunde"
+  },
+
+  "language": {
+    "title": "Suɓu demngal",
+    "fr": "Faranse",
+    "en": "Engele",
+    "ful": "Fulfulde"
+  },
+
+  "common": {
+    "save": "Tellu",
+    "cancel": "Haɓɓu",
+    "delete": "Momtu",
+    "edit": "Tafo",
+    "close": "Uddu",
+    "confirm": "Tellu",
+    "yes": "Eey",
+    "no": "Alaa",
+    "loading": "Ɗo wooda...",
+    "error": "Fenaande",
+    "success": "Woodi",
+    "retry": "Tafo kine",
+    "noInternet": "Firawol alaa",
+    "refresh": "Tafo"
+  }
+}

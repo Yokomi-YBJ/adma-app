@@ -1,0 +1,76 @@
+# ==========================================
+# Dépendances Node.js (Commun à tout le projet)
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.*
+
+# ==========================================
+# Variables d'environnement & Secrets
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.cert
+
+# ==========================================
+# Application Mobile (Expo / React Native)
+# ==========================================
+.expo/
+.expo-shared/
+dist/
+web-build/
+# Dossiers natifs (générés si tu utilises Expo Prebuild ou EAS Build)
+android/
+ios/
+
+# ==========================================
+# Partie Admin (React / HTML / Vite)
+# ==========================================
+build/
+out/
+.eslintcache
+
+# ==========================================
+# Serveur Backend (Express.js)
+# ==========================================
+logs/
+*.log
+coverage/
+.nyc_output/
+# Si tu compiles du TypeScript côté serveur
+dist-server/ 
+
+# ==========================================
+# Outils & Éditeurs de code
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.sublime-workspace
+*.sublime-project
+
+# ==========================================
+# Fichiers Système (OS)
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
