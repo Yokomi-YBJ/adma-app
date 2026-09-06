@@ -13,8 +13,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft, User, Bell, Globe, Shield,
-  HelpCircle, Headphones, Database, LogOut, Trash2,
-  ChevronRight, CheckCircle2, Eye, EyeOff
+  HelpCircle, Headphones, LogOut, Trash2,
+  ChevronRight, CheckCircle2, Eye, EyeOff, AlertTriangle 
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth.store';
@@ -194,8 +194,8 @@ export default function SettingsScreen() {
               onPress={() => router.push('/settings/edit-profile')}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconWrap, { backgroundColor: colors.primaryBg }]}>
-                <User size={18} color={colors.primary} />
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                <User size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Modifier le profil</Text>
@@ -209,8 +209,8 @@ export default function SettingsScreen() {
               onPress={() => router.push('/settings/notifications')}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconWrap, { backgroundColor: '#EEF2FF' }]}>
-                <Bell size={18} color="#4F46E5" />
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                <Bell size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Notifications</Text>
@@ -224,12 +224,27 @@ export default function SettingsScreen() {
               onPress={() => setLangModal(true)}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconWrap, { backgroundColor: '#FEF3C7' }]}>
-                <Globe size={18} color="#D97706" />
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                <Globe size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Langue de l'application</Text>
                 <Text style={styles.rowSub}>{currentLangObj.label}</Text>
+              </View>
+              <ChevronRight size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuRow, styles.menuRowLast]}
+              onPress={() => router.push('/settings/danger-zone')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconWrap, { backgroundColor: '#FEE2E2' }]}>
+                <AlertTriangle size={18} color={colors.danger} />
+              </View>
+              <View style={styles.rowTextWrap}>
+                <Text style={[styles.rowLabel, { color: colors.danger }]}>Zone de danger</Text>
+                <Text style={styles.rowSub}>Supprimer la fiche ou le compte</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -241,8 +256,12 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Confidentialité & Sécurité</Text>
           <View style={styles.card}>
             <View style={styles.menuRow}>
-              <View style={[styles.iconWrap, { backgroundColor: colors.primaryBg }]}>
-                {phonePublic ? <Eye size={18} color={colors.primary} /> : <EyeOff size={18} color={colors.textMuted} />}
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                {phonePublic ? (
+                  <Eye size={18} color={colors.success} />
+                ) : (
+                  <EyeOff size={18} color={colors.textMuted} />
+                )}
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Numéro de téléphone public</Text>
@@ -263,8 +282,8 @@ export default function SettingsScreen() {
               onPress={() => router.push('/settings/legal')}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconWrap, { backgroundColor: '#F0FDF4' }]}>
-                <Shield size={18} color="#16A34A" />
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                <Shield size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Confidentialité & CGU</Text>
@@ -272,7 +291,6 @@ export default function SettingsScreen() {
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
-            
           </View>
         </View>
 
@@ -285,8 +303,8 @@ export default function SettingsScreen() {
               onPress={() => router.push('/settings/support')}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconWrap, { backgroundColor: '#F3E8FF' }]}>
-                <HelpCircle size={18} color="#9333EA" />
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                <HelpCircle size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Foire aux questions (FAQ)</Text>
@@ -300,8 +318,8 @@ export default function SettingsScreen() {
               onPress={() => router.push('/settings/support?tab=contact')}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconWrap, { backgroundColor: '#E0F2FE' }]}>
-                <Headphones size={18} color="#0284C7" />
+              <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
+                <Headphones size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>Contacter l'équipe Adma</Text>
@@ -323,14 +341,7 @@ export default function SettingsScreen() {
             <Text style={styles.logoutBtnText}>Se déconnecter</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={handleDeleteAccount}
-            activeOpacity={0.7}
-          >
-            <Trash2 size={16} color={colors.textMuted} />
-            <Text style={styles.deleteBtnText}>Supprimer définitivement mon compte</Text>
-          </TouchableOpacity>
+          
         </View>
 
         {/* App Version */}

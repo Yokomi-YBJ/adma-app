@@ -95,7 +95,7 @@
     "contactInfo": "Contact information",
     "distanceKm": "km from you",
     "geoZone": "Service zone",
-    "geoUpdate": "Update my zone",
+    "geoUpdate": "Update",
     "geoNone": "Zone not defined",
     "geoUpdateSuccess": "Service zone updated",
     "geoDeleteConfirm": "You will no longer appear in \"Near me\". Continue?"
