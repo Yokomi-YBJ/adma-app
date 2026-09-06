@@ -1,6 +1,38 @@
 import { query } from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { notifyNewReview, notifyReviewResponse } from '../services/notificationService.js';
+import { invalidateCache } from '../services/cacheService.js';
+
+export async function updateProviderReviewStats(providerId) {
+  const [[counts]] = await query(`
+    SELECT
+      COUNT(*) AS total_reviews,
+      SUM(IF(verdict = 'recommend', 1, 0)) AS recommend_reviews
+    FROM reviews
+    WHERE provider_id = ? AND status = 'active'
+  `, [providerId]);
+
+  const reviewCount = Number(counts?.total_reviews || 0);
+  const recommendCount = Number(counts?.recommend_reviews || 0);
+  const trustScore = reviewCount > 0 ? Math.round((recommendCount / reviewCount) * 100) : 0;
+
+  const [[prov]] = await query('SELECT verification_status, photo_url, description, specialty, plan FROM providers WHERE id = ?', [providerId]);
+  let rankingScore = 5;
+  if (prov) {
+    const isVerified = prov.verification_status === 'verified' ? 15 : (prov.verification_status === 'verified_id' ? 8 : 0);
+    const hasCompleteProfile = (prov.photo_url && prov.description && prov.specialty) ? 10 : 5;
+    const isPaidPlan = ['premium', 'professional', 'enterprise'].includes(prov.plan) ? 10 : 0;
+    rankingScore = ((trustScore / 100) * 40) + (Math.min(reviewCount, 100) / 100 * 20) + isVerified + hasCompleteProfile + isPaidPlan + 5;
+  }
+
+  await query(`
+    UPDATE providers
+    SET review_count = ?, recommend_count = ?, trust_score = ?, ranking_score = ?
+    WHERE id = ?
+  `, [reviewCount, recommendCount, trustScore, rankingScore, providerId]);
+
+  invalidateCache('home_providers');
+}
 
 export const getReviews = asyncHandler(async (req, res) => {
   const { providerId, page = 1, limit = 20 } = req.query;
@@ -53,6 +85,8 @@ export const createReview = asyncHandler(async (req, res) => {
     [providerId, userId, verdict, comment?.trim() || null]
   );
 
+  await updateProviderReviewStats(providerId);
+
   const reviewerName = [req.user.first_name, req.user.last_name].filter(Boolean).join(' ') || 'Un utilisateur';
   notifyNewReview(providerId, reviewerName, verdict).catch(() => {});
 
@@ -82,9 +116,12 @@ export const createReviewResponse = asyncHandler(async (req, res) => {
 });
 
 export const deleteReview = asyncHandler(async (req, res) => {
-  const [rows] = await query('SELECT reviewer_id FROM reviews WHERE id=?', [req.params.id]);
+  const [rows] = await query('SELECT provider_id, reviewer_id FROM reviews WHERE id=?', [req.params.id]);
   if (!rows.length) throw new AppError('Avis introuvable', 404, 'NOT_FOUND');
   if (rows[0].reviewer_id !== req.user.id) throw new AppError('Accès refusé', 403, 'FORBIDDEN');
   await query("UPDATE reviews SET status='deleted' WHERE id=?", [req.params.id]);
+  if (rows[0].provider_id) {
+    await updateProviderReviewStats(rows[0].provider_id);
+  }
   res.json({ success: true });
 });

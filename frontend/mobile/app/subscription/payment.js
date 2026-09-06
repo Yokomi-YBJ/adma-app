@@ -1,7 +1,7 @@
 /**
  * ADMA — Écran de paiement KPay
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator, ScrollView,
@@ -33,6 +33,13 @@ export default function PaymentScreen() {
   const [loading,  setLoading]  = useState(false);
   const [step,     setStep]     = useState('select'); // 'select' | 'confirm' | 'processing' | 'done' | 'failed'
   const [paymentId, setPaymentId] = useState(null);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   function validatePhone(p) {
     return /^6[5-9]\d{7}$/.test(p.replace(/\s/g, ''));
@@ -58,10 +65,11 @@ export default function PaymentScreen() {
 
       // Polling du statut (max 2 min)
       let attempts = 0;
-      const interval = setInterval(async () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(async () => {
         attempts++;
         if (attempts > 24) {
-          clearInterval(interval);
+          if (intervalRef.current) clearInterval(intervalRef.current);
           setStep('failed');
           setLoading(false);
           return;
@@ -70,12 +78,12 @@ export default function PaymentScreen() {
           const statusRes = await api.get(`/payments/${res.data.data.paymentId}/status`);
           const status    = statusRes.data.data.status;
           if (status === 'completed') {
-            clearInterval(interval);
+            if (intervalRef.current) clearInterval(intervalRef.current);
             updateProvider({ plan: planId, plan_expires_at: statusRes.data.data.expiresAt });
             setStep('done');
             setLoading(false);
           } else if (status === 'failed' || status === 'cancelled') {
-            clearInterval(interval);
+            if (intervalRef.current) clearInterval(intervalRef.current);
             setStep('failed');
             setLoading(false);
           }

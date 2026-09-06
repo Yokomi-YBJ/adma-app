@@ -9,13 +9,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, ChevronRight, Wifi, WifiOff } from 'lucide-react-native';
+import { Search, MapPin, ChevronRight, Wifi, WifiOff, Bell } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
 import { CACHE_TTL } from '../../constants/config';
 import api from '../../services/api';
 import { setCache, getCache } from '../../services/cache';
 import { useAuthStore }    from '../../store/auth.store';
+import { useNotificationStore } from '../../store/notification.store';
 import { ProviderCard }    from '../../components/cards/ProviderCard';
 import { CategoryCard }    from '../../components/cards/CategoryCard';
 import { SkeletonHome }    from '../../components/ui/Skeleton';
@@ -27,6 +28,8 @@ export default function HomeScreen() {
   const insets      = useSafeAreaInsets();
   const user        = useAuthStore((s) => s.user);
   const isOnline    = useNetworkStore((s) => s.isOnline);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const loadNotifs  = useNotificationStore((s) => s.load);
 
   const [categories, setCategories] = useState([]);
   const [providers,  setProviders]  = useState([]);
@@ -36,6 +39,7 @@ export default function HomeScreen() {
 
   const loadData = useCallback(async (force = false) => {
     try {
+      loadNotifs().catch(() => {});
       // Utilise le cache si disponible et pas forcé
       const [cachedCats, cachedProvs] = await Promise.all([
         getCache('home_categories'),
@@ -119,11 +123,14 @@ export default function HomeScreen() {
           </View>
         </View>
         <TouchableOpacity
-          style={styles.searchIconBtn}
-          onPress={() => router.push('/(tabs)/search')}
+          style={styles.notifIconBtn}
+          onPress={() => router.push('/notifications')}
           activeOpacity={0.7}
         >
-          <Search size={20} color={colors.navy} strokeWidth={2.5} />
+          <Bell size={22} color={colors.navy} strokeWidth={2.2} />
+          {unreadCount > 0 && (
+            <View style={styles.unreadBadgeDot} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -210,12 +217,24 @@ const styles = StyleSheet.create({
   greeting:     { fontSize: 24, fontWeight: '800', color: colors.navy, letterSpacing: -0.3 },
   locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
   location:     { fontSize: 13, color: colors.primary, fontWeight: '600' },
-  searchIconBtn:{
+  notifIconBtn: {
     width: 44, height: 44,
     borderRadius: 14,
     backgroundColor: colors.surface,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
+    position: 'relative',
+  },
+  unreadBadgeDot: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.danger,
+    borderWidth: 1.5,
+    borderColor: colors.white,
   },
 
   offlineBanner:{

@@ -31,7 +31,11 @@ export default function NotificationPreferencesScreen() {
       try {
         const res = await api.get('/users/notification-preferences');
         const data = res.data?.data || {};
-        if (mounted) setPrefs({ ...defaultPrefs, ...data });
+        const parsed = { ...defaultPrefs };
+        Object.keys(defaultPrefs).forEach((k) => {
+          if (data[k] !== undefined) parsed[k] = Boolean(data[k]);
+        });
+        if (mounted) setPrefs(parsed);
       } catch (error) {
         showAppModal({
           title: 'Erreur',

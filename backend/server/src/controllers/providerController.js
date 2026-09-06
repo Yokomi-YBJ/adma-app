@@ -1,5 +1,9 @@
 /**
  * ADMA — Contrôleur Prestataires
+ * 
+ * Modifications :
+ * - Exclusion du prestataire de l'utilisateur connecté dans les recherches (searchProviders et searchNearby)
+ * - Gestion des vues avec cooldown côté serveur (dans le contrôleur d'événements, pas ici)
  */
 import multer from 'multer';
 import { query } from '../config/database.js';
@@ -18,7 +22,13 @@ export const searchProviders = asyncHandler(async (req, res) => {
   const conds  = ['p.is_active=TRUE', 'p.deleted_at IS NULL'];
   const params = [];
 
-  if (categoryId)     { conds.push('p.category_id=?');   params.push(parseInt(categoryId)); }
+  // Exclusion du propre prestataire
+  if (userId) {
+    conds.push('p.user_id != ?');
+    params.push(userId);
+  }
+
+  if (categoryId)     { conds.push('(p.category_id=? OR c.parent_id=?)'); params.push(parseInt(categoryId), parseInt(categoryId)); }
   if (cityId)         { conds.push('p.city_id=?');        params.push(parseInt(cityId)); }
   if (neighborhoodId) { conds.push('p.neighborhood_id=?');params.push(parseInt(neighborhoodId)); }
   if (availability)   { conds.push('p.availability=?');   params.push(availability); }
@@ -34,7 +44,7 @@ export const searchProviders = asyncHandler(async (req, res) => {
     : 'FALSE';
 
   const [rows] = await query(`
-    SELECT p.id, p.name, p.specialty, p.photo_url, p.availability,
+    SELECT p.id, p.category_id, p.name, p.specialty, p.photo_url, p.availability,
            p.trust_score, p.review_count, p.recommend_count, p.ranking_score,
            p.verification_status, p.plan, p.created_at,
            c.name_fr AS category_name_fr,
@@ -85,10 +95,33 @@ export const getProvider = asyncHandler(async (req, res) => {
 
   if (!rows.length) throw new AppError('Prestataire introuvable', 404, 'PROVIDER_NOT_FOUND');
 
+  // Synchronisation des avis en direct pour résilience
+  const [[reviewStats]] = await query(`
+    SELECT
+      COUNT(*) AS total_reviews,
+      SUM(IF(verdict = 'recommend', 1, 0)) AS recommend_reviews
+    FROM reviews
+    WHERE provider_id = ? AND status = 'active'
+  `, [providerId]);
+
+  const realReviewCount = Number(reviewStats?.total_reviews || 0);
+  const realRecommendCount = Number(reviewStats?.recommend_reviews || 0);
+  const realTrustScore = realReviewCount > 0 ? Math.round((realRecommendCount / realReviewCount) * 100) : 0;
+
+  if (rows[0].review_count !== realReviewCount || rows[0].recommend_count !== realRecommendCount || rows[0].trust_score !== realTrustScore) {
+    query('UPDATE providers SET review_count=?, recommend_count=?, trust_score=? WHERE id=?',
+      [realReviewCount, realRecommendCount, realTrustScore, providerId]
+    ).catch(() => {});
+    rows[0].review_count = realReviewCount;
+    rows[0].recommend_count = realRecommendCount;
+    rows[0].trust_score = realTrustScore;
+  }
+
   const [photos]  = await query('SELECT id, photo_url, caption, position FROM provider_photos WHERE provider_id=? ORDER BY position ASC', [providerId]);
   const [reviews] = await query(`
     SELECT r.id, r.verdict, r.comment, r.created_at,
-           CONCAT(u.first_name,' ',u.last_name) AS reviewer_name,
+           TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))) AS reviewer_name,
+           u.avatar_url AS reviewer_avatar,
            rr.comment AS response, rr.created_at AS response_at
     FROM reviews r JOIN users u ON u.id=r.reviewer_id
     LEFT JOIN review_responses rr ON rr.review_id=r.id
@@ -96,7 +129,17 @@ export const getProvider = asyncHandler(async (req, res) => {
     ORDER BY r.created_at DESC LIMIT 10
   `, [providerId]);
 
-  res.json({ success: true, data: { ...formatProvider(rows[0], true), photos, reviews } });
+  const formattedReviews = reviews.map(r => ({
+    id:             r.id,
+    verdict:        r.verdict,
+    comment:        r.comment,
+    createdAt:      r.created_at,
+    reviewerName:   r.reviewer_name?.trim() || 'Utilisateur',
+    reviewerAvatar: r.reviewer_avatar,
+    response:       r.response ? { comment: r.response, createdAt: r.response_at } : null,
+  }));
+
+  res.json({ success: true, data: { ...formatProvider(rows[0], true), photos, reviews: formattedReviews } });
 });
 
 // ── Infos contact ─────────────────────────────────────────────────
@@ -169,7 +212,7 @@ export const updateProvider = asyncHandler(async (req, res) => {
 
   const allowed = { name:'name', specialty:'specialty', description:'description',
     contactMethod:'contact_method', phoneNumber:'phone_number', whatsappNumber:'whatsapp_number',
-    websiteUrl:'website_url', availability:'availability', cityId:'city_id', neighborhoodId:'neighborhood_id' };
+    websiteUrl:'website_url', availability:'availability', cityId:'city_id', neighborhoodId:'neighborhood_id', categoryId:'category_id' };
 
   const sets = []; const vals = [];
   for (const [jsKey, dbCol] of Object.entries(allowed)) {
@@ -263,31 +306,37 @@ export const requestVerification = asyncHandler(async (req, res) => {
 // ── Formateur ─────────────────────────────────────────────────────
 function formatProvider(row, withDetails = false) {
   const base = {
-    id:                 row.id,
-    name:               row.name,
-    specialty:          row.specialty,
-    description:        row.description,
-    categoryId:         row.category_id,
-    categoryName:       row.category_name_fr,
-    city:               row.city_name,
-    neighborhood:       row.neighborhood_name,
-    photoUrl:           row.photo_url,
-    availability:       row.availability,
-    contactMethod:      row.contact_method,
+    id: row.id,
+    name: row.name,
+    specialty: row.specialty,
+    description: row.description,
+    categoryId: row.category_id,
+    categoryName: row.category_name_fr,
+    cityId: row.city_id,               // ← ajout
+    cityName: row.city_name,
+    neighborhoodId: row.neighborhood_id, // ← ajout
+    neighborhoodName: row.neighborhood_name,
+    photoUrl: row.photo_url,
+    availability: row.availability,
+    contactMethod: row.contact_method,
+    phoneNumber: row.phone_number,      // ← ajout
+    whatsappNumber: row.whatsapp_number, // ← ajout
     verificationStatus: row.verification_status,
-    plan:               row.plan,
-    reviewCount:        row.review_count    || 0,
-    recommendCount:     row.recommend_count || 0,
-    trustScore:         row.trust_score     || 0,
-    trustBadge:         getTrustBadge(row.trust_score, row.review_count),
-    isFavorite:         !!row.is_favorite,
-    viewsThisMonth:     row.views_this_month || 0,
-    createdAt:          row.created_at,
+    plan: row.plan,
+    reviewCount: row.review_count || 0,
+    recommendCount: row.recommend_count || 0,
+    trustScore: row.trust_score || 0,
+    trustBadge: getTrustBadge(row.trust_score, row.review_count),
+    isFavorite: !!row.is_favorite,
+    viewsThisMonth: row.views_this_month || 0,
+    createdAt: row.created_at,
+    latitude: row.latitude,   // ← ajout
+    longitude: row.longitude, // ← ajout
   };
   if (withDetails) {
-    base.websiteUrl     = row.website_url;
+    base.websiteUrl = row.website_url;
     base.totalFavorites = row.total_favorites || 0;
-    base.planExpiresAt  = row.plan_expires_at;
+    base.planExpiresAt = row.plan_expires_at;
   }
   return base;
 }
@@ -325,18 +374,21 @@ export const searchNearby = asyncHandler(async (req, res) => {
   const offset    = (Math.max(1, parseInt(page)) - 1) * PAGE_SIZE;
   const userId    = req.user?.id || null;
 
-  const catFilter = categoryId ? 'AND p.category_id = ?' : '';
-  const catParams = categoryId ? [parseInt(categoryId)] : [];
+  const catFilter = categoryId ? 'AND (p.category_id = ? OR c.parent_id = ?)' : '';
+  const catParams = categoryId ? [parseInt(categoryId), parseInt(categoryId)] : [];
+
+  // Exclusion de son propre prestataire
+  const userFilter = userId ? 'AND p.user_id != ?' : '';
+  const userParams = userId ? [userId] : [];
 
   const favSub = userId
     ? `(SELECT 1 FROM favorites f WHERE f.user_id=${parseInt(userId)} AND f.provider_id=p.id LIMIT 1) IS NOT NULL`
     : 'FALSE';
 
-  // Formule Haversine — distance en km entre le client et le prestataire
-  // Le rayon autorisé dépend du plan du prestataire
-  const [rows] = await query(`
+  // Construction de la requête avec tous les filtres
+  const sql = `
     SELECT
-      p.id, p.name, p.specialty, p.photo_url, p.availability,
+      p.id, p.category_id, p.name, p.specialty, p.photo_url, p.availability,
       p.trust_score, p.review_count, p.recommend_count,
       p.verification_status, p.plan,
       c.name_fr  AS category_name_fr,
@@ -361,6 +413,7 @@ export const searchNearby = asyncHandler(async (req, res) => {
       AND p.latitude     IS NOT NULL
       AND p.longitude    IS NOT NULL
       ${catFilter}
+      ${userFilter}
     HAVING distance_km <= CASE p.plan
       WHEN 'free'         THEN 3
       WHEN 'premium'      THEN 6
@@ -369,12 +422,15 @@ export const searchNearby = asyncHandler(async (req, res) => {
     END
     ORDER BY distance_km ASC
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
-  `, [clientLat, clientLng, clientLat, ...catParams]);
+  `;
 
-  // Compte total (sans LIMIT)
-  const [[{ total }]] = await query(`
+  const params = [clientLat, clientLng, clientLat, ...catParams, ...userParams];
+  const [rows] = await query(sql, params);
+
+  // Compte total (sans LIMIT) avec les mêmes conditions
+  const countSql = `
     SELECT COUNT(*) AS total FROM (
-      SELECT p.id,
+      SELECT p.id, p.plan,
         ROUND(
           6371 * ACOS(
             GREATEST(-1, LEAST(1,
@@ -385,14 +441,18 @@ export const searchNearby = asyncHandler(async (req, res) => {
           ), 2
         ) AS distance_km
       FROM providers p
+      JOIN categories c ON c.id = p.category_id
       WHERE p.is_active=TRUE AND p.deleted_at IS NULL
         AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
         ${catFilter}
+        ${userFilter}
       HAVING distance_km <= CASE p.plan
         WHEN 'free' THEN 3 WHEN 'premium' THEN 6
         WHEN 'professional' THEN 9 ELSE 99999 END
     ) sub
-  `, [clientLat, clientLng, clientLat, ...catParams]);
+  `;
+  const countParams = [clientLat, clientLng, clientLat, ...catParams, ...userParams];
+  const [[{ total }]] = await query(countSql, countParams);
 
   res.json({
     success: true,

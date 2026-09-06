@@ -198,7 +198,9 @@ export default function OnboardingScreen() {
 
   async function finish() {
     await AsyncStorage.setItem('adma_onboarded', '1');
-    router.replace('/(auth)/login');
+    const { useAuthStore } = await import('../../store/auth.store');
+    const isLoggedIn = useAuthStore.getState().isLoggedIn;
+    router.replace(isLoggedIn ? '/(tabs)' : '/(auth)/login');
   }
 
   function next() {

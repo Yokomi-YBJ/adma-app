@@ -16,6 +16,7 @@ import { useLocation }        from '../../hooks/useLocation';
 import { ProviderCard }       from '../../components/cards/ProviderCard';
 import { EmptyState }         from '../../components/ui/EmptyState';
 import { SkeletonProviderCard } from '../../components/ui/Skeleton';
+import { Select }             from '../../components/ui/Select';
 
 const PAGE_SIZE = 20;
 
@@ -55,10 +56,16 @@ const banner = StyleSheet.create({
   btnText: { fontSize:12, fontWeight:'700', color:colors.white },
 });
 
-// ── Modal Filtres ─────────────────────────────────────────────────
+// ── Modal Filtres (avec Select) ─────────────────────────────────
 function FilterModal({ visible, onClose, filters, setFilters, categories, cities, neighborhoods }) {
-  const { t }  = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'fr';
   const [draft, setDraft] = useState(filters);
+
+  // Sécurisation des props (au cas où elles seraient undefined)
+  const safeCategories = categories || [];
+  const safeCities = cities || [];
+  const safeNeighborhoods = neighborhoods || [];
 
   // Sync quand filters change de l'extérieur
   useEffect(() => { if (visible) setDraft(filters); }, [visible]);
@@ -68,6 +75,29 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
     const clear = { categoryId:null, cityId:null, neighborhoodId:null, verified:false, available:false };
     setDraft(clear); setFilters(clear); onClose();
   }
+
+  // Préparer les options pour le Select Catégorie
+  const categoryOptions = safeCategories.map(c => ({
+    id: c.id,
+    label: c.name_fr || c.name,
+    subtitle: c.parent_name || null,
+    group: null,
+  }));
+  const categoryOptionsWithAll = [{ id: null, label: 'Toutes', subtitle: null, group: null }, ...categoryOptions];
+
+  // Préparer les options pour le Select Ville
+  const cityOptions = safeCities.map(c => ({
+    id: c.id,
+    label: c.name,
+    subtitle: c.region || 'Cameroun',
+    group: c.region || null,
+  }));
+  const cityOptionsWithAll = [{ id: null, label: 'Toutes', subtitle: null, group: null }, ...cityOptions];
+
+  // Options pour le quartier (dépend de la ville sélectionnée)
+  const neighborhoodOptions = (draft.cityId) 
+    ? safeNeighborhoods.filter(n => n.city_id === draft.cityId).map(n => ({ id: n.id, label: n.name }))
+    : [];
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -79,40 +109,36 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
         </View>
         <ScrollView style={fm.body} showsVerticalScrollIndicator={false}>
 
-          {/* Catégorie */}
-          <Text style={fm.label}>Catégorie</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fm.chips}>
-           {[{ id:null, name_fr:'Toutes' }, ...(categories || [])].map(c => (
-              <TouchableOpacity
-                key={c.id ?? 'all'}
-                style={[fm.chip, draft.categoryId === c.id && fm.chipActive]}
-                onPress={() => setDraft(d => ({ ...d, categoryId: c.id }))}
-              >
-                <Text style={[fm.chipText, draft.categoryId === c.id && fm.chipTextActive]}>{c.name_fr}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {/* Catégorie avec Select */}
+          <Select
+            label="Catégorie"
+            value={draft.categoryId}
+            options={categoryOptionsWithAll}
+            onSelect={(id) => setDraft(d => ({ ...d, categoryId: id }))}
+            placeholder="Choisir une catégorie"
+            searchPlaceholder="Rechercher une catégorie..."
+            modalTitle="Sélectionner une catégorie"
+            icon={null}
+          />
 
-          {/* Ville */}
-          <Text style={fm.label}>Ville</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fm.chips}>
-            {[{ id:null, name:'Toutes' }, ...(cities || [])].map(c => (
-              <TouchableOpacity
-                key={c.id ?? 'all'}
-                style={[fm.chip, draft.cityId === c.id && fm.chipActive]}
-                onPress={() => setDraft(d => ({ ...d, cityId:c.id, neighborhoodId:null }))}
-              >
-                <Text style={[fm.chipText, draft.cityId === c.id && fm.chipTextActive]}>{c.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {/* Ville avec Select */}
+          <Select
+            label="Ville"
+            value={draft.cityId}
+            options={cityOptionsWithAll}
+            onSelect={(id) => setDraft(d => ({ ...d, cityId: id, neighborhoodId: null }))}
+            placeholder="Choisir une ville"
+            searchPlaceholder="Rechercher une ville..."
+            modalTitle="Sélectionner une ville"
+            icon={null}
+          />
 
-          {/* Quartier */}
+          {/* Quartier (conditionnel et en chips) */}
           {draft.cityId && (
             <>
               <Text style={fm.label}>Quartier</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fm.chips}>
-                {[{ id:null, name:'Tous' }, ...neighborhoods.filter(n => n.city_id === draft.cityId)].map(n => (
+                {[{ id: null, name: 'Tous' }, ...safeNeighborhoods.filter(n => n.city_id === draft.cityId)].map(n => (
                   <TouchableOpacity
                     key={n.id ?? 'all'}
                     style={[fm.chip, draft.neighborhoodId === n.id && fm.chipActive]}
@@ -213,6 +239,13 @@ export default function SearchScreen() {
 
   const debounceRef = useRef(null);
 
+  useEffect(() => {
+    if (params.categoryId) {
+      const parsedCatId = parseInt(params.categoryId);
+      setFilters(f => (f.categoryId === parsedCatId ? f : { ...f, categoryId: parsedCatId }));
+    }
+  }, [params.categoryId]);
+
   useEffect(() => { loadMeta(); }, []);
 
   useEffect(() => {
@@ -225,19 +258,29 @@ export default function SearchScreen() {
 
   async function loadMeta() {
     const cached = getCache('search_meta');
-    if (cached) { setCategories(cached.categories); setCities(cached.cities); setNeighborhoods(cached.neighborhoods); }
+    if (cached) {
+      setCategories(cached.categories || []);
+      setCities(cached.cities || []);
+      setNeighborhoods(cached.neighborhoods || []);
+    }
     try {
       const [cRes, ciRes, nRes] = await Promise.all([
         api.get('/categories'),
         api.get('/categories/cities'),
         api.get('/categories/neighborhoods'),
       ]);
-      const meta = { categories: cRes.data.data || [], cities: ciRes.data.data || [], neighborhoods: nRes.data.data || [] };
+      const meta = {
+        categories: cRes.data.data || [],
+        cities: ciRes.data.data || [],
+        neighborhoods: nRes.data.data || []
+      };
       setCategories(meta.categories);
       setCities(meta.cities);
       setNeighborhoods(meta.neighborhoods);
       setCache('search_meta', meta, CACHE_TTL.categories);
-    } catch {}
+    } catch {
+      // On garde les valeurs existantes en cas d'erreur
+    }
   }
 
   // ── Activer le mode "Autour de moi" ────────────────────────────
@@ -453,7 +496,7 @@ export default function SearchScreen() {
         visible={showFilters}
         onClose={() => setShowFilters(false)}
         filters={filters}
-        setFilters={f => { setFilters(f); }}
+        setFilters={setFilters}
         categories={categories}
         cities={cities}
         neighborhoods={neighborhoods}

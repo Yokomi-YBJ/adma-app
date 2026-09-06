@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Camera, Save, UserRound } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,9 +13,10 @@ import api from '../../services/api';
 import { showAppModal } from '../../components/ui/AppModal';
 
 export default function EditProfileScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const user = useAuthStore((s) => s.user);
+  const { t }   = useTranslation();
+  const router  = useRouter();
+  const insets  = useSafeAreaInsets();
+  const user    = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
 
   const [firstName, setFirstName] = useState('');
@@ -46,15 +48,19 @@ export default function EditProfileScreen() {
   async function handleAvatarPress() {
     if (uploadingAvatar) return;
 
-    // Demander la permission d'accéder à la galerie
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Nous avons besoin d\'accéder à votre galerie pour changer la photo.');
+      showAppModal({
+        title: t('common.error', 'Erreur'),
+        message: t('create.permPhoto', 'Autorisez l\'accès à vos photos.'),
+        confirmText: 'OK',
+        variant: 'warning',
+      });
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -76,18 +82,21 @@ export default function EditProfileScreen() {
         });
 
         // Mettre à jour le store avec la nouvelle URL
-        updateUser({ avatar_url: res.data.data.avatarUrl });
+        updateUser({
+          avatarUrl: res.data.data.avatarUrl,
+          avatar_url: res.data.data.avatarUrl,
+        });
 
         showAppModal({
-          title: 'Succès',
-          message: 'Photo de profil mise à jour',
+          title: t('common.success', 'Succès'),
+          message: t('editProfile.avatarUpdated', 'Photo de profil mise à jour'),
           confirmText: 'OK',
           variant: 'success',
         });
       } catch (error) {
         showAppModal({
-          title: 'Erreur',
-          message: error?.response?.data?.message || 'Impossible de mettre à jour la photo.',
+          title: t('common.error', 'Erreur'),
+          message: error?.response?.data?.message || t('editProfile.avatarError', 'Impossible de mettre à jour la photo.'),
           confirmText: 'OK',
           variant: 'danger',
         });
@@ -108,8 +117,8 @@ export default function EditProfileScreen() {
 
     if (!Object.keys(payload).length) {
       showAppModal({
-        title: 'Aucun changement',
-        message: 'Modifiez votre profil pour enregistrer.',
+        title: t('common.info', 'Information'),
+        message: t('editProfile.noChanges', 'Modifiez votre profil pour enregistrer.'),
         confirmText: 'OK',
         variant: 'info',
       });
@@ -119,18 +128,22 @@ export default function EditProfileScreen() {
     setSaving(true);
     try {
       await api.put('/users/me', payload);
-      updateUser(payload);
+      updateUser({
+        ...payload,
+        first_name: nextFirst || user?.first_name,
+        last_name: nextLast || user?.last_name,
+      });
       showAppModal({
-        title: 'Profil mis à jour',
-        message: 'Les informations ont bien été enregistrées.',
+        title: t('common.success', 'Succès'),
+        message: t('editProfile.saved', 'Profil mis à jour avec succès.'),
         confirmText: 'OK',
         variant: 'success',
         onConfirm: () => router.back(),
       });
     } catch (error) {
       showAppModal({
-        title: 'Erreur',
-        message: error?.response?.data?.message || 'La mise à jour a échoué.',
+        title: t('common.error', 'Erreur'),
+        message: error?.response?.data?.message || t('common.saveError', 'La mise à jour a échoué.'),
         confirmText: 'OK',
         variant: 'danger',
       });
@@ -145,7 +158,7 @@ export default function EditProfileScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={20} color={colors.navy} />
         </TouchableOpacity>
-        <Text style={styles.title}>Modifier le profil</Text>
+        <Text style={styles.title}>{t('editProfile.title', 'Modifier le profil')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -172,8 +185,8 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
 
           <View style={styles.avatarMeta}>
-            <Text style={styles.avatarTitle}>Photo de profil</Text>
-            <Text style={styles.avatarHint}>Appuyez sur la photo ou sur l’icône pour la modifier.</Text>
+            <Text style={styles.avatarTitle}>{t('create.photoLabel', 'Photo de profil')}</Text>
+            <Text style={styles.avatarHint}>{t('editProfile.avatarHint', 'Appuyez pour modifier la photo.')}</Text>
           </View>
 
           <TouchableOpacity
@@ -188,37 +201,37 @@ export default function EditProfileScreen() {
 
         <View style={styles.section}>
           <Input
-            label="Prénom"
+            label={t('editProfile.firstNameLabel', 'Prénom')}
             value={firstName}
             onChangeText={setFirstName}
-            placeholder="Votre prénom"
+            placeholder={t('editProfile.firstNamePlaceholder', 'Votre prénom')}
             autoCapitalize="words"
           />
 
           <Input
-            label="Nom"
+            label={t('editProfile.lastNameLabel', 'Nom')}
             value={lastName}
             onChangeText={setLastName}
-            placeholder="Votre nom"
+            placeholder={t('editProfile.lastNamePlaceholder', 'Votre nom')}
             autoCapitalize="words"
           />
 
           <View style={styles.callout}>
             <UserRound size={18} color={colors.primary} />
             <Text style={styles.calloutText}>
-              Les informations seront visibles sur vos avis, votre fiche et les contacts.
+              {t('editProfile.calloutText', 'Ces informations seront visibles sur vos avis et vos échanges.')}
             </Text>
           </View>
         </View>
 
         <Button
-          title="Enregistrer"
+          title={saving ? t('common.saving', 'Enregistrement...') : t('common.saveChanges', 'Enregistrer les modifications')}
           onPress={handleSave}
           loading={saving}
           icon={Save}
           iconPosition="left"
           size="lg"
-          style={{ marginTop: 8 }}
+          style={{ marginTop: 16 }}
         />
       </ScrollView>
     </View>

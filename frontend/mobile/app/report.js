@@ -1,27 +1,17 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Flag, ChevronLeft, Check } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import { ChevronLeft, Check } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import api from '../services/api';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { showAppModal } from '../components/ui/AppModal';
 
-const REASONS = [
-  { id: 'fake_provider',          label: 'Fausse fiche / arnaque' },
-  { id: 'wrong_number',           label: 'Mauvais numero de telephone' },
-  { id: 'wrong_info',             label: 'Informations incorrectes' },
-  { id: 'activity_not_exist',     label: 'Activite inexistante' },
-  { id: 'problematic_behavior',   label: 'Comportement problematique' },
-  { id: 'fake_review',            label: 'Faux avis' },
-  { id: 'offensive',              label: 'Contenu offensant' },
-  { id: 'spam',                   label: 'Spam' },
-  { id: 'other',                  label: 'Autre raison' },
-];
-
 export default function ReportScreen() {
+  const { t }   = useTranslation();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams();
@@ -32,14 +22,39 @@ export default function ReportScreen() {
   const [loading, setLoading] = useState(false);
   const [done,    setDone]    = useState(false);
 
+  const REASONS = [
+    { id: 'fake_provider',          label: t('report.reasons.fake_provider', 'Fausse fiche / arnaque') },
+    { id: 'wrong_number',           label: t('report.reasons.wrong_number', 'Mauvais numéro de téléphone') },
+    { id: 'wrong_info',             label: t('report.reasons.wrong_info', 'Informations incorrectes') },
+    { id: 'activity_not_exist',     label: t('report.reasons.activity_not_exist', 'Activité inexistante') },
+    { id: 'problematic_behavior',   label: t('report.reasons.problematic_behavior', 'Comportement problématique') },
+    { id: 'fake_review',            label: t('report.reasons.fake_review', 'Faux avis') },
+    { id: 'offensive',              label: t('report.reasons.offensive', 'Contenu offensant') },
+    { id: 'spam',                   label: t('report.reasons.spam', 'Spam') },
+    { id: 'other',                  label: t('report.reasons.other', 'Autre raison') },
+  ];
+
   async function submit() {
-    if (!reason) { showAppModal({ title: 'Information', message: 'Choisissez une raison.', confirmText: 'OK', variant: 'warning' }); return; }
+    if (!reason) {
+      showAppModal({
+        title: t('common.info', 'Information'),
+        message: t('report.chooseReason', 'Choisissez une raison.'),
+        confirmText: 'OK',
+        variant: 'warning',
+      });
+      return;
+    }
     setLoading(true);
     try {
       await api.post('/reports', { targetType: type, targetId: parseInt(id), reason, description: detail.trim() || null });
       setDone(true);
     } catch (err) {
-      showAppModal({ title: 'Erreur', message: err.response?.data?.message || 'Échec de l\'envoi.', confirmText: 'OK', variant: 'danger' });
+      showAppModal({
+        title: t('common.error', 'Erreur'),
+        message: err.response?.data?.message || t('report.error', 'Échec de l\'envoi.'),
+        confirmText: 'OK',
+        variant: 'danger',
+      });
     }
     setLoading(false);
   }
@@ -48,9 +63,9 @@ export default function ReportScreen() {
     return (
       <View style={styles.doneWrap}>
         <View style={styles.doneIcon}><Check size={40} color={colors.success} /></View>
-        <Text style={styles.doneTitle}>Signalement envoye</Text>
-        <Text style={styles.doneDesc}>Notre equipe examinera votre signalement dans les meilleurs delais. Merci de contribuer a la qualite d'Adma.</Text>
-        <Button title="Fermer" onPress={() => router.back()} style={{ marginTop: 24 }} />
+        <Text style={styles.doneTitle}>{t('report.sentTitle', 'Signalement envoyé')}</Text>
+        <Text style={styles.doneDesc}>{t('report.sentDesc', 'Notre équipe examinera votre signalement dans les meilleurs délais. Merci de contribuer à la sécurité d\'Adma.')}</Text>
+        <Button title={t('common.close', 'Fermer')} onPress={() => router.back()} style={{ marginTop: 24, minWidth: 160 }} />
       </View>
     );
   }
@@ -61,11 +76,11 @@ export default function ReportScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={22} color={colors.navy} />
         </TouchableOpacity>
-        <Text style={styles.title}>Signaler</Text>
+        <Text style={styles.title}>{t('provider.report', 'Signaler')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.subtitle}>Pourquoi signalez-vous cette fiche ?</Text>
+      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <Text style={styles.subtitle}>{t('report.whySubtitle', 'Pourquoi signalez-vous cette fiche ?')}</Text>
 
         <View style={styles.reasons}>
           {REASONS.map((r) => (
@@ -82,17 +97,24 @@ export default function ReportScreen() {
         </View>
 
         <Input
-          label="Details supplementaires (optionnel)"
+          label={t('report.detailsLabel', 'Détails supplémentaires (optionnel)')}
           value={detail}
           onChangeText={setDetail}
-          placeholder="Decrivez le probleme..."
+          placeholder={t('report.detailsPlaceholder', 'Décrivez le problème constaté...')}
           multiline
           numberOfLines={3}
           maxLength={500}
           showCharCount
         />
 
-        <Button title="Envoyer le signalement" onPress={submit} loading={loading} disabled={!reason} size="lg" style={{ marginTop: 8 }} />
+        <Button
+          title={loading ? t('report.sending', 'Envoi en cours...') : t('report.submitBtn', 'Envoyer le signalement')}
+          onPress={submit}
+          loading={loading}
+          disabled={!reason}
+          size="lg"
+          style={{ marginTop: 8 }}
+        />
       </ScrollView>
     </View>
   );

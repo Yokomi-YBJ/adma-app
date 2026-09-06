@@ -1,36 +1,36 @@
 /**
  * ADMA — Modification fiche prestataire
  * Inclut la mise à jour de la zone de service GPS
+ * (La suppression de fiche a été retirée)
  */
-import { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location    from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Camera, Save, Navigation, CheckCircle2, X, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, Camera, Save, Navigation, CheckCircle2, X, Trash2, Briefcase, MapPin, Building } from 'lucide-react-native';
 import { colors }       from '../../constants/colors';
 import { PLAN_RADIUS }  from '../../constants/config';
 import api              from '../../services/api';
 import { useAuthStore } from '../../store/auth.store';
 import { Input }        from '../../components/ui/Input';
+import { Select }       from '../../components/ui/Select';
 import { Button }       from '../../components/ui/Button';
 import { showAppModal } from '../../components/ui/AppModal';
 
-const AVAILABILITY_OPTIONS = [
-  { id:'available',   label:'Disponible',   color:colors.success },
-  { id:'busy',        label:'Occupé',        color:colors.warning },
-  { id:'unavailable', label:'Indisponible',  color:colors.danger  },
-];
-
 export default function EditProviderScreen() {
+  const { t, i18n }  = useTranslation();
   const router       = useRouter();
   const insets       = useSafeAreaInsets();
   const provider     = useAuthStore(s => s.provider);
   const updateProv   = useAuthStore(s => s.updateProvider);
+  const lang         = i18n.language || 'fr';
 
   const [saving,     setSaving]     = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -44,7 +44,27 @@ export default function EditProviderScreen() {
     phoneNumber:    provider?.phoneNumber     || provider?.phone_number    || '',
     whatsappNumber: provider?.whatsappNumber  || provider?.whatsapp_number || '',
     websiteUrl:     provider?.websiteUrl      || provider?.website_url     || '',
+    categoryId:     provider?.categoryId      || provider?.category_id     || null,
+    cityId:         provider?.cityId          || provider?.city_id         || null,
+    neighborhoodId: provider?.neighborhoodId  || provider?.neighborhood_id || null,
+    contactMethod:  provider?.contactMethod   || provider?.contact_method  || 'both',
   });
+
+  const [allCategories, setAllCategories] = useState([]);
+  const [cities,        setCities]        = useState([]);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+
+  const AVAILABILITY_OPTIONS = [
+    { id:'available',   label: t('create.available', 'Disponible'),     color: colors.success },
+    { id:'busy',        label: t('create.busy', 'Occupé'),              color: colors.warning },
+    { id:'unavailable', label: t('create.unavailable', 'Indisponible'),  color: colors.danger  },
+  ];
+
+  const CONTACT_METHODS = [
+    { id:'phone',    label: t('create.phoneOnly', 'Téléphone uniquement') },
+    { id:'whatsapp', label: t('create.whatsappOnly', 'WhatsApp uniquement')  },
+    { id:'both',     label: t('create.both', 'Téléphone + WhatsApp') },
+  ];
 
   // Géoloc séparée du reste du form
   const [hasGeo,  setHasGeo]  = useState(!!(provider?.latitude && provider?.longitude));
@@ -52,14 +72,80 @@ export default function EditProviderScreen() {
     provider?.latitude ? { latitude: provider.latitude, longitude: provider.longitude } : null
   );
 
+  useEffect(() => {
+    loadMetaData();
+  }, []);
+
+  async function loadMetaData() {
+    try {
+      const [cRes, ciRes, nRes] = await Promise.all([
+        api.get('/categories'),
+        api.get('/categories/cities'),
+        api.get('/categories/neighborhoods'),
+      ]);
+      setAllCategories(cRes.data.data || []);
+      setCities(ciRes.data.data || []);
+      setNeighborhoods(nRes.data.data || []);
+    } catch {}
+  }
+
+  const categoryOptions = useMemo(() => {
+    const parentMap = {};
+    allCategories.forEach(c => {
+      if (!c.parent_id) parentMap[c.id] = c;
+    });
+
+    const subCats = allCategories.filter(c => c.parent_id);
+    return subCats.map(c => {
+      const parent = parentMap[c.parent_id];
+      const parentName = lang === 'en' ? (parent?.name_en || parent?.name_fr) : lang === 'ful' ? (parent?.name_ful || parent?.name_fr) : parent?.name_fr;
+      const catName = lang === 'en' ? (c.name_en || c.name_fr) : lang === 'ful' ? (c.name_ful || c.name_fr) : c.name_fr;
+
+      return {
+        id: c.id,
+        label: catName,
+        subtitle: parentName,
+        group: parentName,
+      };
+    });
+  }, [allCategories, lang]);
+
+  const cityOptions = useMemo(() => {
+    return cities.map(ci => ({
+      id: ci.id,
+      label: ci.name,
+      subtitle: ci.region || 'Cameroun',
+    }));
+  }, [cities]);
+
+  const neighborhoodOptions = useMemo(() => {
+    if (!form.cityId) return [];
+    return neighborhoods
+      .filter(n => n.city_id === form.cityId)
+      .map(n => ({
+        id: n.id,
+        label: n.name,
+      }));
+  }, [neighborhoods, form.cityId]);
+
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
   async function pickPhoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { showAppModal({ title: 'Information', message: 'Autorisez l\'accès à vos photos.', confirmText: 'OK', variant: 'warning' }); return; }
+    if (!perm.granted) {
+      showAppModal({
+        title: t('common.error', 'Erreur'),
+        message: t('create.permPhoto', 'Autorisez l\'accès à vos photos.'),
+        confirmText: 'OK',
+        variant: 'warning',
+      });
+      return;
+    }
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.85,
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
     });
     if (!res.canceled) setPhoto(res.assets[0]);
   }
@@ -71,8 +157,8 @@ export default function EditProviderScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         showAppModal({
-          title: 'Localisation désactivée',
-          message: 'Activez la localisation dans vos paramètres téléphone pour définir votre zone de service.',
+          title: t('create.geoPermDenied', 'Localisation désactivée'),
+          message: t('create.geoPermDeniedMsg', 'Activez la localisation dans vos paramètres pour définir votre zone de service.'),
           confirmText: 'OK',
           variant: 'warning',
         });
@@ -91,19 +177,29 @@ export default function EditProviderScreen() {
       setGeoCoords(coords);
       setHasGeo(true);
       updateProv({ latitude: coords.latitude, longitude: coords.longitude });
-      showAppModal({ title: 'Information', message: 'Zone de service mise à jour.', confirmText: 'OK', variant: 'success' });
+      showAppModal({
+        title: t('common.success', 'Succès'),
+        message: t('provider.geoUpdateSuccess', 'Zone de service mise à jour.'),
+        confirmText: 'OK',
+        variant: 'success',
+      });
     } catch (err) {
-      showAppModal({ title: 'Erreur', message: err.response?.data?.message || 'Impossible d\'obtenir votre position.', confirmText: 'OK', variant: 'danger' });
+      showAppModal({
+        title: t('common.error', 'Erreur'),
+        message: err.response?.data?.message || t('create.geoError', 'Impossible d\'obtenir votre position.'),
+        confirmText: 'OK',
+        variant: 'danger',
+      });
     }
     setGeoLoading(false);
   }
 
   async function removeGeoLocation() {
     showAppModal({
-      title: 'Supprimer la zone GPS',
-      message: 'Vous n\'apparaîtrez plus dans la recherche "Autour de moi". Continuer ?',
-      confirmText: 'Supprimer',
-      cancelText: 'Annuler',
+      title: t('provider.geoDeleteTitle', 'Supprimer la zone GPS'),
+      message: t('provider.geoDeleteConfirm', 'Vous n\'apparaîtrez plus dans la recherche "Autour de moi". Continuer ?'),
+      confirmText: t('common.delete', 'Supprimer'),
+      cancelText: t('common.cancel', 'Annuler'),
       variant: 'warning',
       destructive: true,
       onConfirm: async () => {
@@ -113,7 +209,12 @@ export default function EditProviderScreen() {
           setHasGeo(false);
           updateProv({ latitude: null, longitude: null });
         } catch {
-          showAppModal({ title: 'Erreur', message: 'Échec de la suppression.', confirmText: 'OK', variant: 'danger' });
+          showAppModal({
+            title: t('common.error', 'Erreur'),
+            message: t('common.deleteError', 'Échec de la suppression.'),
+            confirmText: 'OK',
+            variant: 'danger',
+          });
         }
       },
     });
@@ -121,9 +222,24 @@ export default function EditProviderScreen() {
 
   // ── Sauvegarde infos textuelles ─────────────────────────────────
   async function save() {
-    if (!form.name.trim() || !form.specialty.trim()) {
-      showAppModal({ title: 'Information', message: 'Nom et spécialité sont obligatoires.', confirmText: 'OK', variant: 'warning' }); return;
+    if (!form.name.trim() || !form.specialty.trim() || !form.categoryId || !form.cityId || !form.neighborhoodId) {
+      showAppModal({
+        title: t('common.info', 'Information'),
+        message: t('create.errNameSpecialty', 'Nom, spécialité, catégorie, ville et quartier sont obligatoires.'),
+        confirmText: 'OK',
+        variant: 'warning',
+      });
+      return;
     }
+    if ((form.contactMethod === 'phone' || form.contactMethod === 'both') && !form.phoneNumber.trim()) {
+        showAppModal({ title: t('common.info', 'Information'), message: t('create.errPhone', 'Numéro de téléphone requis.'), confirmText: 'OK', variant: 'warning' });
+        return;
+    }
+    if ((form.contactMethod === 'whatsapp' || form.contactMethod === 'both') && !form.whatsappNumber.trim()) {
+        showAppModal({ title: t('common.info', 'Information'), message: t('create.errWhatsapp', 'Numéro WhatsApp requis.'), confirmText: 'OK', variant: 'warning' });
+        return;
+    }
+
     setSaving(true);
     try {
       const fd = new FormData();
@@ -137,14 +253,19 @@ export default function EditProviderScreen() {
       });
       updateProv(res.data.data);
       showAppModal({
-        title: 'Information',
-        message: 'Fiche mise à jour.',
+        title: t('common.success', 'Succès'),
+        message: t('editProfile.saved', 'Fiche mise à jour avec succès.'),
         confirmText: 'OK',
         variant: 'success',
         onConfirm: () => router.back(),
       });
     } catch (err) {
-      showAppModal({ title: 'Erreur', message: err.response?.data?.message || 'Échec de la mise à jour.', confirmText: 'OK', variant: 'danger' });
+      showAppModal({
+        title: t('common.error', 'Erreur'),
+        message: err.response?.data?.message || t('common.saveError', 'Échec de la mise à jour.'),
+        confirmText: 'OK',
+        variant: 'danger',
+      });
     }
     setSaving(false);
   }
@@ -160,7 +281,7 @@ export default function EditProviderScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={22} color={colors.navy} />
         </TouchableOpacity>
-        <Text style={styles.title}>Modifier ma fiche</Text>
+        <Text style={styles.title}>{t('provider.editProfile', 'Modifier ma fiche')}</Text>
         <TouchableOpacity style={styles.saveIconBtn} onPress={save} disabled={saving}>
           {saving
             ? <ActivityIndicator size="small" color={colors.primary} />
@@ -188,28 +309,116 @@ export default function EditProviderScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Champs textuels */}
-        <Input label="Nom de la fiche *" value={form.name}
-          onChangeText={v => set('name', v)} placeholder="Ex: Moussa Électricité"
-          maxLength={150} showCharCount />
-        <Input label="Spécialité *" value={form.specialty}
-          onChangeText={v => set('specialty', v)} placeholder="Ex: Électricien bâtiment"
-          maxLength={200} showCharCount />
-        <Input label="Description" value={form.description}
-          onChangeText={v => set('description', v)} placeholder="Décrivez vos services..."
-          multiline numberOfLines={4} maxLength={600} showCharCount />
-        <Input label="Numéro de téléphone" value={form.phoneNumber}
-          onChangeText={v => set('phoneNumber', v)} keyboardType="phone-pad"
-          placeholder="6XXXXXXXX" prefix="+237" />
-        <Input label="Numéro WhatsApp" value={form.whatsappNumber}
-          onChangeText={v => set('whatsappNumber', v)} keyboardType="phone-pad"
-          placeholder="6XXXXXXXX" prefix="+237" />
-        <Input label="Site web (optionnel)" value={form.websiteUrl}
-          onChangeText={v => set('websiteUrl', v)} placeholder="https://..."
-          keyboardType="url" autoCapitalize="none" />
+        {/* Nouveaux champs */}
+        <Select
+          label={t('create.categoryLabel', 'Catégorie *')}
+          value={form.categoryId}
+          options={categoryOptions}
+          onSelect={id => set('categoryId', id)}
+          placeholder={t('create.selectCategory', 'Choisir une catégorie...')}
+          searchPlaceholder={t('create.searchCategory', 'Rechercher un métier, service...')}
+          modalTitle={t('create.modalCatTitle', 'Sélectionner une catégorie')}
+          icon={Briefcase}
+        />
+
+        <Input
+          label={t('create.nameLabel', 'Nom de la fiche *')}
+          value={form.name}
+          onChangeText={v => set('name', v)}
+          placeholder={t('create.namePlaceholder', 'Ex: Moussa Électricité')}
+          maxLength={150}
+          showCharCount
+        />
+        <Input
+          label={t('create.specialtyLabel', 'Spécialité *')}
+          value={form.specialty}
+          onChangeText={v => set('specialty', v)}
+          placeholder={t('create.specialtyPlaceholder', 'Ex: Électricien bâtiment')}
+          maxLength={200}
+          showCharCount
+        />
+        <Input
+          label={t('create.descriptionLabel', 'Description')}
+          value={form.description}
+          onChangeText={v => set('description', v)}
+          placeholder={t('create.descriptionPlaceholder', 'Décrivez vos services...')}
+          multiline
+          numberOfLines={4}
+          maxLength={600}
+          showCharCount
+        />
+
+        <Select
+          label={t('create.cityLabel', 'Ville *')}
+          value={form.cityId}
+          options={cityOptions}
+          onSelect={id => { set('cityId', id); set('neighborhoodId', null); }}
+          placeholder={t('create.selectCity', 'Choisir une ville...')}
+          searchPlaceholder={t('create.searchCity', 'Rechercher une ville...')}
+          modalTitle={t('create.modalCityTitle', 'Sélectionner une ville')}
+          icon={Building}
+        />
+
+        <Select
+          label={t('create.neighborhoodLabel', 'Quartier *')}
+          value={form.neighborhoodId}
+          options={neighborhoodOptions}
+          onSelect={id => set('neighborhoodId', id)}
+          placeholder={t('create.selectNeighborhood', 'Choisir un quartier...')}
+          searchPlaceholder={t('create.searchNeighborhood', 'Rechercher un quartier...')}
+          modalTitle={t('create.modalNeighTitle', 'Sélectionner un quartier')}
+          icon={MapPin}
+          disabled={!form.cityId}
+          hint={!form.cityId ? t('create.selectCityFirst', 'Veuillez d\'abord choisir une ville.') : undefined}
+        />
+
+        <Text style={[styles.fieldLabel, { marginTop: 10 }]}>{t('create.contactMethodLabel', 'Mode de contact')}</Text>
+        <View style={styles.optionGrid}>
+          {CONTACT_METHODS.map(m => (
+            <TouchableOpacity
+              key={m.id}
+              style={[styles.optionBtn, form.contactMethod === m.id && styles.optionBtnActive]}
+              onPress={() => set('contactMethod', m.id)}
+            >
+              <Text style={[styles.optionText, form.contactMethod === m.id && styles.optionTextActive]}>
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {(form.contactMethod === 'phone' || form.contactMethod === 'both') && (
+          <Input
+            label={t('create.phoneLabel', 'Numéro de téléphone')}
+            value={form.phoneNumber}
+            onChangeText={v => set('phoneNumber', v)}
+            keyboardType="phone-pad"
+            placeholder="6XXXXXXXX"
+            prefix="+237"
+          />
+        )}
+        {(form.contactMethod === 'whatsapp' || form.contactMethod === 'both') && (
+          <Input
+            label={t('create.whatsappLabel', 'Numéro WhatsApp')}
+            value={form.whatsappNumber}
+            onChangeText={v => set('whatsappNumber', v)}
+            keyboardType="phone-pad"
+            placeholder="6XXXXXXXX"
+            prefix="+237"
+          />
+        )}
+
+        <Input
+          label={t('create.websiteLabel', 'Site web (optionnel)')}
+          value={form.websiteUrl}
+          onChangeText={v => set('websiteUrl', v)}
+          placeholder="https://..."
+          keyboardType="url"
+          autoCapitalize="none"
+        />
 
         {/* Disponibilité */}
-        <Text style={styles.fieldLabel}>Disponibilité</Text>
+        <Text style={styles.fieldLabel}>{t('create.availabilityLabel', 'Disponibilité')}</Text>
         <View style={styles.availRow}>
           {AVAILABILITY_OPTIONS.map(opt => (
             <TouchableOpacity
@@ -228,12 +437,12 @@ export default function EditProviderScreen() {
 
         {/* Zone de service GPS */}
         <View style={styles.geoSection}>
-          <Text style={styles.sectionTitle}>Zone de service GPS</Text>
+          <Text style={styles.sectionTitle}>{t('create.geoTitle', 'Zone de service GPS')}</Text>
           <Text style={styles.geoDesc}>
-            Définissez votre zone pour apparaître dans la recherche "Autour de moi".
-            Votre rayon actuel :{' '}
+            {t('create.geoHint', 'Définissez votre zone pour apparaître dans la recherche "Autour de moi".')}{' '}
+            {t('provider.currentRadius', 'Votre rayon actuel :')}{' '}
             <Text style={styles.geoPlanText}>
-              {myPlan.charAt(0).toUpperCase() + myPlan.slice(1)} — {myRadius ? `${myRadius} km` : 'Illimité'}
+              {myPlan.charAt(0).toUpperCase() + myPlan.slice(1)} — {myRadius ? `${myRadius} km` : t('plans.unlimited', 'Illimité')}
             </Text>
           </Text>
 
@@ -241,12 +450,12 @@ export default function EditProviderScreen() {
             <View style={styles.geoDefinedCard}>
               <CheckCircle2 size={22} color={colors.success} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.geoDefinedTitle}>Zone de service définie</Text>
+                <Text style={styles.geoDefinedTitle}>{t('create.geoDefined', 'Zone de service définie')}</Text>
                 <Text style={styles.geoDefinedCoords}>
                   {geoCoords.latitude.toFixed(5)}, {geoCoords.longitude.toFixed(5)}
                 </Text>
                 <Text style={styles.geoDefinedHint}>
-                  Appuyez sur "Mettre à jour" si vous avez changé de zone de travail.
+                  {t('provider.geoDefinedHint', 'Appuyez sur "Mettre à jour" si vous avez changé de zone de travail.')}
                 </Text>
               </View>
             </View>
@@ -254,7 +463,7 @@ export default function EditProviderScreen() {
             <View style={styles.geoUndefinedCard}>
               <Navigation size={18} color={colors.textMuted} />
               <Text style={styles.geoUndefinedText}>
-                Aucune zone définie — vous n'apparaissez pas dans "Autour de moi"
+                {t('provider.geoUndefinedText', 'Aucune zone définie — vous n\'apparaissez pas dans "Autour de moi"')}
               </Text>
             </View>
           )}
@@ -271,7 +480,7 @@ export default function EditProviderScreen() {
                 : <Navigation size={16} color={colors.white} />
               }
               <Text style={styles.geoActionBtnText}>
-                {hasGeo ? 'Mettre à jour' : 'Définir ma zone ici'}
+                {hasGeo ? t('provider.geoUpdate', 'Mettre à jour') : t('create.geoSet', 'Définir ma zone ici')}
               </Text>
             </TouchableOpacity>
 
@@ -282,15 +491,17 @@ export default function EditProviderScreen() {
                 activeOpacity={0.8}
               >
                 <Trash2 size={16} color={colors.danger} />
-                <Text style={styles.geoActionBtnDangerText}>Supprimer</Text>
+                <Text style={styles.geoActionBtnDangerText}>{t('common.delete', 'Supprimer')}</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
 
         <Button
-          title={saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
-          onPress={save} loading={saving} size="lg"
+          title={saving ? t('common.saving', 'Enregistrement...') : t('common.saveChanges', 'Enregistrer les modifications')}
+          onPress={save}
+          loading={saving}
+          size="lg"
           style={{ marginTop: 8 }}
         />
         <View style={{ height: 40 }} />
@@ -316,6 +527,13 @@ const styles = StyleSheet.create({
   availBtn:        { flexDirection:'row', alignItems:'center', gap:10, padding:14, borderRadius:12, backgroundColor:colors.white, borderWidth:1.5, borderColor:colors.border },
   availDot:        { width:10, height:10, borderRadius:5 },
   availText:       { fontSize:14, color:colors.text, fontWeight:'500' },
+  
+  // Option Grid for Contact Methods
+  optionGrid:      { gap:8, marginBottom:16 },
+  optionBtn:       { padding:14, borderRadius:12, backgroundColor:colors.white, borderWidth:1.5, borderColor:colors.border },
+  optionBtnActive: { borderColor:colors.primary, backgroundColor:colors.primaryBg },
+  optionText:      { fontSize:14, color:colors.textSecondary, fontWeight:'500' },
+  optionTextActive:{ color:colors.primary, fontWeight:'700' },
 
   // GPS section
   geoSection:      { backgroundColor:colors.surface, borderRadius:18, padding:18, marginBottom:24 },

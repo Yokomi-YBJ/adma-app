@@ -1,7 +1,9 @@
 /**
  * ADMA — Écran détail prestataire
  * Design complet : galerie, avis, contact, signalement
+ * + comptage des vues avec cooldown de 4h par utilisateur
  */
+
 import { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -15,6 +17,7 @@ import {
   FlatList,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -50,17 +53,17 @@ function TrustMeter({ score, reviewCount }) {
   if (reviewCount === 0) {
     return (
       <View style={meter.container}>
-        <Text style={meter.label}>Nouveau prestataire</Text>
-        <Text style={meter.hint}>Aucun avis pour le moment</Text>
+        <Text style={meter.label}>{t('provider.newProvider', 'Nouveau prestataire')}</Text>
+        <Text style={meter.hint}>{t('provider.noReviews', 'Aucun avis pour le moment')}</Text>
       </View>
     );
   }
   const color = score >= 80 ? colors.success : score >= 50 ? colors.warning : colors.danger;
-  const badgeLabel = score >= 80 ? 'Tres fiable' : score >= 50 ? 'Correct' : 'Prudence';
+  const badgeLabel = score >= 80 ? t('trustBadge.reliable', 'Très fiable') : score >= 50 ? t('trustBadge.correct', 'Correct') : t('trustBadge.caution', 'Prudence');
   return (
     <View style={meter.container}>
       <View style={meter.row}>
-        <Text style={meter.label}>Score de confiance</Text>
+        <Text style={meter.label}>{t('provider.trustScore', 'Score de confiance')}</Text>
         <Text style={[meter.score, { color }]}>{score}%</Text>
       </View>
       <View style={meter.barBg}>
@@ -70,7 +73,7 @@ function TrustMeter({ score, reviewCount }) {
         <View style={[meter.badge, { backgroundColor: color + '20' }]}>
           <Text style={[meter.badgeText, { color }]}>{badgeLabel}</Text>
         </View>
-        <Text style={meter.reviewCount}>{reviewCount} avis</Text>
+        <Text style={meter.reviewCount}>{reviewCount} {t('provider.reviews', 'avis')}</Text>
       </View>
     </View>
   );
@@ -92,6 +95,8 @@ const meter = StyleSheet.create({
 
 // ─── ReviewItem ──────────────────────────────────────────────────
 function ReviewItem({ review }) {
+  const { i18n } = useTranslation();
+  const lang = i18n.language || 'fr';
   const icons = {
     recommend: <ThumbsUp size={14} color={colors.success} fill={colors.success} />,
     neutral: <Minus size={14} color={colors.warning} />,
@@ -108,9 +113,9 @@ function ReviewItem({ review }) {
         <View style={[rv.verdict, { backgroundColor: bgColors[review.verdict] || colors.surface }]}>
           {icons[review.verdict]}
         </View>
-        <Text style={rv.reviewer}>{review.reviewerName || 'Utilisateur'}</Text>
+        <Text style={rv.reviewer}>{review.reviewerName || review.reviewer_name || 'Utilisateur'}</Text>
         <Text style={rv.date}>
-          {new Date(review.createdAt || review.created_at).toLocaleDateString('fr-FR', {
+          {new Date(review.createdAt || review.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
             month: 'short',
             day: 'numeric',
           })}
@@ -119,7 +124,7 @@ function ReviewItem({ review }) {
       {review.comment && <Text style={rv.comment}>{review.comment}</Text>}
       {review.response && (
         <View style={rv.response}>
-          <Text style={rv.responseLabel}>Reponse du prestataire :</Text>
+          <Text style={rv.responseLabel}>Réponse du prestataire :</Text>
           <Text style={rv.responseText}>{review.response.comment || review.response}</Text>
         </View>
       )}
@@ -179,6 +184,8 @@ export default function ProviderDetailScreen() {
         setProvider(cached);
         setIsFavorite(cached.isFavorite);
         setLoading(false);
+        // On envoie la vue même si cache, car le cooldown est géré
+        sendViewEvent(providerId);
       }
 
       const res = await api.get(`/providers/${providerId}`);
@@ -187,9 +194,8 @@ export default function ProviderDetailScreen() {
       setIsFavorite(data.isFavorite);
       await setCache(cacheKey, data, CACHE_TTL.providerDetail);
 
-      api
-        .post('/contacts', { providerId: parseInt(providerId), eventType: 'profile_view' })
-        .catch(() => {});
+      // Appel API pour les événements de contact (déjà fait dans sendViewEvent)
+      // On ne refait pas l'appel ici pour éviter les doublons
     } catch {
       if (!provider) {
         showAppModal({
@@ -202,6 +208,26 @@ export default function ProviderDetailScreen() {
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  // ─── Envoi de la vue avec cooldown de 4h ──────────────────────
+  async function sendViewEvent(pid) {
+    if (!user) return; // On ne compte que les utilisateurs connectés
+    const storageKey = `view_${pid}_${user.id}`;
+    try {
+      const lastView = await AsyncStorage.getItem(storageKey);
+      const now = Date.now();
+      const cooldown = 4 * 60 * 60 * 1000; // 4 heures en millisecondes
+
+      if (!lastView || now - parseInt(lastView) >= cooldown) {
+        // Envoyer l'événement
+        await api.post('/contacts', { providerId: parseInt(pid), eventType: 'profile_view' });
+        await AsyncStorage.setItem(storageKey, now.toString());
+      }
+    } catch (error) {
+      // Silencieux : on ne bloque pas l'affichage
+      console.warn('View event failed', error);
     }
   }
 
@@ -311,8 +337,13 @@ export default function ProviderDetailScreen() {
   async function shareProvider() {
     try {
       const deepLink = `adma://provider/${providerId}`;
+      const locationText = [
+        provider.neighborhood || provider.neighborhoodName || provider.neighborhood_name,
+        provider.city || provider.cityName || provider.city_name,
+      ].filter(Boolean).join(', ');
+
       const message =
-        `Découvrez ${provider.name} sur ADMA — ${provider.specialty} à ${provider.neighborhoodName || ''}, ${provider.cityName || ''}\n\n` +
+        `Découvrez ${provider.name} sur ADMA — ${provider.specialty}${locationText ? ` à ${locationText}` : ''}\n\n` +
         `Téléchargez l'app : https://adma.app/download\n` +
         `Ouvrir dans l'app : ${deepLink}`;
       await Share.share({
@@ -332,6 +363,7 @@ export default function ProviderDetailScreen() {
 
   // ─── Signaler ────────────────────────────────────────────────────
   function reportProvider() {
+    if (!requireAuth()) return;
     router.push(`/report?type=provider&id=${providerId}`);
   }
 
@@ -345,6 +377,12 @@ export default function ProviderDetailScreen() {
   const reviews = provider.reviews || [];
   const photos = provider.photos || [];
   const verStatus = provider.verificationStatus || provider.verification_status || 'none';
+
+  const reviewCount = Number(provider.reviewCount ?? provider.review_count ?? reviews.length);
+  const trustScore = Number(provider.trustScore ?? provider.trust_score ?? 0);
+  const neighborhoodName = provider.neighborhood || provider.neighborhoodName || provider.neighborhood_name || '';
+  const cityName = provider.city || provider.cityName || provider.city_name || '';
+  const locationDisplay = [neighborhoodName, cityName].filter(Boolean).join(', ');
 
   return (
     <View style={styles.flex}>
@@ -411,7 +449,7 @@ export default function ProviderDetailScreen() {
             {verStatus === 'verified' && (
               <View style={styles.verifiedChip}>
                 <CheckCircle2 size={14} color={colors.primary} fill={colors.primaryBg} />
-                <Text style={styles.verifiedText}>Verifie</Text>
+                <Text style={styles.verifiedText}>{t('provider.verified', 'Vérifié')}</Text>
               </View>
             )}
             {verStatus === 'verified_id' && (
@@ -425,9 +463,7 @@ export default function ProviderDetailScreen() {
           <View style={styles.locationRow}>
             <MapPin size={14} color={colors.textMuted} />
             <Text style={styles.locationText}>
-              {[provider.neighborhoodName || provider.neighborhood_name, provider.cityName || provider.city_name]
-                .filter(Boolean)
-                .join(', ')}
+              {locationDisplay || t('provider.locationNotSet', 'Localisation non définie')}
             </Text>
           </View>
           {provider.plan && provider.plan !== 'free' && (
@@ -440,21 +476,21 @@ export default function ProviderDetailScreen() {
 
         <View style={styles.card}>
           <TrustMeter
-            score={provider.trustScore || provider.trust_score || 0}
-            reviewCount={provider.reviewCount || provider.review_count || 0}
+            score={trustScore}
+            reviewCount={reviewCount}
           />
         </View>
 
         {provider.description && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('provider.description')}</Text>
+            <Text style={styles.sectionTitle}>{t('provider.description', 'Description')}</Text>
             <Text style={styles.description}>{provider.description}</Text>
           </View>
         )}
 
         {photos.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('provider.gallery')}</Text>
+            <Text style={styles.sectionTitle}>{t('provider.gallery', 'Galerie')}</Text>
             <FlatList
               horizontal
               data={photos}
@@ -469,12 +505,12 @@ export default function ProviderDetailScreen() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistiques</Text>
+          <Text style={styles.sectionTitle}>{t('profile.stats', 'Statistiques')}</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Eye size={18} color={colors.primary} />
               <Text style={styles.statValue}>{provider.viewsThisMonth || 0}</Text>
-              <Text style={styles.statLabel}>{t('provider.viewsThisMonth')}</Text>
+              <Text style={styles.statLabel}>{t('provider.viewsThisMonth', 'vues ce mois')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
@@ -486,7 +522,7 @@ export default function ProviderDetailScreen() {
             <View style={styles.statItem}>
               <Heart size={18} color={colors.danger} />
               <Text style={styles.statValue}>{provider.totalFavorites || 0}</Text>
-              <Text style={styles.statLabel}>Favoris</Text>
+              <Text style={styles.statLabel}>{t('favorites.title', 'Favoris')}</Text>
             </View>
           </View>
         </View>
@@ -494,20 +530,20 @@ export default function ProviderDetailScreen() {
         <View style={styles.section}>
           <View style={styles.reviewsHeader}>
             <Text style={styles.sectionTitle}>
-              {t('provider.reviews')} ({reviews.length})
+              {t('provider.reviews', 'Avis')} ({reviewCount})
             </Text>
             {!isOwnProfile && user && (
               <TouchableOpacity
                 style={styles.addReviewBtn}
                 onPress={() => router.push(`/reviews/${providerId}`)}
               >
-                <Text style={styles.addReviewText}>{t('provider.leaveReview')}</Text>
+                <Text style={styles.addReviewText}>{t('provider.leaveReview', 'Laisser un avis')}</Text>
                 <ChevronRight size={14} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
           {reviews.length === 0 ? (
-            <Text style={styles.noReviews}>{t('provider.noReviews')}</Text>
+            <Text style={styles.noReviews}>{t('provider.noReviews', 'Aucun avis pour le moment')}</Text>
           ) : (
             reviews.slice(0, 5).map((r) => <ReviewItem key={r.id} review={r} />)
           )}
@@ -522,7 +558,7 @@ export default function ProviderDetailScreen() {
           <View style={styles.section}>
             <TouchableOpacity style={styles.reportBtn} onPress={reportProvider}>
               <Flag size={16} color={colors.textMuted} />
-              <Text style={styles.reportText}>{t('provider.report')}</Text>
+              <Text style={styles.reportText}>{t('provider.report', 'Signaler')}</Text>
             </TouchableOpacity>
           </View>
         )}
