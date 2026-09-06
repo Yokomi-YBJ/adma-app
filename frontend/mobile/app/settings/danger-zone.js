@@ -85,7 +85,7 @@ export default function DangerZoneScreen() {
     showAppModal({
       title: 'Supprimer définitivement le compte',
       message: 'Cette action est irréversible. Votre profil, vos avis et toutes vos données personnelles seront définitivement supprimés de la plateforme.',
-      confirmText: 'Supprimer mon compte',
+      confirmText: 'Supprimer',
       cancelText: 'Annuler',
       variant: 'danger',
       destructive: true,
