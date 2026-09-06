@@ -272,22 +272,7 @@ export default function SettingsScreen() {
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.menuRow, styles.menuRowLast]}
-              onPress={handleClearCache}
-              activeOpacity={0.7}
-              disabled={cacheClearing}
-            >
-              <View style={[styles.iconWrap, { backgroundColor: colors.surface }]}>
-                <Database size={18} color={colors.textSecondary} />
-              </View>
-              <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Nettoyer le cache local</Text>
-                <Text style={styles.rowSub}>Libérer l'espace mémoire temporaire</Text>
-              </View>
-              <ChevronRight size={18} color={colors.textMuted} />
-            </TouchableOpacity>
+            
           </View>
         </View>
 
@@ -350,7 +335,7 @@ export default function SettingsScreen() {
 
         {/* App Version */}
         <View style={styles.appInfo}>
-          <Text style={styles.appInfoTitle}>ADMA Cameroun</Text>
+          <Text style={styles.appInfoTitle}>Adma</Text>
           <Text style={styles.appInfoVersion}>Version 1.0.0 (Adamaoua)</Text>
         </View>
       </ScrollView>

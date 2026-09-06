@@ -1,17 +1,17 @@
 /**
- * ADMA — Écran de connexion
- * OTP en 2 étapes, design propre thème clair
+ * ADMA — Écran de connexion (Refonte UI/UX Mobile 10/10)
+ * Approche minimaliste, champs natifs, bouton docké au clavier.
  */
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Animated,
-  ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, Animated, Keyboard,
+  
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Phone, ArrowLeft, RotateCcw } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ArrowLeft, RotateCcw } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/auth.store';
@@ -20,40 +20,57 @@ import { Button } from '../../components/ui/Button';
 const OTP_RESEND_SECONDS = 60;
 
 export default function LoginScreen() {
-  const { t }        = useTranslation();
-  const router       = useRouter();
-  const login        = useAuthStore((s) => s.login);
+  const { t } = useTranslation();
+  const router = useRouter();
+  const login = useAuthStore((s) => s.login);
 
-  const [phone, setPhone]     = useState('');
-  const [code, setCode]       = useState('');
-  const [step, setStep]       = useState(1); // 1: phone, 2: otp
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
 
-  // Animation d'entrée
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const codeRef = useRef(null);
+  const phoneRef = useRef(null);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-    ]).start();
-  }, [step]);
-
-  // Countdown renvoi OTP
   useEffect(() => {
     if (countdown <= 0) return;
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [countdown]);
+
+  const animateTransition = (nextStep) => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: nextStep === 2 ? -20 : 20, duration: 0, useNativeDriver: true })
+    ]).start(() => {
+      setStep(nextStep);
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    });
+  };
 
   function validatePhone(p) {
     return /^6[5-9]\d{7}$/.test(p.replace(/\s/g, ''));
   }
+
+  const formatPhone = (val) => {
+    const cleaned = val.replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{0,3})(\d{0,2})(\d{0,2})(\d{0,2})$/);
+    if (!match) return cleaned;
+    return !match[2] ? match[1] 
+         : `${match[1]} ${match[2]}${match[3] ? ` ${match[3]}` : ''}${match[4] ? ` ${match[4]}` : ''}`;
+  };
+
+  const handlePhoneChange = (val) => {
+    setError('');
+    setPhone(formatPhone(val));
+  };
 
   async function sendOTP() {
     const clean = phone.replace(/\s/g, '');
@@ -63,13 +80,13 @@ export default function LoginScreen() {
     }
     setError('');
     setLoading(true);
+    Keyboard.dismiss();
+    
     try {
       await api.post('/auth/send-otp', { phone: `+237${clean}` });
-      setStep(2);
       setCountdown(OTP_RESEND_SECONDS);
-      slideAnim.setValue(30);
-      fadeAnim.setValue(0);
-      setTimeout(() => codeRef.current?.focus(), 300);
+      animateTransition(2);
+      setTimeout(() => codeRef.current?.focus(), 450);
     } catch (err) {
       setError(err.response?.data?.message || t('common.error'));
     }
@@ -80,9 +97,11 @@ export default function LoginScreen() {
     if (code.length !== 6) return;
     setError('');
     setLoading(true);
+    Keyboard.dismiss();
+    
     try {
       const res = await api.post('/auth/verify-otp', {
-        phone:      `+237${phone.replace(/\s/g, '')}`,
+        phone: `+237${phone.replace(/\s/g, '')}`,
         code,
         deviceInfo: Platform.OS,
       });
@@ -110,198 +129,203 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.flex}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled={Platform.OS === 'ios'} 
+        style={styles.container}
       >
-        {/* Hero */}
-        <View style={styles.hero}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoText}>A</Text>
+        <View style={styles.topSection}>
+          <View style={styles.header}>
+            {step === 2 ? (
+              <TouchableOpacity 
+                style={styles.backBtn} 
+                onPress={() => { 
+                  Keyboard.dismiss(); 
+                  animateTransition(1); 
+                  setCode(''); 
+                  setError(''); 
+                  setTimeout(() => phoneRef.current?.focus(), 400); 
+                }}
+              >
+                <ArrowLeft size={24} color={colors.navy || '#1A1A1A'} />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ height: 0 }} />  
+            )}
           </View>
-          <Text style={styles.logoName}>ADMA</Text>
-          <Text style={styles.tagline}>{t('tagline')}</Text>
+
+          <Animated.View 
+            style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+          >
+            <Text style={styles.title}>
+              {step === 1 ? t('auth.title') : t('auth.otpTitle')}
+            </Text>
+            <Text style={styles.subtitle}>
+              {step === 1
+                ? t('auth.subtitle')
+                // Retour aux objets de variables natifs pour i18next
+                : t('auth.otpSubtitle', { phone: phone.replace(/\s/g, '') })
+              }
+            </Text>
+
+            {step === 1 && (
+              <View style={styles.inputGroup}>
+                <View style={[styles.inputContainer, error && styles.inputError]}>
+                  <View style={styles.prefixBox}>
+                    <Text style={styles.flag}>🇨🇲</Text>
+                    <Text style={styles.prefix}>+237</Text>
+                  </View>
+                  <TextInput
+                    ref={phoneRef}
+                    style={styles.input}
+                    value={phone}
+                    onChangeText={handlePhoneChange}
+                    keyboardType="phone-pad"
+                    maxLength={12} 
+                    placeholder="6XX XX XX XX"
+                    placeholderTextColor={colors.textDisabled || '#A3A3A3'}
+                    returnKeyType="done"
+                    onSubmitEditing={sendOTP}
+                    autoFocus
+                  />
+                </View>
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              </View>
+            )}
+
+            {step === 2 && (
+              <View style={styles.inputGroup}>
+                <TextInput
+                  ref={codeRef}
+                  style={[styles.otpInput, error && styles.inputError]}
+                  value={code}
+                  onChangeText={(v) => { setCode(v.replace(/\D/g, '')); setError(''); if (v.length === 6) verifyOTP(); }}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  placeholder="------"
+                  placeholderTextColor={colors.border || '#E5E5E5'}
+                  selectionColor={colors.primary || '#5FC2BA'}
+                />
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                
+                <TouchableOpacity
+                  style={styles.resendBtn}
+                  onPress={resendOTP}
+                  disabled={countdown > 0 || loading}
+                >
+                  {countdown === 0 && <RotateCcw size={16} color={colors.primary || '#5FC2BA'} />}
+                  <Text style={[styles.resendText, countdown > 0 && styles.resendTextMuted]}>
+                    {countdown > 0
+                      // Retour aux objets de variables natifs pour i18next
+                      ? t('auth.resendIn', { seconds: countdown })
+                      : t('auth.resend')
+                    }
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Animated.View>
         </View>
 
-        {/* Card */}
-        <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-
-          {step === 2 && (
-            <TouchableOpacity style={styles.backBtn} onPress={() => { setStep(1); setCode(''); setError(''); }}>
-              <ArrowLeft size={18} color={colors.primary} />
-              <Text style={styles.backText}>Modifier le numero</Text>
-            </TouchableOpacity>
-          )}
-
-          <Text style={styles.cardTitle}>
-            {step === 1 ? t('auth.title') : t('auth.otpTitle')}
-          </Text>
-          <Text style={styles.cardSubtitle}>
-            {step === 1
-              ? t('auth.subtitle')
-              : t('auth.otpSubtitle', { phone: phone.replace(/\s/g, '') })
+        <View style={styles.footer}>
+          <Button
+            title={
+              loading ? t('common.loading') 
+              : step === 1 ? t('auth.sendCode') 
+              : t('auth.verify')
             }
-          </Text>
-
-          {/* Étape 1 — Numéro */}
+            onPress={step === 1 ? sendOTP : verifyOTP}
+            loading={loading}
+            disabled={step === 2 && code.length < 6}
+            size="lg"
+            style={styles.mainButton}
+          />
+          
           {step === 1 && (
-            <>
-              <Text style={styles.fieldLabel}>{t('auth.phoneLabel')}</Text>
-              <View style={[styles.phoneRow, error && styles.inputError]}>
-                <View style={styles.prefixBox}>
-                  <Text style={styles.flag}>CMR</Text>
-                  <Text style={styles.prefix}>+237</Text>
-                </View>
-                <TextInput
-                  style={styles.phoneInput}
-                  value={phone}
-                  onChangeText={(v) => { setPhone(v); setError(''); }}
-                  keyboardType="phone-pad"
-                  maxLength={9}
-                  placeholder={t('auth.phonePlaceholder')}
-                  placeholderTextColor={colors.textDisabled}
-                  returnKeyType="done"
-                  onSubmitEditing={sendOTP}
-                  autoFocus
-                />
-              </View>
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-              <Button
-                title={loading ? t('common.loading') : t('auth.sendCode')}
-                onPress={sendOTP}
-                loading={loading}
-                size="lg"
-                style={{ marginTop: 20 }}
-              />
-            </>
+            <Text style={styles.legal}>
+              En continuant, vous acceptez nos {' '}
+              <Text style={styles.legalLink}>Conditions</Text> et notre{' '}
+              <Text style={styles.legalLink}>Politique de confidentialité</Text>
+            </Text>
           )}
-
-          {/* Étape 2 — OTP */}
-          {step === 2 && (
-            <>
-              <Text style={styles.fieldLabel}>{t('auth.otpPlaceholder')}</Text>
-              <TextInput
-                ref={codeRef}
-                style={[styles.otpInput, error && styles.inputError]}
-                value={code}
-                onChangeText={(v) => { setCode(v.replace(/\D/g, '')); setError(''); if (v.length === 6) verifyOTP(); }}
-                keyboardType="number-pad"
-                maxLength={6}
-                placeholder="000000"
-                placeholderTextColor={colors.textDisabled}
-              />
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-              <Button
-                title={loading ? t('common.loading') : t('auth.verify')}
-                onPress={verifyOTP}
-                loading={loading}
-                disabled={code.length < 6}
-                size="lg"
-                style={{ marginTop: 20 }}
-              />
-
-              <TouchableOpacity
-                style={[styles.resendBtn, countdown > 0 && styles.resendDisabled]}
-                onPress={resendOTP}
-                disabled={countdown > 0 || loading}
-              >
-                <RotateCcw size={14} color={countdown > 0 ? colors.textMuted : colors.primary} />
-                <Text style={[styles.resendText, countdown > 0 && styles.resendTextMuted]}>
-                  {countdown > 0
-                    ? t('auth.resendIn', { seconds: countdown })
-                    : t('auth.resend')
-                  }
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </Animated.View>
-
-        <Text style={styles.legal}>
-          En continuant, vous acceptez nos{'\n'}
-          <Text style={styles.legalLink}>Conditions d'utilisation</Text> et notre <Text style={styles.legalLink}>Politique de confidentialite</Text>
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex:         { flex: 1, backgroundColor: colors.background },
-  scroll:       { flexGrow: 1, paddingHorizontal: 24, paddingTop: 80, paddingBottom: 40 },
-
-  hero:         { alignItems: 'center', marginBottom: 40 },
-  logoMark:     {
-    width: 76, height: 76, borderRadius: 24,
-    backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 14,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
+  safeArea: { flex: 1, backgroundColor: colors.background || '#FAFBFC' },
+  
+  container: { 
+    flex: 1, 
+    paddingHorizontal: 24,
+    justifyContent: 'space-between'
   },
-  logoText:     { fontSize: 38, fontWeight: '900', color: colors.white, letterSpacing: -1 },
-  logoName:     { fontSize: 28, fontWeight: '900', color: colors.navy, letterSpacing: 6 },
-  tagline:      { fontSize: 14, color: colors.textMuted, marginTop: 6, fontWeight: '600' },
-
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 24, padding: 24,
-    borderWidth: 1, borderColor: colors.borderLight,
-    shadowColor: colors.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 4,
+  
+  topSection: { 
+    flex: 1, 
+    justifyContent: 'flex-start' // Maintient le contenu ancré en haut
   },
-  backBtn:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  backText:     { fontSize: 14, color: colors.primary, fontWeight: '600' },
+  
+  header: { height: 60, justifyContent: 'center', marginTop: 20 },
+  backBtn: { width: 40, height: 40, justifyContent: 'center', marginLeft: -8 },
+  
+  
+  content: { paddingTop: 40 },
+  
+  title: { fontSize: 32, fontWeight: '900', color: colors.navy || '#0A1128', marginBottom: 12, letterSpacing: -0.5 },
+  subtitle: { fontSize: 16, color: colors.textMuted || '#6B7280', marginBottom: 40, lineHeight: 24 },
 
-  cardTitle:    { fontSize: 22, fontWeight: '800', color: colors.navy, marginBottom: 6 },
-  cardSubtitle: { fontSize: 14, color: colors.textMuted, marginBottom: 24, lineHeight: 20 },
-
-  fieldLabel:   { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 8 },
-
-  phoneRow: {
+  inputGroup: { marginBottom: 24 },
+  
+  inputContainer: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: 14, overflow: 'hidden',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface || '#F3F4F6',
+    borderRadius: 16,
+    height: 64,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
+  inputError: { borderColor: colors.danger || '#EF4444', backgroundColor: '#FEF2F2' },
+  
   prefixBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 14, paddingVertical: 14,
-    borderRightWidth: 1, borderRightColor: colors.border,
+    flexDirection: 'row', alignItems: 'center',
+    paddingLeft: 20, paddingRight: 16,
+    borderRightWidth: 1, borderRightColor: colors.borderLight || '#E5E7EB',
+    height: '60%',
   },
-  flag:         { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
-  prefix:       { fontSize: 15, fontWeight: '700', color: colors.navy },
-  phoneInput:   { flex: 1, fontSize: 17, color: colors.text, paddingHorizontal: 14, paddingVertical: 13, letterSpacing: 1 },
+  flag: { fontSize: 18, marginRight: 6 },
+  prefix: { fontSize: 16, fontWeight: '700', color: colors.navy || '#0A1128' },
+  
+  input: {
+    flex: 1, fontSize: 18, fontWeight: '600',
+    color: colors.text || '#111827',
+    paddingHorizontal: 16, height: '100%',
+  },
 
   otpInput: {
-    borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: 14, padding: 16,
-    fontSize: 28, fontWeight: '700',
-    color: colors.navy, textAlign: 'center',
-    letterSpacing: 14, backgroundColor: colors.white,
+    backgroundColor: colors.surface || '#F3F4F6',
+    borderRadius: 16, height: 72,
+    fontSize: 32, fontWeight: '700',
+    color: colors.navy || '#0A1128',
+    textAlign: 'center', letterSpacing: 24,
+    paddingLeft: 24, 
   },
-  inputError:   { borderColor: colors.danger },
-  errorText:    { fontSize: 13, color: colors.danger, marginTop: 6, fontWeight: '500' },
 
-  resendBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18, padding: 8 },
-  resendDisabled: { opacity: 0.5 },
-  resendText:   { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  resendTextMuted: { color: colors.textMuted },
+  errorText: { fontSize: 14, color: colors.danger || '#EF4444', marginTop: 8, fontWeight: '500', marginLeft: 4 },
 
-  legal:        { textAlign: 'center', fontSize: 12, color: colors.textMuted, marginTop: 32, lineHeight: 18 },
-  legalLink:    { color: colors.primary, fontWeight: '600' },
+  resendBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 24, alignSelf: 'flex-start' },
+  resendText: { fontSize: 15, color: colors.primary || '#5FC2BA', fontWeight: '700', marginLeft: 8 },
+  resendTextMuted: { color: colors.textMuted || '#9CA3AF', marginLeft: 0 },
+
+  footer: { 
+    paddingBottom: Platform.OS === 'ios' ? 10 : 24, 
+    paddingTop: 16 
+  },
+  mainButton: { height: 56, borderRadius: 16 },
+  
+  legal: { textAlign: 'center', fontSize: 12, color: colors.textMuted || '#6B7280', marginTop: 20, lineHeight: 18 },
+  legalLink: { color: colors.navy || '#0A1128', fontWeight: '700' },
 });

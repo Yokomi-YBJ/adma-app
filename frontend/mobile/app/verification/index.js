@@ -54,6 +54,7 @@ export default function VerificationScreen() {
     setLoading(false);
   }
 
+  // Écran de succès (sans header fixe, mais on peut en mettre un si besoin)
   if (done) {
     return (
       <View style={styles.doneWrap}>
@@ -66,8 +67,10 @@ export default function VerificationScreen() {
     );
   }
 
+  // Écran principal avec header fixe
   return (
-    <ScrollView style={styles.flex} showsVerticalScrollIndicator={false}>
+    <View style={styles.flex}>
+      {/* Header fixe (ne défile pas) */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={22} color={colors.navy} />
@@ -75,104 +78,148 @@ export default function VerificationScreen() {
         <Text style={styles.title}>Demande de verification</Text>
       </View>
 
-      {/* Bénéfices */}
-      <View style={styles.benefits}>
-        {[
-          { Icon: CheckCircle2, color: colors.primary,  text: 'Badge bleu visible sur votre fiche' },
-          { Icon: TrendingUp,   color: colors.success,  text: 'Meilleur classement dans les resultats' },
-          { Icon: Shield,       color: colors.info,     text: 'Confiance accrue des clients' },
-        ].map(({ Icon, color: c, text }, i) => (
-          <View key={i} style={styles.benefitRow}>
-            <View style={[styles.benefitIcon, { backgroundColor: c + '18' }]}><Icon size={18} color={c} /></View>
-            <Text style={styles.benefitText}>{text}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.body}>
-        <Text style={styles.sectionTitle}>Photo de votre CNI</Text>
-        <Text style={styles.sectionHint}>Votre CNI sera supprimee automatiquement 24h apres la verification.</Text>
-
-        {/* Recto */}
-        <Text style={styles.fieldLabel}>Recto (obligatoire)</Text>
-        <TouchableOpacity style={[styles.photoBox, cniFront && styles.photoBoxFilled]} onPress={() => pick('front')} activeOpacity={0.8}>
-          {cniFront ? (
-            <>
-              <Image source={{ uri: cniFront.uri }} style={styles.photoPreview} />
-              <TouchableOpacity style={styles.removePhoto} onPress={() => setCniFront(null)}>
-                <X size={14} color={colors.white} />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Camera size={28} color={colors.primary} />
-              <Text style={styles.photoText}>Ajouter la photo recto</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {/* Verso */}
-        <Text style={styles.fieldLabel}>Verso (optionnel)</Text>
-        <TouchableOpacity style={[styles.photoBox, cniBack && styles.photoBoxFilled]} onPress={() => pick('back')} activeOpacity={0.8}>
-          {cniBack ? (
-            <>
-              <Image source={{ uri: cniBack.uri }} style={styles.photoPreview} />
-              <TouchableOpacity style={styles.removePhoto} onPress={() => setCniBack(null)}>
-                <X size={14} color={colors.white} />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Camera size={28} color={colors.textMuted} />
-              <Text style={[styles.photoText, { color: colors.textMuted }]}>Ajouter la photo verso</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <Input
-          label="Message (optionnel)"
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Informations supplementaires..."
-          multiline
-          numberOfLines={3}
-          maxLength={300}
-          showCharCount
-        />
-
-        <View style={styles.privacyBox}>
-          <Shield size={16} color={colors.info} />
-          <Text style={styles.privacyText}>
-            Vos documents sont traites de maniere confidentielle et supprimes automatiquement apres verification.
-          </Text>
+      {/* Contenu scrollable */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Bénéfices */}
+        <View style={styles.benefits}>
+          {[
+            { Icon: CheckCircle2, color: colors.primary,  text: 'Badge bleu visible sur votre fiche' },
+            { Icon: TrendingUp,   color: colors.success,  text: 'Meilleur classement dans les resultats' },
+            { Icon: Shield,       color: colors.info,     text: 'Confiance accrue des clients' },
+          ].map(({ Icon, color: c, text }, i) => (
+            <View key={i} style={styles.benefitRow}>
+              <View style={[styles.benefitIcon, { backgroundColor: c + '18' }]}><Icon size={18} color={c} /></View>
+              <Text style={styles.benefitText}>{text}</Text>
+            </View>
+          ))}
         </View>
 
-        <Button
-          title={loading ? 'Envoi en cours...' : 'Envoyer la demande'}
-          onPress={submit}
-          loading={loading}
-          size="lg"
-          style={{ marginTop: 20, marginBottom: 40 }}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.body}>
+          <Text style={styles.sectionTitle}>Photo de votre CNI</Text>
+          <Text style={styles.sectionHint}>Votre CNI sera supprimee automatiquement 24h apres la verification.</Text>
+
+          {/* Recto */}
+          <Text style={styles.fieldLabel}>Recto (obligatoire)</Text>
+          <TouchableOpacity style={[styles.photoBox, cniFront && styles.photoBoxFilled]} onPress={() => pick('front')} activeOpacity={0.8}>
+            {cniFront ? (
+              <>
+                <Image source={{ uri: cniFront.uri }} style={styles.photoPreview} />
+                <TouchableOpacity style={styles.removePhoto} onPress={() => setCniFront(null)}>
+                  <X size={14} color={colors.white} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Camera size={28} color={colors.primary} />
+                <Text style={styles.photoText}>Ajouter la photo recto</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Verso */}
+          <Text style={styles.fieldLabel}>Verso (optionnel)</Text>
+          <TouchableOpacity style={[styles.photoBox, cniBack && styles.photoBoxFilled]} onPress={() => pick('back')} activeOpacity={0.8}>
+            {cniBack ? (
+              <>
+                <Image source={{ uri: cniBack.uri }} style={styles.photoPreview} />
+                <TouchableOpacity style={styles.removePhoto} onPress={() => setCniBack(null)}>
+                  <X size={14} color={colors.white} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Camera size={28} color={colors.textMuted} />
+                <Text style={[styles.photoText, { color: colors.textMuted }]}>Ajouter la photo verso</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <Input
+            label="Message (optionnel)"
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Informations supplementaires..."
+            multiline
+            numberOfLines={3}
+            maxLength={300}
+            showCharCount
+          />
+
+          <View style={styles.privacyBox}>
+            <Shield size={16} color={colors.info} />
+            <Text style={styles.privacyText}>
+              Vos documents sont traites de maniere confidentielle et supprimes automatiquement apres verification.
+            </Text>
+          </View>
+
+          <Button
+            title={loading ? 'Envoi en cours...' : 'Envoyer la demande'}
+            onPress={submit}
+            loading={loading}
+            size="lg"
+            style={{ marginTop: 20, marginBottom: 40 }}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex:          { flex: 1, backgroundColor: colors.background },
-  header:        { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 16, backgroundColor: colors.white },
-  backBtn:       { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
-  title:         { fontSize: 18, fontWeight: '700', color: colors.navy },
-  benefits:      { margin: 16, padding: 16, backgroundColor: colors.white, borderRadius: 16, borderWidth: 1, borderColor: colors.borderLight, gap: 12 },
+
+  // Header fixe (identique à plans.js)
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.navy,
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingBottom: 20,
+  },
+
+  benefits: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 12,
+  },
   benefitRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
   benefitIcon:   { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   benefitText:   { fontSize: 14, color: colors.text, flex: 1 },
+
   body:          { paddingHorizontal: 20 },
   sectionTitle:  { fontSize: 17, fontWeight: '700', color: colors.navy, marginBottom: 4 },
   sectionHint:   { fontSize: 13, color: colors.textMuted, marginBottom: 20 },
   fieldLabel:    { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 8 },
-  photoBox:      {
+
+  photoBox: {
     height: 160, borderRadius: 16, borderWidth: 2, borderColor: colors.primary + '60',
     borderStyle: 'dashed', backgroundColor: colors.primaryBg,
     justifyContent: 'center', alignItems: 'center', marginBottom: 16, overflow: 'hidden', position: 'relative',
@@ -181,8 +228,11 @@ const styles = StyleSheet.create({
   photoPreview:  { width: '100%', height: '100%' },
   photoText:     { fontSize: 13, color: colors.primary, fontWeight: '600', marginTop: 10 },
   removePhoto:   { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.danger, justifyContent: 'center', alignItems: 'center' },
+
   privacyBox:    { flexDirection: 'row', gap: 10, padding: 14, backgroundColor: colors.infoBg, borderRadius: 12 },
   privacyText:   { flex: 1, fontSize: 13, color: colors.info, lineHeight: 18 },
+
+  // Écran de succès (inchangé)
   doneWrap:      { flex: 1, backgroundColor: colors.white, justifyContent: 'center', alignItems: 'center', padding: 40 },
   doneIcon:      { width: 100, height: 100, borderRadius: 30, backgroundColor: colors.primaryBg, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   doneTitle:     { fontSize: 24, fontWeight: '800', color: colors.navy, marginBottom: 12 },

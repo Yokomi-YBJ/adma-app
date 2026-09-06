@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Camera, Save, UserRound } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
@@ -19,6 +20,7 @@ export default function EditProfileScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -40,6 +42,62 @@ export default function EditProfileScreen() {
       .slice(0, 2);
   }, [firstName, lastName, user]);
 
+  // ─── Changer la photo de profil ────────────────────────────────
+  async function handleAvatarPress() {
+    if (uploadingAvatar) return;
+
+    // Demander la permission d'accéder à la galerie
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'Nous avons besoin d\'accéder à votre galerie pour changer la photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      setUploadingAvatar(true);
+      try {
+        const uri = result.assets[0].uri;
+        const formData = new FormData();
+        formData.append('avatar', {
+          uri,
+          type: 'image/jpeg',
+          name: 'avatar.jpg',
+        });
+
+        const res = await api.post('/users/avatar', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        // Mettre à jour le store avec la nouvelle URL
+        updateUser({ avatar_url: res.data.data.avatarUrl });
+
+        showAppModal({
+          title: 'Succès',
+          message: 'Photo de profil mise à jour',
+          confirmText: 'OK',
+          variant: 'success',
+        });
+      } catch (error) {
+        showAppModal({
+          title: 'Erreur',
+          message: error?.response?.data?.message || 'Impossible de mettre à jour la photo.',
+          confirmText: 'OK',
+          variant: 'danger',
+        });
+      } finally {
+        setUploadingAvatar(false);
+      }
+    }
+  }
+
+  // ─── Enregistrer les modifications du profil ──────────────────
   async function handleSave() {
     const payload = {};
     const nextFirst = firstName.trim();
@@ -93,20 +151,37 @@ export default function EditProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.avatarCard}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            style={styles.avatarWrapper}
+            onPress={handleAvatarPress}
+            disabled={uploadingAvatar}
+            activeOpacity={0.7}
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+            {uploadingAvatar && (
+              <View style={styles.avatarLoading}>
+                <ActivityIndicator size="small" color={colors.white} />
+              </View>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.avatarMeta}>
             <Text style={styles.avatarTitle}>Photo de profil</Text>
-            <Text style={styles.avatarHint}>La photo apparaîtra sur votre fiche et vos avis.</Text>
+            <Text style={styles.avatarHint}>Appuyez sur la photo ou sur l’icône pour la modifier.</Text>
           </View>
 
-          <TouchableOpacity style={styles.cameraBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.cameraBtn}
+            onPress={handleAvatarPress}
+            disabled={uploadingAvatar}
+            activeOpacity={0.8}
+          >
             <Camera size={16} color={colors.primary} />
           </TouchableOpacity>
         </View>
@@ -192,6 +267,13 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
+  avatarWrapper: {
+    position: 'relative',
+    width: 66,
+    height: 66,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
   avatar: {
     width: 66,
     height: 66,
@@ -209,6 +291,12 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 22,
     fontWeight: '800',
+  },
+  avatarLoading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarMeta: {
     flex: 1,
