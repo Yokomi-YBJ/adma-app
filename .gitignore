@@ -30,10 +30,6 @@ yarn-error.log*
 .expo-shared/
 dist/
 web-build/
-# Dossiers natifs (générés si tu utilises Expo Prebuild ou EAS Build)
-android/
-ios/
-
 # ==========================================
 # Partie Admin (React / HTML / Vite)
 # ==========================================
