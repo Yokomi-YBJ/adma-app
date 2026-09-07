@@ -40,8 +40,18 @@ export function SkeletonHome() {
       </View>
       <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
         <SkeletonBox style={{ width: 120, height: 20, borderRadius: 6, marginBottom: 14 }} />
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {[1,2,3,4].map(i => <SkeletonBox key={i} style={{ width: 80, height: 90, borderRadius: 16 }} />)}
+        <View style={{ flexDirection: 'row' }}>
+          {[1,2,3,4].map((i, idx) => (
+            <SkeletonBox
+              key={i}
+              style={{
+                width: 80,
+                height: 90,
+                borderRadius: 16,
+                marginRight: idx < 3 ? 10 : 0,
+              }}
+            />
+          ))}
         </View>
       </View>
       {[1,2,3].map(i => <SkeletonProviderCard key={i} />)}
@@ -67,8 +77,8 @@ const styles = StyleSheet.create({
   box:   { backgroundColor: colors.surfaceAlt, borderRadius: 8 },
   card:  { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, padding: 14, backgroundColor: colors.white, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
   image: { width: 76, height: 76, borderRadius: 14 },
-  info:  { flex: 1, marginLeft: 14, gap: 8, justifyContent: 'center' },
-  line1: { height: 16, width: '70%', borderRadius: 6 },
-  line2: { height: 13, width: '50%', borderRadius: 6 },
+  info:  { flex: 1, marginLeft: 14, justifyContent: 'center' },
+  line1: { height: 16, width: '70%', borderRadius: 6, marginBottom: 6 },
+  line2: { height: 13, width: '50%', borderRadius: 6, marginBottom: 4 },
   line3: { height: 11, width: '40%', borderRadius: 6 },
 });

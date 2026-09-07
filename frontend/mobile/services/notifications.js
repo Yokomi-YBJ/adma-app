@@ -1,6 +1,7 @@
 /**
  * ADMA — Service Notifications Push (Expo EAS)
  */
+import * as Notifications from 'expo-notifications'; // ✅ ajout
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -11,7 +12,7 @@ import { useNotificationStore } from '../store/notification.store';
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 // Handler global
-/*Notifications.setNotificationHandler({
+Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert:  true,
     shouldPlaySound:  true,
@@ -46,7 +47,7 @@ async function setupAndroidChannels() {
     importance: Notifications.AndroidImportance.HIGH,
     lightColor: '#5FC2BA',
   });
-}*/
+}
 
 export async function registerForPushNotifications() {
   if (isExpoGo) {
@@ -85,12 +86,20 @@ export async function registerForPushNotifications() {
   }
 }
 
-/*export function setupNotificationListeners(navigation) {
+export function setupNotificationListeners(navigation) {
   const addStore = useNotificationStore.getState().addNotification;
 
   const fgSub = Notifications.addNotificationReceivedListener((notif) => {
     const { title, body, data } = notif.request.content;
-    addStore({ id: Date.now(), title_fr: title, body_fr: body, data_json: data, is_read: false, created_at: new Date().toISOString() });
+    // Ajout d'une garde pour data
+    addStore({
+      id: Date.now(),
+      title_fr: title,
+      body_fr: body,
+      data_json: data || {},
+      is_read: false,
+      created_at: new Date().toISOString()
+    });
   });
 
   const tapSub = Notifications.addNotificationResponseReceivedListener((response) => {
@@ -100,19 +109,19 @@ export async function registerForPushNotifications() {
     switch (data.type) {
       case 'new_review':
       case 'review_response':
-        if (data.providerId) navigation?.navigate(`provider/${data.providerId}`);
+        if (data.providerId) navigation?.navigate('Provider', { id: data.providerId }); // ✅ correction
         break;
       case 'verification_approved':
       case 'verification_rejected':
-        navigation?.navigate('verification/index'); // Correction du chemin
+        navigation?.navigate('Verification'); // ✅ correction (nom d'écran)
         break;
       case 'subscription_expiring':
-        navigation?.navigate('subscription/plans');
+        navigation?.navigate('SubscriptionPlans');
         break;
       default:
-        navigation?.navigate('notifications/index');
+        navigation?.navigate('Notifications');
     }
   });
 
   return () => { fgSub.remove(); tapSub.remove(); };
-}*/
+}

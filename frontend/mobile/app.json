@@ -34,9 +34,10 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#5FC2BA"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "cm.adma.app",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "permissions": [
         "CAMERA",
