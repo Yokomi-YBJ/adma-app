@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "build": "eas build --platform all"
+    "build": "eas build --platform all",
+    "eas-build-pre": "echo $GOOGLE_SERVICES_B64 | base64 -d > google-services.json"
   },
   "dependencies": {
     "@formatjs/intl-pluralrules": "^6.3.13",
