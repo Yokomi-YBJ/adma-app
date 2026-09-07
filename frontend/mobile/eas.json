@@ -6,13 +6,31 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "GOOGLE_SERVICES_B64": "@secrets:GOOGLE_SERVICES_B64"
+      },
+      "hooks": {
+        "preBuild": "echo $GOOGLE_SERVICES_B64 | base64 -d > google-services.json"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "GOOGLE_SERVICES_B64": "@secrets:GOOGLE_SERVICES_B64"
+      },
+      "hooks": {
+        "preBuild": "echo $GOOGLE_SERVICES_B64 | base64 -d > google-services.json"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "GOOGLE_SERVICES_B64": "@secrets:GOOGLE_SERVICES_B64"
+      },
+      "hooks": {
+        "preBuild": "echo $GOOGLE_SERVICES_B64 | base64 -d > google-services.json"
+      }
     }
   },
   "submit": {
