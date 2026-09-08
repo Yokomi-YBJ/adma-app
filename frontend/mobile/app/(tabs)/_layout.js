@@ -104,7 +104,7 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.profile') || 'Profil',
           headerShown: false,
-          tabBarIcon: ({ color, size, focused }) => <TabIcon name="person" color={color} size={size} badge={unread} focused={focused} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon name="person" color={color} size={size} focused={focused} />,
         }}
       />
     </Tabs>

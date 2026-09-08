@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import { colors } from '../../constants/colors';
 
-function SkeletonBox({ style }) {
+// ✅ Export ajouté pour SkeletonBox
+export function SkeletonBox({ style }) {
   const anim = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
     Animated.loop(

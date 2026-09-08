@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, Modal, Image
+  Switch, Modal, Image, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft, User, Bell, Globe, Shield,
   HelpCircle, Headphones, LogOut, Trash2,
-  ChevronRight, CheckCircle2, Eye, EyeOff, AlertTriangle 
+  ChevronRight, CheckCircle2, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth.store';
@@ -41,6 +41,7 @@ export default function SettingsScreen() {
   const [phonePublic, setPhonePublic] = useState(!!user?.phone_public);
   const [langModal, setLangModal]     = useState(false);
   const [cacheClearing, setCacheClearing] = useState(false);
+  const [loading, setLoading]         = useState(false); // ✅ état de chargement pour la déconnexion
 
   useEffect(() => {
     if (user?.phone_public !== undefined) {
@@ -103,8 +104,13 @@ export default function SettingsScreen() {
       variant: 'warning',
       destructive: true,
       onConfirm: async () => {
-        await logout();
-        router.replace('/(auth)/login');
+        setLoading(true); // ✅ active le loading
+        try {
+          await logout();
+          router.replace('/(auth)/login');
+        } finally {
+          setLoading(false); // ✅ désactive le loading
+        }
       },
     });
   }
@@ -384,6 +390,16 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ✅ Overlay de chargement pour la déconnexion */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Déconnexion en cours...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -646,5 +662,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
+  },
+
+  // ✅ Styles pour l'overlay de chargement
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingCard: {
+    backgroundColor: colors.white,
+    paddingVertical: 28,
+    paddingHorizontal: 36,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  loadingText: {
+    marginTop: 14,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.navy,
   },
 });

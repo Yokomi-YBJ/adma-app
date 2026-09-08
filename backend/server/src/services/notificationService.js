@@ -10,10 +10,16 @@ const expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN || '' });
 
 // ── Envoi Push via Expo ──────────────────────────────────────────
 async function sendPushNotification(tokens, title, body, data = {}) {
-  if (!tokens?.length) return;
+  if (!tokens?.length) {
+    logger.info('[Push] Aucun token fourni');
+    return;
+  }
 
   const validTokens = tokens.filter(t => t && Expo.isExpoPushToken(t));
-  if (!validTokens.length) return;
+  if (!validTokens.length) {
+    logger.warn('[Push] Aucun token valide parmi:', tokens);
+    return;
+  }
 
   const messages = validTokens.map(to => ({
     to, title, body, data,
@@ -63,9 +69,13 @@ export async function createNotification(userId, {
       subscription_activated: 'subscription_reminder',
       new_favorite:           'favorite_update',
       contact_reminder:       'contact_reminder',
+      review_updated:         'review_response', // ← on utilise le même canal
     };
     const prefKey = prefKeyMap[type];
-    if (prefs[0] && prefKey && prefs[0][prefKey] === 0) return null;
+    if (prefs[0] && prefKey && prefs[0][prefKey] === 0) {
+      logger.info(`[Push] Utilisateur ${userId} a désactivé les notifications pour ${type}`);
+      return null;
+    }
 
     // Sauvegarder en BDD
     const [result] = await query(
@@ -82,6 +92,8 @@ export async function createNotification(userId, {
     const token = rows[0]?.expo_push_token;
     if (token) {
       await sendPushNotification([token], titleFr, bodyFr, { ...data, type, notifId: result.insertId, channelId });
+    } else {
+      logger.info(`[Push] Utilisateur ${userId} n'a pas de token push, notification sauvegardée en BDD seulement.`);
     }
 
     return result.insertId;
@@ -111,6 +123,23 @@ export async function notifyReviewResponse(reviewerId, providerName) {
     titleFr: 'Réponse à votre avis',      titleEn: 'Reply to your review',
     bodyFr:  `${providerName} a répondu à votre avis.`,
     bodyEn:  `${providerName} replied to your review.`,
+  });
+}
+
+// ✅ NOUVEAU : Notification de modification d'avis
+export async function notifyReviewUpdated(providerId, reviewerName, oldVerdict, newVerdict) {
+  const [rows] = await query('SELECT user_id FROM providers WHERE id = ?', [providerId]);
+  if (!rows.length) return;
+  const labelMap = { recommend: 'positive', neutral: 'neutre', discourage: 'négative' };
+  const oldLabel = labelMap[oldVerdict] || 'avis';
+  const newLabel = labelMap[newVerdict] || 'avis';
+  return createNotification(rows[0].user_id, {
+    type: 'review_updated', channelId: 'reviews',
+    titleFr: 'Avis modifié',
+    titleEn: 'Review updated',
+    bodyFr: `${reviewerName} a modifié son avis (${oldLabel} → ${newLabel}).`,
+    bodyEn: `${reviewerName} updated their review.`,
+    data: { providerId },
   });
 }
 

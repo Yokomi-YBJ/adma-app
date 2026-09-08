@@ -14,10 +14,10 @@ const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreCl
 // Handler global
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert:  true,
+    shouldShowBanner: true,
+    shouldShowList:   true,
     shouldPlaySound:  true,
     shouldSetBadge:   true,
-    shouldShowBanner: true,
   }),
 });
 

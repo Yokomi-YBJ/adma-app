@@ -1,15 +1,16 @@
 /**
  * ADMA — Écran d'accueil
  * Design propre, thème clair, performances optimisées
+ * Loading : le header reste visible, seul le contenu est remplacé par un skeleton
  */
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  FlatList, RefreshControl, Image, Platform,
+  FlatList, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, ChevronRight, Wifi, WifiOff, Bell } from 'lucide-react-native';
+import { Search, MapPin, ChevronRight, WifiOff, Bell } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
 import { CACHE_TTL } from '../../constants/config';
@@ -19,7 +20,7 @@ import { useAuthStore }    from '../../store/auth.store';
 import { useNotificationStore } from '../../store/notification.store';
 import { ProviderCard }    from '../../components/cards/ProviderCard';
 import { CategoryCard }    from '../../components/cards/CategoryCard';
-import { SkeletonHome }    from '../../components/ui/Skeleton';
+import { SkeletonBox, SkeletonProviderCard } from '../../components/ui/Skeleton';
 import { useNetworkStore } from '../../store/network.store';
 
 export default function HomeScreen() {
@@ -40,7 +41,6 @@ export default function HomeScreen() {
   const loadData = useCallback(async (force = false) => {
     try {
       loadNotifs().catch(() => {});
-      // Utilise le cache si disponible et pas forcé
       const [cachedCats, cachedProvs] = await Promise.all([
         getCache('home_categories'),
         getCache('home_providers'),
@@ -92,26 +92,39 @@ export default function HomeScreen() {
   const greeting = () => {
     const h = new Date().getHours();
     if (h < 12) return 'Bonjour';
-    if (h < 18) return 'Bon apres-midi';
+    if (h < 18) return 'Bon après-midi';
     return 'Bonsoir';
   };
 
-  if (loading) return <SkeletonHome />;
+  // ─── Skeleton du contenu (sans le header) ──────────────────────
+  const SkeletonContent = () => (
+    <View>
+      <View style={{ margin: 20 }}>
+        <SkeletonBox style={{ height: 50, borderRadius: 14 }} />
+      </View>
+      <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+        <SkeletonBox style={{ width: 120, height: 20, borderRadius: 6, marginBottom: 14 }} />
+        <View style={{ flexDirection: 'row' }}>
+          {[1,2,3,4].map((i, idx) => (
+            <SkeletonBox
+              key={i}
+              style={{
+                width: 80,
+                height: 90,
+                borderRadius: 16,
+                marginRight: idx < 3 ? 10 : 0,
+              }}
+            />
+          ))}
+        </View>
+      </View>
+      {[1,2,3].map(i => <SkeletonProviderCard key={i} />)}
+    </View>
+  );
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-    >
-      {/* Header */}
+    <View style={styles.container}>
+      {/* Header fixe */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.greeting}>
@@ -134,73 +147,92 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Bannière hors-ligne */}
-      {isOffline && (
-        <View style={styles.offlineBanner}>
-          <WifiOff size={14} color={colors.warning} />
-          <Text style={styles.offlineText}>{t('home.noConnection')}</Text>
-        </View>
-      )}
-
-      {/* Barre de recherche */}
-      <TouchableOpacity
-        style={styles.searchBar}
-        onPress={() => router.push('/(tabs)/search')}
-        activeOpacity={0.8}
+      {/* Contenu scrollable */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
-        <Search size={17} color={colors.textMuted} />
-        <Text style={styles.searchPlaceholder}>{t('home.searchPlaceholder')}</Text>
-      </TouchableOpacity>
-
-      {/* Categories */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('home.categories')}</Text>
-          <TouchableOpacity
-            style={styles.seeAllBtn}
-            onPress={() => router.push('/(tabs)/search')}
-          >
-            <Text style={styles.seeAll}>{t('home.seeAll')}</Text>
-            <ChevronRight size={14} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          horizontal
-          data={categories.filter(c => !c.parent_id)}
-          keyExtractor={(item) => item.id.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesList}
-          renderItem={({ item }) => (
-            <CategoryCard
-              category={item}
-              onPress={() => router.push(`/(tabs)/search?categoryId=${item.id}`)}
-            />
-          )}
-        />
-      </View>
-
-      {/* Prestataires recommandés */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
-        </View>
-        {providers.length === 0 ? (
-          <View style={styles.emptyProviders}>
-            <Text style={styles.emptyText}>Aucun prestataire disponible</Text>
-          </View>
+        {loading ? (
+          <SkeletonContent />
         ) : (
-          providers.map((provider) => (
-            <ProviderCard
-              key={provider.id}
-              provider={provider}
-              onPress={() => router.push(`/provider/${provider.id}`)}
-            />
-          ))
-        )}
-      </View>
+          <>
+            {/* Bannière hors-ligne */}
+            {isOffline && (
+              <View style={styles.offlineBanner}>
+                <WifiOff size={14} color={colors.warning} />
+                <Text style={styles.offlineText}>{t('home.noConnection')}</Text>
+              </View>
+            )}
 
-      <View style={{ height: 32 }} />
-    </ScrollView>
+            {/* Barre de recherche */}
+            <TouchableOpacity
+              style={styles.searchBar}
+              onPress={() => router.push('/(tabs)/search')}
+              activeOpacity={0.8}
+            >
+              <Search size={17} color={colors.textMuted} />
+              <Text style={styles.searchPlaceholder}>{t('home.searchPlaceholder')}</Text>
+            </TouchableOpacity>
+
+            {/* Catégories */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{t('home.categories')}</Text>
+                <TouchableOpacity
+                  style={styles.seeAllBtn}
+                  onPress={() => router.push('/(tabs)/search')}
+                >
+                  <Text style={styles.seeAll}>{t('home.seeAll')}</Text>
+                  <ChevronRight size={14} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                horizontal
+                data={categories.filter(c => !c.parent_id)}
+                keyExtractor={(item) => item.id.toString()}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesList}
+                renderItem={({ item }) => (
+                  <CategoryCard
+                    category={item}
+                    onPress={() => router.push(`/(tabs)/search?categoryId=${item.id}`)}
+                  />
+                )}
+              />
+            </View>
+
+            {/* Prestataires recommandés */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
+              </View>
+              {providers.length === 0 ? (
+                <View style={styles.emptyProviders}>
+                  <Text style={styles.emptyText}>Aucun prestataire disponible</Text>
+                </View>
+              ) : (
+                providers.map((provider) => (
+                  <ProviderCard
+                    key={provider.id}
+                    provider={provider}
+                    onPress={() => router.push(`/provider/${provider.id}`)}
+                  />
+                ))
+              )}
+            </View>
+
+            <View style={{ height: 32 }} />
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -237,7 +269,7 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
 
-  offlineBanner:{
+  offlineBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.warningBg,
     paddingHorizontal: 16, paddingVertical: 10,
@@ -261,7 +293,7 @@ const styles = StyleSheet.create({
   searchPlaceholder: { fontSize: 15, color: colors.textMuted, flex: 1 },
 
   section:      { marginTop: 28 },
-  sectionHeader:{
+  sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20, marginBottom: 14,
@@ -269,8 +301,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.navy },
   seeAllBtn:    { flexDirection: 'row', alignItems: 'center', gap: 2 },
   seeAll:       { fontSize: 13, color: colors.primary, fontWeight: '600' },
-  categoriesList:{ paddingHorizontal: 16, gap: 10 },
+  categoriesList: { paddingHorizontal: 16, gap: 10 },
 
-  emptyProviders:{ margin: 20, padding: 32, backgroundColor: colors.surface, borderRadius: 16, alignItems: 'center' },
+  emptyProviders: { margin: 20, padding: 32, backgroundColor: colors.surface, borderRadius: 16, alignItems: 'center' },
   emptyText:    { color: colors.textMuted, fontSize: 14 },
 });

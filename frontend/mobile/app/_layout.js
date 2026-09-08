@@ -12,6 +12,7 @@ import { initI18n }   from '../i18n';
 import { initCache }  from '../services/cache';
 import { useAuthStore }    from '../store/auth.store';
 import { useNetworkStore } from '../store/network.store';
+// ✅ Correction : import depuis notifications.js
 import { registerForPushNotifications, setupNotificationListeners } from '../services/notifications';
 import { colors } from '../constants/colors';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
@@ -35,8 +36,10 @@ function AuthGuard({ children }) {
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  const router = useRouter();
   const init = useAuthStore((s) => s.initialize);
   const subscribeNetwork = useNetworkStore((s) => s.subscribe);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   const bootstrap = useCallback(async () => {
     await Promise.all([
@@ -44,15 +47,26 @@ export default function RootLayout() {
       initCache(),
     ]);
     await init();
-    await registerForPushNotifications();
+    // ✅ On n'enregistre les notifications que si l'utilisateur est connecté
+    if (isLoggedIn) {
+      await registerForPushNotifications();
+    }
     setReady(true);
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     bootstrap();
     const unsub = subscribeNetwork();
     return unsub;
   }, []);
+
+  // ✅ Ajout des listeners de notifications une fois le layout monté
+  useEffect(() => {
+    if (!ready) return;
+    // On écoute les notifications même si non connecté (pour les notifications en arrière-plan)
+    const cleanup = setupNotificationListeners(router);
+    return cleanup;
+  }, [ready]);
 
   if (!ready) return <LoadingScreen />;
 

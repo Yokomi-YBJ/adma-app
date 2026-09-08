@@ -2,9 +2,11 @@
  * ADMA — Écran détail prestataire
  * Design complet : galerie, avis, contact, signalement
  * + comptage des vues avec cooldown de 4h par utilisateur
+ * + affichage et modification de l'avis de l'utilisateur
+ * + pull-to-refresh pour recharger les données
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,11 +17,13 @@ import {
   Linking,
   Share,
   FlatList,
-  Platform,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   TrendingUp,
@@ -37,6 +41,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Minus,
+  Edit3,
+  X,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import api from '../../services/api';
@@ -46,6 +52,8 @@ import { useTranslation } from 'react-i18next';
 import { CACHE_TTL } from '../../constants/config';
 import { SkeletonProviderDetail } from '../../components/ui/Skeleton';
 import { showAppModal } from '../../components/ui/AppModal';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 // ─── TrustMeter ──────────────────────────────────────────────────
 function TrustMeter({ score, reviewCount }) {
@@ -94,7 +102,7 @@ const meter = StyleSheet.create({
 });
 
 // ─── ReviewItem ──────────────────────────────────────────────────
-function ReviewItem({ review }) {
+function ReviewItem({ review, isOwnReview }) {
   const { i18n } = useTranslation();
   const lang = i18n.language || 'fr';
   const icons = {
@@ -108,12 +116,19 @@ function ReviewItem({ review }) {
     discourage: colors.dangerBg,
   };
   return (
-    <View style={rv.item}>
+    <View style={[rv.item, isOwnReview && rv.ownReview]}>
       <View style={rv.header}>
         <View style={[rv.verdict, { backgroundColor: bgColors[review.verdict] || colors.surface }]}>
           {icons[review.verdict]}
         </View>
-        <Text style={rv.reviewer}>{review.reviewerName || review.reviewer_name || 'Utilisateur'}</Text>
+        <Text style={rv.reviewer}>
+          {isOwnReview ? 'Votre avis' : (review.reviewerName || review.reviewer_name || 'Utilisateur')}
+        </Text>
+        {isOwnReview && (
+          <View style={rv.ownBadge}>
+            <Text style={rv.ownBadgeText}>Vous</Text>
+          </View>
+        )}
         <Text style={rv.date}>
           {new Date(review.createdAt || review.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
             month: 'short',
@@ -141,9 +156,20 @@ const rv = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
+  ownReview: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg + '30',
+  },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   verdict: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   reviewer: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.text },
+  ownBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  ownBadgeText: { fontSize: 9, fontWeight: '800', color: colors.white },
   date: { fontSize: 11, color: colors.textMuted },
   comment: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
   response: { marginTop: 10, padding: 10, backgroundColor: colors.primaryBg, borderRadius: 8 },
@@ -151,13 +177,110 @@ const rv = StyleSheet.create({
   responseText: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
 });
 
+// ─── Modal d'édition d'avis ─────────────────────────────────────
+function EditReviewModal({ visible, review, onClose, onSave }) {
+  const [verdict, setVerdict] = useState(review?.verdict || 'recommend');
+  const [comment, setComment] = useState(review?.comment || '');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (review) {
+      setVerdict(review.verdict || 'recommend');
+      setComment(review.comment || '');
+    }
+  }, [review]);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await onSave({ verdict, comment: comment.trim() || undefined });
+      onClose();
+    } catch (err) {
+      showAppModal({
+        title: 'Erreur',
+        message: err.response?.data?.message || 'Impossible de mettre à jour l\'avis',
+        confirmText: 'OK',
+        variant: 'danger',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const VERDICTS = [
+    { id: 'recommend',  label: 'Je recommande',   Icon: ThumbsUp,   color: colors.success, bg: colors.successBg },
+    { id: 'neutral',    label: 'Neutre',           Icon: Minus,      color: colors.warning,  bg: colors.warningBg },
+    { id: 'discourage', label: 'Je déconseille',   Icon: ThumbsDown, color: colors.danger,   bg: colors.dangerBg },
+  ];
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[styles.modalHeader, { paddingTop: 16 }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={onClose}>
+            <X size={22} color={colors.navy} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Modifier mon avis</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+          <Text style={styles.question}>Quelle est votre appréciation ?</Text>
+
+          <View style={styles.verdictRow}>
+            {VERDICTS.map((v) => {
+              const active = verdict === v.id;
+              return (
+                <TouchableOpacity
+                  key={v.id}
+                  style={[styles.verdictBtn, { borderColor: active ? v.color : colors.border, backgroundColor: active ? v.bg : colors.white }]}
+                  onPress={() => setVerdict(v.id)}
+                  activeOpacity={0.8}
+                >
+                  <v.Icon size={28} color={active ? v.color : colors.textMuted} fill={active ? v.color : 'none'} />
+                  <Text style={[styles.verdictLabel, active && { color: v.color, fontWeight: '700' }]}>{v.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Input
+            label="Commentaire (facultatif)"
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Décrivez votre expérience avec ce prestataire..."
+            multiline
+            numberOfLines={4}
+            maxLength={500}
+            showCharCount
+          />
+
+          <View style={styles.disclaimer}>
+            <Text style={styles.disclaimerText}>
+              Votre avis doit être honnête et basé sur une expérience réelle. Les faux avis seront supprimés.
+            </Text>
+          </View>
+
+          <Button
+            title={loading ? 'Mise à jour...' : 'Mettre à jour'}
+            onPress={handleSave}
+            loading={loading}
+            disabled={!verdict}
+            size="lg"
+            style={{ marginTop: 8 }}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 // ─── Écran principal ─────────────────────────────────────────────
 export default function ProviderDetailScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
-  // Récupération robuste de l'ID
   const providerId = Array.isArray(id) ? id[0] : id;
 
   const user = useAuthStore((s) => s.user);
@@ -165,9 +288,12 @@ export default function ProviderDetailScreen() {
 
   const [provider, setProvider] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
   const [contactInfo, setContactInfo] = useState(null);
+  const [userReview, setUserReview] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const isOwnProfile = userProvider?.id === parseInt(providerId);
 
@@ -175,17 +301,18 @@ export default function ProviderDetailScreen() {
     loadProvider();
   }, [providerId]);
 
-  // ─── Chargement ────────────────────────────────────────────────
-  async function loadProvider() {
+  // ─── Chargement avec possibilité de forcer (ignorer cache) ─────
+  async function loadProvider(force = false) {
     const cacheKey = `provider_${providerId}`;
     try {
-      const cached = await getCache(cacheKey);
-      if (cached) {
-        setProvider(cached);
-        setIsFavorite(cached.isFavorite);
-        setLoading(false);
-        // On envoie la vue même si cache, car le cooldown est géré
-        sendViewEvent(providerId);
+      if (!force) {
+        const cached = await getCache(cacheKey);
+        if (cached) {
+          setProvider(cached);
+          setIsFavorite(cached.isFavorite);
+          setLoading(false);
+          sendViewEvent(providerId);
+        }
       }
 
       const res = await api.get(`/providers/${providerId}`);
@@ -194,9 +321,21 @@ export default function ProviderDetailScreen() {
       setIsFavorite(data.isFavorite);
       await setCache(cacheKey, data, CACHE_TTL.providerDetail);
 
-      // Appel API pour les événements de contact (déjà fait dans sendViewEvent)
-      // On ne refait pas l'appel ici pour éviter les doublons
-    } catch {
+      // Récupérer l'avis de l'utilisateur si connecté
+      if (user) {
+        try {
+          const reviewRes = await api.get(`/reviews?providerId=${providerId}&userId=${user.id}`);
+          const reviewsData = reviewRes.data.data || [];
+          if (reviewsData.length > 0) {
+            setUserReview(reviewsData[0]);
+          } else {
+            setUserReview(null);
+          }
+        } catch {
+          setUserReview(null);
+        }
+      }
+    } catch (err) {
       if (!provider) {
         showAppModal({
           title: 'Erreur',
@@ -208,25 +347,30 @@ export default function ProviderDetailScreen() {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
+  // ─── Pull-to-refresh ───────────────────────────────────────────
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadProvider(true);
+    setRefreshing(false);
+  };
+
   // ─── Envoi de la vue avec cooldown de 4h ──────────────────────
   async function sendViewEvent(pid) {
-    if (!user) return; // On ne compte que les utilisateurs connectés
+    if (!user) return;
     const storageKey = `view_${pid}_${user.id}`;
     try {
       const lastView = await AsyncStorage.getItem(storageKey);
       const now = Date.now();
-      const cooldown = 4 * 60 * 60 * 1000; // 4 heures en millisecondes
-
+      const cooldown = 4 * 60 * 60 * 1000;
       if (!lastView || now - parseInt(lastView) >= cooldown) {
-        // Envoyer l'événement
         await api.post('/contacts', { providerId: parseInt(pid), eventType: 'profile_view' });
         await AsyncStorage.setItem(storageKey, now.toString());
       }
     } catch (error) {
-      // Silencieux : on ne bloque pas l'affichage
       console.warn('View event failed', error);
     }
   }
@@ -247,20 +391,11 @@ export default function ProviderDetailScreen() {
       if (isFavorite) {
         await api.delete(`/favorites/${parseInt(providerId)}`);
         setIsFavorite(false);
-        await setCache(
-          `provider_${providerId}`,
-          { ...provider, isFavorite: false },
-          CACHE_TTL.providerDetail
-        );
       } else {
         await api.post('/favorites', { providerId: parseInt(providerId) });
         setIsFavorite(true);
-        await setCache(
-          `provider_${providerId}`,
-          { ...provider, isFavorite: true },
-          CACHE_TTL.providerDetail
-        );
       }
+      await setCache(`provider_${providerId}`, { ...provider, isFavorite: !isFavorite }, CACHE_TTL.providerDetail);
     } catch (error) {
       const msg = error.response?.data?.message || 'Erreur lors de la mise à jour des favoris';
       showAppModal({ title: 'Erreur', message: msg, confirmText: 'OK', variant: 'danger' });
@@ -275,9 +410,7 @@ export default function ProviderDetailScreen() {
       try {
         const res = await api.get(`/providers/${providerId}/contact`);
         setContactInfo(res.data.data);
-        api
-          .post('/contacts', { providerId: parseInt(providerId), eventType: `${type}_click` })
-          .catch(() => {});
+        api.post('/contacts', { providerId: parseInt(providerId), eventType: `${type}_click` }).catch(() => {});
         openContact(res.data.data, type);
       } catch {
         showAppModal({
@@ -288,9 +421,7 @@ export default function ProviderDetailScreen() {
         });
       }
     } else {
-      api
-        .post('/contacts', { providerId: parseInt(providerId), eventType: `${type}_click` })
-        .catch(() => {});
+      api.post('/contacts', { providerId: parseInt(providerId), eventType: `${type}_click` }).catch(() => {});
       openContact(contactInfo, type);
     }
   }
@@ -306,7 +437,6 @@ export default function ProviderDetailScreen() {
       });
       return;
     }
-
     let phone = String(rawPhone).replace(/\s/g, '');
     if (type === 'whatsapp') {
       const digits = phone.replace(/\D/g, '');
@@ -361,10 +491,34 @@ export default function ProviderDetailScreen() {
     }
   }
 
-  // ─── Signaler ────────────────────────────────────────────────────
+  // ─── Signaler (style amélioré) ──────────────────────────────────
   function reportProvider() {
-    if (!requireAuth()) return;
+    if (!user) {
+      showAppModal({
+        title: 'Connexion requise',
+        message: 'Connectez-vous pour signaler',
+        confirmText: 'OK',
+      });
+      return;
+    }
     router.push(`/report?type=provider&id=${providerId}`);
+  }
+
+  // ─── Mise à jour de l'avis avec force reload ──────────────────
+  async function handleUpdateReview({ verdict, comment }) {
+    if (!userReview) return;
+    try {
+      await api.put(`/reviews/${userReview.id}`, { verdict, comment });
+      await loadProvider(true);
+      showAppModal({ title: 'Avis mis à jour', variant: 'success' });
+    } catch (err) {
+      showAppModal({
+        title: 'Erreur',
+        message: err.response?.data?.message || 'Impossible de mettre à jour l\'avis',
+        confirmText: 'OK',
+        variant: 'danger',
+      });
+    }
   }
 
   // ─── Rendu ──────────────────────────────────────────────────────
@@ -384,30 +538,57 @@ export default function ProviderDetailScreen() {
   const cityName = provider.city || provider.cityName || provider.city_name || '';
   const locationDisplay = [neighborhoodName, cityName].filter(Boolean).join(', ');
 
+  // Organisation des avis : celui de l'utilisateur en premier (si existant)
+  let sortedReviews = [...reviews];
+  if (userReview && user) {
+    const userReviewId = userReview.id;
+    const ownIdx = sortedReviews.findIndex(r => r.id === userReviewId);
+    if (ownIdx !== -1) {
+      const [own] = sortedReviews.splice(ownIdx, 1);
+      sortedReviews = [own, ...sortedReviews];
+    }
+  }
+
+  const statsTitle = isOwnProfile
+    ? t('profile.stats', 'Mes statistiques')
+    : t('provider.stats', 'Statistiques');
+
   return (
-    <View style={styles.flex}>
-      {/* ─── Barre flottante ─── */}
-      <View style={[styles.floatingNav, { paddingTop: insets.top + 8 }]}>
+    <SafeAreaView style={styles.flex}>
+      {/* Barre flottante avec ajustement pour l'encoche */}
+      <View style={[styles.floatingNav]}>
         <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
           <ChevronLeft size={22} color={colors.navy} strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.navActions}>
-          <TouchableOpacity style={styles.navBtn} onPress={toggleFavorite} disabled={favLoading}>
-            <Heart
-              size={20}
-              color={isFavorite ? colors.danger : colors.navy}
-              fill={isFavorite ? colors.danger : 'none'}
-              strokeWidth={2}
-            />
-          </TouchableOpacity>
+          {/* Bouton favoris masqué pour le propriétaire */}
+          {!isOwnProfile && (
+            <TouchableOpacity style={styles.navBtn} onPress={toggleFavorite} disabled={favLoading}>
+              <Heart
+                size={20}
+                color={isFavorite ? colors.danger : colors.navy}
+                fill={isFavorite ? colors.danger : 'none'}
+                strokeWidth={2}
+              />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.navBtn} onPress={shareProvider}>
             <Share2 size={20} color={colors.navy} strokeWidth={2} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ─── Contenu scrollable ─── */}
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         <View style={styles.photoArea}>
           {provider.photoUrl || provider.photo_url ? (
             <Image source={{ uri: provider.photoUrl || provider.photo_url }} style={styles.mainPhoto} />
@@ -437,7 +618,7 @@ export default function ProviderDetailScreen() {
               {provider.availability === 'available'
                 ? 'Disponible'
                 : provider.availability === 'busy'
-                ? 'Occupe'
+                ? 'Occupé'
                 : 'Indisponible'}
             </Text>
           </View>
@@ -475,10 +656,7 @@ export default function ProviderDetailScreen() {
         </View>
 
         <View style={styles.card}>
-          <TrustMeter
-            score={trustScore}
-            reviewCount={reviewCount}
-          />
+          <TrustMeter score={trustScore} reviewCount={reviewCount} />
         </View>
 
         {provider.description && (
@@ -504,8 +682,9 @@ export default function ProviderDetailScreen() {
           </View>
         )}
 
+        {/* Section statistiques avec titre adapté et affichage conditionnel des favoris */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.stats', 'Statistiques')}</Text>
+          <Text style={styles.sectionTitle}>{statsTitle}</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Eye size={18} color={colors.primary} />
@@ -518,42 +697,65 @@ export default function ProviderDetailScreen() {
               <Text style={styles.statValue}>{provider.recommendCount || provider.recommend_count || 0}</Text>
               <Text style={styles.statLabel}>Recommandations</Text>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Heart size={18} color={colors.danger} />
-              <Text style={styles.statValue}>{provider.totalFavorites || 0}</Text>
-              <Text style={styles.statLabel}>{t('favorites.title', 'Favoris')}</Text>
-            </View>
+            {/* Afficher les favoris uniquement si c'est le propriétaire */}
+            {isOwnProfile && (
+              <>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Heart size={18} color={colors.danger} />
+                  <Text style={styles.statValue}>{provider.totalFavorites || 0}</Text>
+                  <Text style={styles.statLabel}>{t('favorites.title', 'Favoris')}</Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
 
+        {/* Section avis */}
         <View style={styles.section}>
           <View style={styles.reviewsHeader}>
             <Text style={styles.sectionTitle}>
               {t('provider.reviews', 'Avis')} ({reviewCount})
             </Text>
             {!isOwnProfile && user && (
-              <TouchableOpacity
-                style={styles.addReviewBtn}
-                onPress={() => router.push(`/reviews/${providerId}`)}
-              >
-                <Text style={styles.addReviewText}>{t('provider.leaveReview', 'Laisser un avis')}</Text>
-                <ChevronRight size={14} color={colors.primary} />
-              </TouchableOpacity>
+              userReview ? (
+                <TouchableOpacity
+                  style={styles.addReviewBtn}
+                  onPress={() => setEditModalVisible(true)}
+                >
+                  <Edit3 size={14} color={colors.primary} />
+                  <Text style={styles.addReviewText}>Modifier mon avis</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.addReviewBtn}
+                  onPress={() => router.push(`/reviews/${providerId}`)}
+                >
+                  <Text style={styles.addReviewText}>{t('provider.leaveReview', 'Laisser un avis')}</Text>
+                  <ChevronRight size={14} color={colors.primary} />
+                </TouchableOpacity>
+              )
             )}
           </View>
-          {reviews.length === 0 ? (
+          {sortedReviews.length === 0 ? (
             <Text style={styles.noReviews}>{t('provider.noReviews', 'Aucun avis pour le moment')}</Text>
           ) : (
-            reviews.slice(0, 5).map((r) => <ReviewItem key={r.id} review={r} />)
+            sortedReviews.slice(0, 5).map((r) => (
+              <ReviewItem
+                key={r.id}
+                review={r}
+                isOwnReview={user && userReview && r.id === userReview.id}
+              />
+            ))
           )}
-          {reviews.length > 5 && (
+          {sortedReviews.length > 5 && (
             <TouchableOpacity style={styles.seeMoreBtn}>
-              <Text style={styles.seeMoreText}>Voir les {reviews.length - 5} avis restants</Text>
+              <Text style={styles.seeMoreText}>Voir les {sortedReviews.length - 5} avis restants</Text>
             </TouchableOpacity>
           )}
         </View>
 
+        {/* Bouton signaler (amélioré) */}
         {!isOwnProfile && (
           <View style={styles.section}>
             <TouchableOpacity style={styles.reportBtn} onPress={reportProvider}>
@@ -566,7 +768,7 @@ export default function ProviderDetailScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* ─── Barre de contact en bas ─── */}
+      {/* Barre de contact en bas */}
       {!isOwnProfile ? (
         <View style={[styles.contactBar, { paddingBottom: insets.bottom + 12 }]}>
           {showPhone && (
@@ -600,33 +802,37 @@ export default function ProviderDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+
+      {/* Modal d'édition d'avis */}
+      {userReview && (
+        <EditReviewModal
+          visible={editModalVisible}
+          review={userReview}
+          onClose={() => setEditModalVisible(false)}
+          onSave={handleUpdateReview}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
 
-  // Barre flottante avec design original
   floatingNav: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 200,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 16,
     paddingBottom: 8,
-    // Le fond est géré par les boutons eux-mêmes
+    zIndex: 200,
   },
   navBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.white + 'EE', // blanc semi-transparent
+    backgroundColor: colors.white + 'EE',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: colors.navy,
@@ -640,7 +846,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  // Le reste des styles identiques à l'original
   photoArea: { position: 'relative' },
   mainPhoto: { width: '100%', height: 280, backgroundColor: colors.surface },
   photoPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryBg },
@@ -721,14 +926,24 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, color: colors.textMuted, textAlign: 'center' },
 
   reviewsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  addReviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  addReviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addReviewText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
   noReviews: { fontSize: 14, color: colors.textMuted, textAlign: 'center', paddingVertical: 24 },
   seeMoreBtn: { padding: 14, alignItems: 'center' },
   seeMoreText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
 
-  reportBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', padding: 12 },
-  reportText: { fontSize: 13, color: colors.textMuted },
+  reportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  reportText: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
 
   contactBar: {
     backgroundColor: colors.white,
@@ -756,4 +971,67 @@ const styles = StyleSheet.create({
   callBtn: { backgroundColor: colors.navy },
   waBtn: { backgroundColor: colors.whatsapp },
   contactBtnText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.navy,
+  },
+  body: {
+    padding: 24,
+    paddingBottom: 60,
+  },
+  question: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.navy,
+    marginBottom: 20,
+  },
+  verdictRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 28,
+  },
+  verdictBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 2,
+    gap: 8,
+  },
+  verdictLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  disclaimer: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 18,
+  },
 });

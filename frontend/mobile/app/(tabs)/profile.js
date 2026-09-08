@@ -144,8 +144,13 @@ export default function ProfileScreen() {
             </View>
           ) : provider ? (
             <>
-              {/* Aperçu fiche */}
-              <ProviderPreview provider={provider} verInfo={verInfo} plan={plan} />
+              {/* Aperçu fiche → cliquable */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => router.push(`/provider/${provider.id}`)}
+              >
+                <ProviderPreview provider={provider} verInfo={verInfo} plan={plan} />
+              </TouchableOpacity>
 
               {/* Actions : uniquement modifier (suppression déplacée dans edit) */}
               <View style={styles.actionRow}>
@@ -202,7 +207,7 @@ export default function ProfileScreen() {
         {/* Version */}
         <Text style={styles.version}>Version 1.0.0</Text>
 
-        {/* Modal modification (conservée, mais on peut aussi la supprimer si on utilise edit.js) */}
+        {/* Modal modification (conservée) */}
         {provider && (
           <EditProviderModal
             visible={editModalOpen}
