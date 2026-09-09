@@ -158,6 +158,7 @@ export default function HomeScreen() {
             colors={[colors.primary]}
           />
         }
+        style={styles.scrollView}
       >
         {loading ? (
           <SkeletonContent />
@@ -193,19 +194,21 @@ export default function HomeScreen() {
                   <ChevronRight size={14} color={colors.primary} />
                 </TouchableOpacity>
               </View>
-              <FlatList
-                horizontal
-                data={categories.filter(c => !c.parent_id)}
-                keyExtractor={(item) => item.id.toString()}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoriesList}
-                renderItem={({ item }) => (
-                  <CategoryCard
-                    category={item}
-                    onPress={() => router.push(`/(tabs)/search?categoryId=${item.id}`)}
-                  />
-                )}
-              />
+              <View style={styles.categoryListWrapper}>
+                <FlatList
+                  horizontal
+                  data={categories.filter(c => !c.parent_id)}
+                  keyExtractor={(item) => item.id.toString()}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoriesList}
+                  renderItem={({ item }) => (
+                    <CategoryCard
+                      category={item}
+                      onPress={() => router.push(`/(tabs)/search?categoryId=${item.id}`)}
+                    />
+                  )}
+                />
+              </View>
             </View>
 
             {/* Prestataires recommandés */}
@@ -238,6 +241,9 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.background },
+
+  // ✅ Ajout d'un style pour le ScrollView pour éviter les problèmes de layout
+  scrollView: { flex: 1 },
 
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -301,7 +307,16 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.navy },
   seeAllBtn:    { flexDirection: 'row', alignItems: 'center', gap: 2 },
   seeAll:       { fontSize: 13, color: colors.primary, fontWeight: '600' },
-  categoriesList: { paddingHorizontal: 16, gap: 10 },
+
+  // ✅ Wrapper pour éviter les problèmes de layout du FlatList horizontal
+  categoryListWrapper: {
+    paddingHorizontal: 16,
+    height: 120, // Hauteur fixe pour éviter les problèmes de mesure
+  },
+  categoriesList: {
+    paddingRight: 10,
+    // On s'assure que la liste a un alignement correct
+  },
 
   emptyProviders: { margin: 20, padding: 32, backgroundColor: colors.surface, borderRadius: 16, alignItems: 'center' },
   emptyText:    { color: colors.textMuted, fontSize: 14 },

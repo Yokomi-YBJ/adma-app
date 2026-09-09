@@ -5,6 +5,7 @@ import { query }  from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { authenticate } from '../middleware/auth.js';
 import { uploadUserAvatar } from '../services/imgdbService.js';
+import { logger } from '../utils/logger.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const router = Router();
@@ -28,6 +29,7 @@ router.put('/me', [
 // Upload avatar
 router.post('/avatar', upload.single('avatar'), asyncHandler(async (req, res) => {
   if (!req.file) throw new AppError('Fichier requis', 400, 'NO_FILE');
+   logger.info(`📸 Upload avatar pour l'utilisateur ${req.user.id}`);
   const { url, publicId } = await uploadUserAvatar(req.file, req.user.id);
   await query('UPDATE users SET avatar_url=?, cloudinary_id=? WHERE id=?', [url, publicId, req.user.id]);
   res.json({ success: true, data: { avatarUrl: url } });
