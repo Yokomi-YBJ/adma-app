@@ -347,5 +347,208 @@
     "characterCount": "{{count}}/{{max}} harfeere",
     "distanceKm": "{{km}} km daga maa",
     "back": "Rutto"
+  },
+  "plans": {
+    "title": "Plans kawtal",
+    "subtitle": "Ɓeydu golle maa ngam heɓugo jofniiɓe heewɓe haa Ngaoundere",
+    "popularBadge": "Ɓurduɗo yiɗeede",
+    "currentBadge": "Plan jooni",
+    "selectBtn": "Suɓo plan o",
+    "keepBtn": "Heɗɗo e plan am",
+    "free": {
+      "label": "Meere",
+      "radius": "3 km",
+      "features": [
+        "Karɗi arandeje yiytoonde",
+        "Noddol diga yimɓe",
+        "Miijooji e jimmre tiiɗnde",
+        "Ɗatal: 3 km"
+      ]
+    },
+    "premium": {
+      "label": "Premium",
+      "radius": "6 km",
+      "features": [
+        "Koo ɗume nder Meere",
+        "Foto profil HD mawɗum",
+        "Kootooji 3",
+        "Limooje arandeeje",
+        "Ɓeydol yiyteende",
+        "Ɗatal: 6 km"
+      ]
+    },
+    "professional": {
+      "label": "Pro",
+      "radius": "12 km",
+      "features": [
+        "Koo ɗume nder Premium",
+        "Arandol nder yiytugol",
+        "Kootooji 6",
+        "Badge tellaaɗo arando",
+        "Limooje laaɓɗe",
+        "Ɗatal: 12 km"
+      ]
+    },
+    "enterprise": {
+      "label": "Enterprise",
+      "radius": "Ngaoundere fuu",
+      "features": [
+        "Koo ɗume nder Pro",
+        "Ɗatal mawngal (Ngaoundere fuu)",
+        "Badge Enterprise laawol",
+        "Wallitorde nyalnde fuu",
+        "Golle feere-feere",
+        "Kootooji haa 12"
+      ]
+    }
+  },
+  "payment": {
+    "title": "Yoɓol reenaangol",
+    "selectOperator": "Suɓo mobayil maa",
+    "phoneLabel": "Nimero telefon ngam yoɓugo",
+    "phonePlaceholder": "6XXXXXXXX (Orange koo MTN)",
+    "invalidPhone": "Nimero telefon fenaande.",
+    "chooseOperator": "Suɓo laawol yoɓol tafoo.",
+    "summary": "Keeje yoɓol",
+    "planLabel": "Plan suɓaaɗo",
+    "duration": "Balɗe",
+    "days30": "Balɗe 30",
+    "amountToPay": "Ceedol yoɓetengol",
+    "payBtn": "Yoɓ {{amount}} FCFA",
+    "confirmTitle": "Tellu yoɓol",
+    "confirmMessage": "A yoɓan {{amount}} FCFA nder konte maa {{operator}} ({{phone}}).",
+    "confirmBtn": "Tellu yoɓol",
+    "cancelBtn": "Waylu",
+    "processingTitle": "Yoɓol ɗon yaha...",
+    "processingDesc": "Ndaaru telefon maa, naatnu kooduure PIN Mobile Money ngam a tellina yoɓol ngol.",
+    "successTitle": "Yoɓol heɓi jam !",
+    "successDesc": "Plan maa fuɗɗii boo karɗi maa heɓi baawɗe mum fuu jooni.",
+    "failedTitle": "Yoɓol heɓaay",
+    "failedDesc": "Yoɓol timmaay koo saldaama. Ɗaɓɓu kine.",
+    "retryBtn": "Ɗaɓɓu kine",
+    "backToPlans": "Rutto haa plans",
+    "goToProfile": "Yiyto profil am"
+  },
+  "settings": {
+    "title": "Teeltanɗe",
+    "accountSection": "Konte am",
+    "editProfile": "Waylu profil",
+    "editProfileSub": "Innde, yettoore, foto profil",
+    "notifications": "Tinndinooje",
+    "notificationsSub": "Alerte miijooji e noddaango",
+    "appLanguage": "Ɗemngal app ngal",
+    "dangerZone": "Nokkuure kulle",
+    "dangerZoneSub": "Momtu karɗi koo konte",
+    "preferencesSection": "Suɓanɗe",
+    "clearCache": "Laaɓnu cache",
+    "clearCacheSub": "Ittu kuuje ɗe mbaɗaaka",
+    "cacheCleared": "Cache laaɓnaama jam.",
+    "supportSection": "Ballal e Sariya",
+    "faqSupport": "Suudu ballal e FAQ",
+    "faqSupportSub": "Yamɗe heewɗe e jokkondiral",
+    "legal": "Sariya e Reenaare",
+    "legalSub": "Reenaare keeje e laawol huutoraade",
+    "privacySection": "Reenaare e Sirri",
+    "phonePublic": "Nimero telefon hollirgo",
+    "phonePublicVisible": "Yimɓe fuu ɗon ngiyra",
+    "phonePublicHidden": "Suuɗaama nder miijooji maa",
+    "phonePublicError": "Wawataako waylugo yiyteende nimero jooni.",
+    "chooseLanguage": "Suɓo ɗemngal",
+    "chooseLanguageSub": "Suɓo ɗemngal ngal a yiɗi ngam gollirgal",
+    "loggingOut": "Ɗon yalta...",
+    "faq": "Yamɗe heewɗe (FAQ)",
+    "faqSub": "Jaabaawol yamɗe heewɗe",
+    "contactSupport": "Jokkondir e kawtal ADMA",
+    "contactSupportSub": "Hollu matsala koo lamndu ƴamol",
+    "logout": "Yaltu",
+    "logoutConfirm": "A ɗo yidi yaltude diga konte maa koo?",
+    "cancel": "Haɓɓu"
+  },
+  "dangerZone": {
+    "title": "Nokkuure kulle",
+    "warningTitle": "Kuuɗe ɗe mbattataa",
+    "warningText": "Kuuɗe ɗe ɗon taccataake. Reenu keeje maa ko a ɗon momta fuu.",
+    "deleteProviderTitle": "Momtu karɗi am",
+    "deleteProviderDesc": "Karɗi maa, kootooji, miijooji e keeje fuu momtete. A heddan e konte maa.",
+    "deleteProviderBtn": "Momtu karɗi",
+    "deleteAccountTitle": "Momtu konte am fuu",
+    "deleteAccountDesc": "Konte maa, muuɗɗinaaɓe, karɗi e keeje maa fuu momtete sam.",
+    "deleteAccountBtn": "Momtu konte am",
+    "confirmProviderTitle": "Momtu karɗi",
+    "confirmProviderMsg": "Ɗum firtataako sam. Keeje golle maa fuu momtete.",
+    "confirmAccountTitle": "Momtu konte",
+    "confirmAccountMsg": "A ɗo yidi momtude konte maa koo? Ɗum firtataako."
+  },
+  "notificationPrefs": {
+    "title": "Suɓanɗe tinndinooje",
+    "subtitle": "Suɓo kaaɗunde ɗe a yidi heɓugo",
+    "saveBtn": "Res suɓanɗe",
+    "savedSuccess": "Suɓanɗe maa resndaama jam.",
+    "new_review": {
+      "title": "Miijooji kesi",
+      "desc": "Heɓ tinndinoore to neɗɗo waɗi miijo dow karɗi maa."
+    },
+    "review_response": {
+      "title": "Jaabawol miijo",
+      "desc": "Heɓ tinndinoore to jofniido jaabi miijo maa."
+    },
+    "verification_update": {
+      "title": "Darnde tellemgol",
+      "desc": "Hakkil e ɗaɓɓirgal maa ngam heɓugo maande."
+    },
+    "subscription_reminder": {
+      "title": "Siftorgo plan",
+      "desc": "Heɓ tinndinoore ko plan maa timma."
+    },
+    "favorite_update": {
+      "title": "Keeje muuɗɗinaaɓe",
+      "desc": "Tinndinoore to jofniiɓe maa muuɗɗinaaɓe mbaylii kuuje."
+    },
+    "contact_reminder": {
+      "title": "Siftorgo e sawri",
+      "desc": "Sawriiji ngam ɓeydugo golle maa e siftorɗe."
+    }
+  },
+  "support": {
+    "title": "Suudu ballal e FAQ",
+    "subtitle": "A woodi ƴamol? Heɓ jaabawol ɗo bee yaawugo",
+    "searchPlaceholder": "Ɗaɓɓu nder ballal...",
+    "faqTitle": "Yamɗe heewɗe",
+    "contactTitle": "A sokli ballal kine?",
+    "contactSubtitle": "Yimɓe amen haa Ngaoundere ɗon ngam maa",
+    "whatsappBtn": "Winndu haa WhatsApp",
+    "callBtn": "Noddu ballal",
+    "emailBtn": "Neldu email",
+    "faqs": {
+      "registerQ": "Noy mi heɓata konte ADMA?",
+      "registerA": "Jippin app ngal, naatnu nimero telefon maa (+237). A heɓan kooduure OTP nder SMS. Naatnu ɗum ngam a timmina naatugol meere.",
+      "providerQ": "Noy mi laatoto jofniido?",
+      "providerA": "Naatu nder app, yahu haa Profil, ɗoɓɓu 'Sos kaye am' boo a winnda golle maa. Karɗi maa ɗon yiytee ɗon ɗon.",
+      "verificationQ": "Noy tellemgol gollirta?",
+      "verificationA": "Hos foto CNI maa nder 'Ɗaɓɓirgal tellemgol'. Min ɗo ndaara ɗum nder balɗe 2 ngam min hokka ma maande bleu.",
+      "subscriptionQ": "Ɗume woni plans kawtal ngal?",
+      "subscriptionA": "ADMA ɗo hokka plans 4: Meere, Premium, Pro e Enterprise ngam ɓeydugo yiyteende maa e ɗatal maa.",
+      "paymentQ": "Noy mi yoɓata plan?",
+      "paymentA": "Daga kaye plans, suɓo plan maa, boo a yoɓa bee Orange Money koo MTN Mobile Money nder jam e KPay.",
+      "notificationsQ": "Ko waɗi mi heɓaay kaaɗunde?",
+      "notificationsA": "Ndaaru to kaaɗunde ɗon uddita nder teeltanɗe telefon maa e nder app ngal boo."
+    }
+  },
+  "legal": {
+    "title": "Sariya e Reenaare",
+    "subtitle": "Keeje sariya, reenaare keeje e alkawalji ADMA",
+    "onlineLink": "Ndaaru sariya fuu nder internet",
+    "dataTitle": "Reenaare keeje",
+    "dataText": "ADMA ɗon resnda tan keeje haanɗe ngam jokkondirgo yimɓe: nimero telefon, kootooji profil e konte. Keeje ɗe ɗon reenaa boo yeeyataake sam.",
+    "usageTitle": "Laabi huutoraade",
+    "usageText": "App ngal ɗo waɗaama ngam kuugal laawol tan. Haɗaama winndugo kuuje bonɗe, fenaande koo jaltol.",
+    "responsibilityTitle": "Hakke hakkil",
+    "responsibilityText": "ADMA ɗo wallita tan ngam yimɓe kawra. Min ngonaa nder alkawal hakkunde maa e jofniido.",
+    "intellectualTitle": "Hakke kaye",
+    "intellectualText": "Koo ɗume nder app ngal (logo, windere, kootooji) ɗum kaye ADMA tan. Haɗaama ƴettugo ɗum meere.",
+    "cniTitle": "Fotooji CNI e tellemgol",
+    "cniText": "Fotooji CNI maa ɗon reenaa nder sirri. Ɗi momtete nder balɗe 24 ɓaawo tellemgol ngol.",
+    "rightsTitle": "Hakkeeji maa",
+    "rightsText": "A woodi hakke yiygo, waylugo e momtugo keeje maa fuu saanga nde a yidi."
   }
 }

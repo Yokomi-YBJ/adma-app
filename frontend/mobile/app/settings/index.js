@@ -57,9 +57,9 @@ export default function SettingsScreen() {
     } catch {
       setPhonePublic(!val);
       showAppModal({
-        title: 'Erreur',
-        message: 'Impossible de mettre à jour la visibilité du numéro.',
-        confirmText: 'OK',
+        title: t('common.error', 'Erreur'),
+        message: t('settings.phonePublicError', 'Impossible de mettre à jour la visibilité du numéro.'),
+        confirmText: t('common.ok', 'OK'),
         variant: 'danger',
       });
     }
@@ -67,26 +67,26 @@ export default function SettingsScreen() {
 
   async function handleClearCache() {
     showAppModal({
-      title: 'Vider le cache',
-      message: 'Voulez-vous supprimer les données temporaires mises en cache pour libérer de l\'espace ?',
-      confirmText: 'Vider le cache',
-      cancelText: 'Annuler',
+      title: t('settings.clearCache', 'Vider le cache'),
+      message: t('settings.clearCacheSub', 'Voulez-vous supprimer les données temporaires mises en cache pour libérer de l\'espace ?'),
+      confirmText: t('settings.clearCache', 'Vider le cache'),
+      cancelText: t('common.cancel', 'Annuler'),
       variant: 'warning',
       onConfirm: async () => {
         setCacheClearing(true);
         try {
           await clearCache();
           showAppModal({
-            title: 'Succès',
-            message: 'Le cache local de l\'application a été vidé.',
-            confirmText: 'OK',
+            title: t('common.success', 'Succès'),
+            message: t('settings.cacheCleared', 'Le cache local de l\'application a été vidé.'),
+            confirmText: t('common.ok', 'OK'),
             variant: 'success',
           });
         } catch {
           showAppModal({
-            title: 'Erreur',
-            message: 'Une erreur est survenue lors du nettoyage du cache.',
-            confirmText: 'OK',
+            title: t('common.error', 'Erreur'),
+            message: t('common.error', 'Une erreur est survenue lors du nettoyage du cache.'),
+            confirmText: t('common.ok', 'OK'),
             variant: 'danger',
           });
         }
@@ -97,10 +97,10 @@ export default function SettingsScreen() {
 
   async function handleLogout() {
     showAppModal({
-      title: 'Déconnexion',
-      message: 'Êtes-vous sûr de vouloir vous déconnecter de votre compte Adma ?',
-      confirmText: 'Se déconnecter',
-      cancelText: 'Annuler',
+      title: t('settings.logout', 'Déconnexion'),
+      message: t('settings.logoutConfirm', 'Êtes-vous sûr de vouloir vous déconnecter de votre compte Adma ?'),
+      confirmText: t('settings.logout', 'Se déconnecter'),
+      cancelText: t('common.cancel', 'Annuler'),
       variant: 'warning',
       destructive: true,
       onConfirm: async () => {
@@ -117,10 +117,10 @@ export default function SettingsScreen() {
 
   async function handleDeleteAccount() {
     showAppModal({
-      title: 'Supprimer définitivement le compte',
-      message: 'Cette action est irréversible. Votre profil, vos avis et vos informations seront définitivement supprimés de la plateforme.',
-      confirmText: 'Supprimer',
-      cancelText: 'Annuler',
+      title: t('dangerZone.confirmAccountTitle', 'Supprimer définitivement le compte'),
+      message: t('dangerZone.confirmAccountMsg', 'Cette action est irréversible. Votre profil, vos avis et vos informations seront définitivement supprimés de la plateforme.'),
+      confirmText: t('common.delete', 'Supprimer'),
+      cancelText: t('common.cancel', 'Annuler'),
       variant: 'danger',
       destructive: true,
       onConfirm: async () => {
@@ -130,9 +130,9 @@ export default function SettingsScreen() {
           router.replace('/(auth)/login');
         } catch {
           showAppModal({
-            title: 'Erreur',
-            message: 'Impossible de supprimer le compte pour le moment.',
-            confirmText: 'OK',
+            title: t('common.error', 'Erreur'),
+            message: t('common.error', 'Impossible de supprimer le compte pour le moment.'),
+            confirmText: t('common.ok', 'OK'),
             variant: 'danger',
           });
         }
@@ -157,7 +157,7 @@ export default function SettingsScreen() {
         >
           <ChevronLeft size={22} color={colors.navy} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Paramètres</Text>
+        <Text style={styles.headerTitle}>{t('settings.title', 'Paramètres')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -186,14 +186,14 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.editProfileBtn}>
-            <Text style={styles.editProfileText}>Modifier</Text>
+            <Text style={styles.editProfileText}>{t('common.edit', 'Modifier')}</Text>
             <ChevronRight size={16} color={colors.primary} />
           </View>
         </TouchableOpacity>
 
         {/* Section 1: Mon Compte */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mon compte</Text>
+          <Text style={styles.sectionTitle}>{t('settings.accountSection', 'Mon compte')}</Text>
           <View style={styles.card}>
             <TouchableOpacity
               style={styles.menuRow}
@@ -204,8 +204,8 @@ export default function SettingsScreen() {
                 <User size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Modifier le profil</Text>
-                <Text style={styles.rowSub}>Nom, prénom, photo de profil</Text>
+                <Text style={styles.rowLabel}>{t('settings.editProfile', 'Modifier le profil')}</Text>
+                <Text style={styles.rowSub}>{t('settings.editProfileSub', 'Nom, prénom, photo de profil')}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -219,8 +219,8 @@ export default function SettingsScreen() {
                 <Bell size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Notifications</Text>
-                <Text style={styles.rowSub}>Alerte avis, messages et rappels</Text>
+                <Text style={styles.rowLabel}>{t('settings.notifications', 'Notifications')}</Text>
+                <Text style={styles.rowSub}>{t('settings.notificationsSub', 'Alerte avis, messages et rappels')}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -234,7 +234,7 @@ export default function SettingsScreen() {
                 <Globe size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Langue de l'application</Text>
+                <Text style={styles.rowLabel}>{t('settings.appLanguage', 'Langue de l\'application')}</Text>
                 <Text style={styles.rowSub}>{currentLangObj.label}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
@@ -249,8 +249,8 @@ export default function SettingsScreen() {
                 <AlertTriangle size={18} color={colors.danger} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={[styles.rowLabel, { color: colors.danger }]}>Zone de danger</Text>
-                <Text style={styles.rowSub}>Supprimer la fiche ou le compte</Text>
+                <Text style={[styles.rowLabel, { color: colors.danger }]}>{t('settings.dangerZone', 'Zone de danger')}</Text>
+                <Text style={styles.rowSub}>{t('settings.dangerZoneSub', 'Supprimer la fiche ou le compte')}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -259,7 +259,7 @@ export default function SettingsScreen() {
 
         {/* Section 2: Confidentialité & Sécurité */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Confidentialité & Sécurité</Text>
+          <Text style={styles.sectionTitle}>{t('settings.privacySection', 'Confidentialité & Sécurité')}</Text>
           <View style={styles.card}>
             <View style={styles.menuRow}>
               <View style={[styles.iconWrap, { backgroundColor: colors.successBg }]}>
@@ -270,9 +270,9 @@ export default function SettingsScreen() {
                 )}
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Numéro de téléphone public</Text>
+                <Text style={styles.rowLabel}>{t('settings.phonePublic', 'Numéro de téléphone public')}</Text>
                 <Text style={styles.rowSub}>
-                  {phonePublic ? 'Visible par les clients' : 'Masqué dans vos avis'}
+                  {phonePublic ? t('settings.phonePublicVisible', 'Visible par les clients') : t('settings.phonePublicHidden', 'Masqué dans vos avis')}
                 </Text>
               </View>
               <Switch
@@ -292,8 +292,8 @@ export default function SettingsScreen() {
                 <Shield size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Confidentialité & CGU</Text>
-                <Text style={styles.rowSub}>Conditions d'utilisation et données personnelles</Text>
+                <Text style={styles.rowLabel}>{t('settings.legal', 'Confidentialité & CGU')}</Text>
+                <Text style={styles.rowSub}>{t('settings.legalSub', 'Conditions d\'utilisation et données personnelles')}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -302,7 +302,7 @@ export default function SettingsScreen() {
 
         {/* Section 3: Assistance */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Assistance & Support</Text>
+          <Text style={styles.sectionTitle}>{t('settings.supportSection', 'Assistance & Support')}</Text>
           <View style={styles.card}>
             <TouchableOpacity
               style={styles.menuRow}
@@ -313,8 +313,8 @@ export default function SettingsScreen() {
                 <HelpCircle size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Foire aux questions (FAQ)</Text>
-                <Text style={styles.rowSub}>Réponses aux questions courantes</Text>
+                <Text style={styles.rowLabel}>{t('settings.faq', 'Foire aux questions (FAQ)')}</Text>
+                <Text style={styles.rowSub}>{t('settings.faqSub', 'Réponses aux questions courantes')}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -328,8 +328,8 @@ export default function SettingsScreen() {
                 <Headphones size={18} color={colors.success} />
               </View>
               <View style={styles.rowTextWrap}>
-                <Text style={styles.rowLabel}>Contacter l'équipe Adma</Text>
-                <Text style={styles.rowSub}>Signaler un problème technique ou poser une question</Text>
+                <Text style={styles.rowLabel}>{t('settings.contactSupport', 'Contacter l\'équipe Adma')}</Text>
+                <Text style={styles.rowSub}>{t('settings.contactSupportSub', 'Signaler un problème technique ou poser une question')}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
@@ -344,16 +344,14 @@ export default function SettingsScreen() {
             activeOpacity={0.75}
           >
             <LogOut size={18} color={colors.danger} />
-            <Text style={styles.logoutBtnText}>Se déconnecter</Text>
+            <Text style={styles.logoutBtnText}>{t('settings.logout', 'Se déconnecter')}</Text>
           </TouchableOpacity>
-
-          
         </View>
 
         {/* App Version */}
         <View style={styles.appInfo}>
           <Text style={styles.appInfoTitle}>Adma</Text>
-          <Text style={styles.appInfoVersion}>Version 1.0.0 (Adamaoua)</Text>
+          <Text style={styles.appInfoVersion}>{t('profile.version', 'Version 1.0.0')} (Adamaoua)</Text>
         </View>
       </ScrollView>
 
@@ -363,8 +361,8 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.modalBackdrop} onPress={() => setLangModal(false)} />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Choisir la langue</Text>
-              <Text style={styles.modalSubtitle}>Sélectionnez votre langue de préférence pour l'interface</Text>
+              <Text style={styles.modalTitle}>{t('settings.chooseLanguage', 'Choisir la langue')}</Text>
+              <Text style={styles.modalSubtitle}>{t('settings.chooseLanguageSub', 'Sélectionnez votre langue de préférence pour l\'interface')}</Text>
             </View>
 
             {LANGUAGES.map((item) => {
@@ -396,7 +394,7 @@ export default function SettingsScreen() {
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Déconnexion en cours...</Text>
+            <Text style={styles.loadingText}>{t('settings.loggingOut', 'Déconnexion en cours...')}</Text>
           </View>
         </View>
       )}

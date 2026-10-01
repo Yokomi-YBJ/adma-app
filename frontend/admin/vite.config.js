@@ -7,13 +7,17 @@ export default defineConfig({
     port: 4000,
     proxy: { '/api': { target: 'http://localhost:5000', changeOrigin: true } },
   },
-  build: { 
-    outDir: 'dist', 
-    sourcemap: false, 
-    minify: false,
-    rollupOptions: { output: { manualChunks: undefined } },
-    chunkSizeWarningLimit: 5000,
-    assetsInlineLimit: 0,
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'charts-vendor': ['recharts'],
+        },
+      },
+    },
   },
-  esbuild: { legalComments: 'none' },
 });

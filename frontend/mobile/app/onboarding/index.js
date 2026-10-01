@@ -157,6 +157,8 @@ const SLIDES = [
   },
 ];
 
+import { useTranslation } from 'react-i18next';
+
 // ── Dots ──────────────────────────────────────────────────────────
 function Dots({ current, total, accent }) {
   return (
@@ -192,9 +194,32 @@ export default function OnboardingScreen() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const listRef = useRef(null);
+  const { t }   = useTranslation();
   const [idx, setIdx] = useState(0);
-  const current = SLIDES[idx];
-  const isLast  = idx === SLIDES.length - 1;
+
+  const slidesData = [
+    {
+      ...SLIDES[0],
+      title: t('onboarding.step1Title', SLIDES[0].title),
+      description: t('onboarding.step1Desc', SLIDES[0].description),
+      btnLabel: t('create.next', 'Suivant'),
+    },
+    {
+      ...SLIDES[1],
+      title: t('onboarding.step2Title', SLIDES[1].title),
+      description: t('onboarding.step2Desc', SLIDES[1].description),
+      btnLabel: t('create.next', 'Suivant'),
+    },
+    {
+      ...SLIDES[2],
+      title: t('onboarding.step3Title', SLIDES[2].title),
+      description: t('onboarding.step3Desc', SLIDES[2].description),
+      btnLabel: t('onboarding.getStarted', 'Commencer'),
+    },
+  ];
+
+  const current = slidesData[idx];
+  const isLast  = idx === slidesData.length - 1;
 
   async function finish() {
     await AsyncStorage.setItem('adma_onboarded', '1');
@@ -227,7 +252,7 @@ export default function OnboardingScreen() {
         <View />
         {!isLast && (
           <TouchableOpacity style={st.skipBtn} onPress={finish}>
-            <Text style={[st.skipText, { color: current.accent }]}>Passer</Text>
+            <Text style={[st.skipText, { color: current.accent }]}>{t('onboarding.skip', 'Passer')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -235,7 +260,7 @@ export default function OnboardingScreen() {
       {/* Carrousel */}
       <FlatList
         ref={listRef}
-        data={SLIDES}
+        data={slidesData}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -253,7 +278,7 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={st.navRow}>
-          <Dots current={idx} total={SLIDES.length} accent={current.accent} />
+          <Dots current={idx} total={slidesData.length} accent={current.accent} />
 
           <TouchableOpacity
             style={[st.nextBtn, { backgroundColor: current.accent }]}

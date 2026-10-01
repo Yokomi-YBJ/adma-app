@@ -344,5 +344,208 @@
     "optional": "Optional",
     "characterCount": "{{count}}/{{max}} characters",
     "distanceKm": "{{km}} km from you"
+  },
+  "plans": {
+    "title": "Subscription Plans",
+    "subtitle": "Grow your business and reach more clients in Ngaoundéré",
+    "popularBadge": "Popular",
+    "currentBadge": "Current plan",
+    "selectBtn": "Choose this plan",
+    "keepBtn": "Keep my plan",
+    "free": {
+      "label": "Free",
+      "radius": "3 km",
+      "features": [
+        "Basic visible profile",
+        "Direct contact by clients",
+        "Reviews and trust score",
+        "Coverage: 3 km"
+      ]
+    },
+    "premium": {
+      "label": "Premium",
+      "radius": "6 km",
+      "features": [
+        "Everything in Free",
+        "HD profile photo highlighted",
+        "3-photo gallery",
+        "Basic analytics",
+        "Visibility boost",
+        "Coverage: 6 km"
+      ]
+    },
+    "professional": {
+      "label": "Professional",
+      "radius": "12 km",
+      "features": [
+        "Everything in Premium",
+        "Top placement in search results",
+        "6-photo gallery",
+        "Priority verification badge",
+        "Detailed analytics",
+        "Coverage: 12 km"
+      ]
+    },
+    "enterprise": {
+      "label": "Enterprise",
+      "radius": "Entire Ngaoundéré",
+      "features": [
+        "Everything in Professional",
+        "Max coverage (entire Ngaoundéré)",
+        "Certified Enterprise badge",
+        "Priority support 7d/7",
+        "Multi-services profile",
+        "Up to 12 photos gallery"
+      ]
+    }
+  },
+  "payment": {
+    "title": "Secure Payment",
+    "selectOperator": "Select your mobile operator",
+    "phoneLabel": "Phone number to be charged",
+    "phonePlaceholder": "6XXXXXXXX (Orange or MTN)",
+    "invalidPhone": "Invalid phone number.",
+    "chooseOperator": "Please select a payment operator.",
+    "summary": "Order summary",
+    "planLabel": "Selected plan",
+    "duration": "Validity duration",
+    "days30": "30 days",
+    "amountToPay": "Amount to pay",
+    "payBtn": "Pay {{amount}} FCFA",
+    "confirmTitle": "Confirm payment",
+    "confirmMessage": "You will be charged {{amount}} FCFA on your {{operator}} account ({{phone}}).",
+    "confirmBtn": "Confirm payment",
+    "cancelBtn": "Edit",
+    "processingTitle": "Processing payment...",
+    "processingDesc": "Please check your phone and approve the prompt by entering your secret Mobile Money PIN.",
+    "successTitle": "Payment successful!",
+    "successDesc": "Your subscription has been activated successfully. Your profile now enjoys all the new benefits.",
+    "failedTitle": "Payment failed",
+    "failedDesc": "The transaction could not be completed or was cancelled. Please try again.",
+    "retryBtn": "Try again",
+    "backToPlans": "Back to plans",
+    "goToProfile": "View profile"
+  },
+  "settings": {
+    "title": "Settings",
+    "accountSection": "My account",
+    "editProfile": "Edit profile",
+    "editProfileSub": "Name, surname, profile photo",
+    "notifications": "Notifications",
+    "notificationsSub": "Review alerts, messages and reminders",
+    "appLanguage": "App language",
+    "dangerZone": "Danger zone",
+    "dangerZoneSub": "Delete profile or account",
+    "preferencesSection": "Preferences",
+    "clearCache": "Clear cache",
+    "clearCacheSub": "Free up storage space on device",
+    "cacheCleared": "Cache cleared successfully.",
+    "supportSection": "Support & Legal",
+    "faqSupport": "Help Center & FAQ",
+    "faqSupportSub": "Frequently asked questions and contact",
+    "legal": "Terms & Privacy",
+    "legalSub": "Data protection and terms of use",
+    "privacySection": "Privacy & Security",
+    "phonePublic": "Public phone number",
+    "phonePublicVisible": "Visible to clients",
+    "phonePublicHidden": "Hidden in your reviews",
+    "phonePublicError": "Could not update phone number visibility.",
+    "chooseLanguage": "Choose language",
+    "chooseLanguageSub": "Select your preferred language for the interface",
+    "loggingOut": "Logging out...",
+    "faq": "Frequently Asked Questions (FAQ)",
+    "faqSub": "Answers to common questions",
+    "contactSupport": "Contact ADMA Team",
+    "contactSupportSub": "Report a technical issue or ask a question",
+    "logout": "Log out",
+    "logoutConfirm": "Are you sure you want to log out of your Adma account?",
+    "cancel": "Cancel"
+  },
+  "dangerZone": {
+    "title": "Danger Zone",
+    "warningTitle": "Irreversible actions",
+    "warningText": "The actions below will permanently delete your data. Please check carefully before proceeding.",
+    "deleteProviderTitle": "Delete provider profile",
+    "deleteProviderDesc": "Your profile, photos, reviews and associated data will be permanently removed. You will keep your user account.",
+    "deleteProviderBtn": "Delete profile",
+    "deleteAccountTitle": "Delete account permanently",
+    "deleteAccountDesc": "Your account, favorites, provider profile (if any) and all personal data will be irreversibly erased.",
+    "deleteAccountBtn": "Delete my account",
+    "confirmProviderTitle": "Delete provider profile",
+    "confirmProviderMsg": "This action is irreversible. All your professional data will be deleted.",
+    "confirmAccountTitle": "Delete my account",
+    "confirmAccountMsg": "Are you sure you want to delete your account? This cannot be undone."
+  },
+  "notificationPrefs": {
+    "title": "Notification Preferences",
+    "subtitle": "Choose which alerts you wish to receive",
+    "saveBtn": "Save preferences",
+    "savedSuccess": "Preferences saved successfully.",
+    "new_review": {
+      "title": "New reviews",
+      "desc": "Get notified when a client leaves a review on your profile."
+    },
+    "review_response": {
+      "title": "Review responses",
+      "desc": "Get notified when a provider replies to your review."
+    },
+    "verification_update": {
+      "title": "Verification status",
+      "desc": "Track updates regarding your verification request."
+    },
+    "subscription_reminder": {
+      "title": "Subscription reminders",
+      "desc": "Get notified before your plan expires."
+    },
+    "favorite_update": {
+      "title": "Favorite updates",
+      "desc": "Get notified when your saved providers update their profile."
+    },
+    "contact_reminder": {
+      "title": "Reminders & tips",
+      "desc": "Helpful tips to grow your activity and follow-ups."
+    }
+  },
+  "support": {
+    "title": "Help Center & FAQ",
+    "subtitle": "Have a question? Find your answer easily",
+    "searchPlaceholder": "Search in help...",
+    "faqTitle": "Frequently Asked Questions",
+    "contactTitle": "Need additional help?",
+    "contactSubtitle": "Our Ngaoundéré support team is here to help you",
+    "whatsappBtn": "Chat on WhatsApp",
+    "callBtn": "Call Support",
+    "emailBtn": "Send an Email",
+    "faqs": {
+      "registerQ": "How to create an ADMA account?",
+      "registerA": "Download the app, enter your Cameroon phone number (+237). You will receive an SMS OTP code. Enter it to sign in without any password.",
+      "providerQ": "How to become a provider?",
+      "providerA": "Sign in, go to the Profile tab, tap 'Create profile' and fill in your specialty and contact details. Your card will be immediately visible.",
+      "verificationQ": "How does identity verification work?",
+      "verificationA": "Submit a photo of your national ID from the 'Verification' section. Our team reviews your documents within 48h to grant your badge.",
+      "subscriptionQ": "What are the subscription plans?",
+      "subscriptionA": "ADMA offers 4 plans: Free, Premium, Professional and Enterprise, offering increased visibility and radius.",
+      "paymentQ": "How to pay for a plan?",
+      "paymentA": "From the Subscription screen, pick your plan, then pay securely using Orange Money or MTN Mobile Money with KPay.",
+      "notificationsQ": "Why am I not receiving notifications?",
+      "notificationsA": "Ensure notifications are enabled in your phone system settings and under 'Settings > Notifications' inside the app."
+    }
+  },
+  "legal": {
+    "title": "Terms & Privacy",
+    "subtitle": "Legal information, data protection and ADMA commitments",
+    "onlineLink": "View complete policy online",
+    "dataTitle": "Data Protection",
+    "dataText": "ADMA only collects information necessary to connect clients and service providers: contact details, profile photos and account identifiers. All data is encrypted in transit (HTTPS) and never sold to third parties.",
+    "usageTitle": "Terms of Use",
+    "usageText": "The app is strictly intended for legal and responsible use. Publishing illegal content, threats, spam or misleading information is strictly forbidden.",
+    "responsibilityTitle": "Responsibility",
+    "responsibilityText": "ADMA acts as a technical connection platform. We are not party to individual contracts between clients and providers, and disclaim direct liability for disputes.",
+    "intellectualTitle": "Intellectual Property",
+    "intellectualText": "All app content (logos, text, icons, graphics) is the exclusive property of ADMA. Unauthorized copying is prohibited.",
+    "cniTitle": "Identity Documents & Verification",
+    "cniText": "ID documents submitted for verification are encrypted, securely stored, and deleted within 24 hours of approval or rejection.",
+    "rightsTitle": "Your Rights",
+    "rightsText": "In accordance with data protection regulations, you have the right to access, rectify and delete your personal data at any time."
   }
 }

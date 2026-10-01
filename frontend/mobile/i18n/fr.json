@@ -344,5 +344,208 @@
     "optional": "Optionnel",
     "characterCount": "{{count}}/{{max}} caracteres",
     "distanceKm": "{{km}} km de vous"
+  },
+  "plans": {
+    "title": "Plans d'abonnement",
+    "subtitle": "Développez votre activité et gagnez plus de clients à Ngaoundéré",
+    "popularBadge": "Populaire",
+    "currentBadge": "Plan actuel",
+    "selectBtn": "Sélectionner ce plan",
+    "keepBtn": "Conserver mon plan",
+    "free": {
+      "label": "Gratuit",
+      "radius": "3 km",
+      "features": [
+        "Fiche de base visible",
+        "Contactable par les clients",
+        "Avis et score de confiance",
+        "Portée : 3 km"
+      ]
+    },
+    "premium": {
+      "label": "Premium",
+      "radius": "6 km",
+      "features": [
+        "Tout du gratuit",
+        "Photo de profil HD mise en avant",
+        "Galerie 3 photos",
+        "Statistiques de base",
+        "Boost de visibilité",
+        "Portée : 6 km"
+      ]
+    },
+    "professional": {
+      "label": "Professionnel",
+      "radius": "12 km",
+      "features": [
+        "Tout du Premium",
+        "Tête de liste dans la recherche",
+        "Galerie 6 photos",
+        "Badge de vérification prioritaire",
+        "Statistiques détaillées",
+        "Portée : 12 km"
+      ]
+    },
+    "enterprise": {
+      "label": "Entreprise",
+      "radius": "Tout Ngaoundéré",
+      "features": [
+        "Tout du Professionnel",
+        "Portée maximale (tout Ngaoundéré)",
+        "Badge Entreprise certifié",
+        "Support prioritaire 7j/7",
+        "Multi-spécialités",
+        "Galerie jusqu'à 12 photos"
+      ]
+    }
+  },
+  "payment": {
+    "title": "Paiement sécurisé",
+    "selectOperator": "Choisissez votre opérateur",
+    "phoneLabel": "Numéro de téléphone pour le débit",
+    "phonePlaceholder": "6XXXXXXXX (Orange ou MTN)",
+    "invalidPhone": "Numéro de téléphone invalide.",
+    "chooseOperator": "Choisissez un opérateur de paiement.",
+    "summary": "Récapitulatif de la commande",
+    "planLabel": "Plan sélectionné",
+    "duration": "Durée de validité",
+    "days30": "30 jours",
+    "amountToPay": "Montant à débiter",
+    "payBtn": "Payer {{amount}} FCFA",
+    "confirmTitle": "Confirmer le paiement",
+    "confirmMessage": "Vous allez être débité de {{amount}} FCFA sur votre compte {{operator}} ({{phone}}).",
+    "confirmBtn": "Confirmer le débit",
+    "cancelBtn": "Modifier",
+    "processingTitle": "Paiement en cours...",
+    "processingDesc": "Veuillez consulter votre téléphone et valider la transaction en saisissant votre code PIN Mobile Money secret.",
+    "successTitle": "Paiement réussi !",
+    "successDesc": "Votre abonnement a été activé avec succès. Votre fiche bénéficie immédiatement de tous ses avantages.",
+    "failedTitle": "Échec du paiement",
+    "failedDesc": "La transaction n'a pas pu aboutir ou a été annulée. Veuillez réessayer.",
+    "retryBtn": "Réessayer le paiement",
+    "backToPlans": "Retour aux plans",
+    "goToProfile": "Voir mon profil"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "accountSection": "Mon compte",
+    "editProfile": "Modifier le profil",
+    "editProfileSub": "Nom, prénom, photo de profil",
+    "notifications": "Notifications",
+    "notificationsSub": "Alerte avis, messages et rappels",
+    "appLanguage": "Langue de l'application",
+    "dangerZone": "Zone de danger",
+    "dangerZoneSub": "Supprimer la fiche ou le compte",
+    "preferencesSection": "Préférences",
+    "clearCache": "Vider le cache",
+    "clearCacheSub": "Libérer de l'espace sur l'appareil",
+    "cacheCleared": "Le cache a été vidé avec succès.",
+    "supportSection": "Assistance & Légal",
+    "faqSupport": "Centre d'aide & FAQ",
+    "faqSupportSub": "Questions fréquentes et contact",
+    "legal": "Conditions & Confidentialité",
+    "legalSub": "Protection des données et CGU",
+    "privacySection": "Confidentialité & Sécurité",
+    "phonePublic": "Numéro de téléphone public",
+    "phonePublicVisible": "Visible par les clients",
+    "phonePublicHidden": "Masqué dans vos avis",
+    "phonePublicError": "Impossible de mettre à jour la visibilité du numéro.",
+    "chooseLanguage": "Choisir la langue",
+    "chooseLanguageSub": "Sélectionnez votre langue de préférence pour l'interface",
+    "loggingOut": "Déconnexion en cours...",
+    "faq": "Foire aux questions (FAQ)",
+    "faqSub": "Réponses aux questions courantes",
+    "contactSupport": "Contacter l'équipe Adma",
+    "contactSupportSub": "Signaler un problème technique ou poser une question",
+    "logout": "Se déconnecter",
+    "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter de votre compte Adma ?",
+    "cancel": "Annuler"
+  },
+  "dangerZone": {
+    "title": "Zone de danger",
+    "warningTitle": "Actions irréversibles",
+    "warningText": "Les actions ci-dessous entraînent la suppression définitive de vos données. Veillez à bien vérifier avant de valider.",
+    "deleteProviderTitle": "Supprimer ma fiche prestataire",
+    "deleteProviderDesc": "Votre fiche, vos photos, vos avis et toutes les données associées seront définitivement supprimés. Vous conserverez votre compte utilisateur.",
+    "deleteProviderBtn": "Supprimer la fiche",
+    "deleteAccountTitle": "Supprimer mon compte définitivement",
+    "deleteAccountDesc": "Votre compte, vos favoris, votre fiche prestataire (si existante) et toutes vos données personnelles seront supprimés de façon irréversible.",
+    "deleteAccountBtn": "Supprimer mon compte",
+    "confirmProviderTitle": "Supprimer la fiche prestataire",
+    "confirmProviderMsg": "Cette action est irréversible. Toutes vos données professionnelles seront effacées.",
+    "confirmAccountTitle": "Supprimer mon compte",
+    "confirmAccountMsg": "Êtes-vous certain de vouloir supprimer votre compte ? Cette action est définitive."
+  },
+  "notificationPrefs": {
+    "title": "Préférences notifications",
+    "subtitle": "Personnalisez les alertes que vous souhaitez recevoir",
+    "saveBtn": "Enregistrer les préférences",
+    "savedSuccess": "Préférences enregistrées avec succès.",
+    "new_review": {
+      "title": "Nouveaux avis",
+      "desc": "Soyez alerté lorsqu'un client laisse une évaluation sur votre fiche."
+    },
+    "review_response": {
+      "title": "Réponses aux avis",
+      "desc": "Recevez une notification quand un prestataire répond à votre avis."
+    },
+    "verification_update": {
+      "title": "Statut de vérification",
+      "desc": "Suivez l'avancement de votre demande de badge officiel."
+    },
+    "subscription_reminder": {
+      "title": "Rappels d'abonnement",
+      "desc": "Soyez averti avant l'expiration de votre forfait Premium/Pro."
+    },
+    "favorite_update": {
+      "title": "Mises à jour des favoris",
+      "desc": "Recevez les nouveautés concernant vos prestataires enregistrés."
+    },
+    "contact_reminder": {
+      "title": "Rappels et conseils",
+      "desc": "Conseils pour développer votre activité et rappels utiles."
+    }
+  },
+  "support": {
+    "title": "Centre d'aide & FAQ",
+    "subtitle": "Une question ? Trouvez facilement votre réponse",
+    "searchPlaceholder": "Rechercher dans l'aide...",
+    "faqTitle": "Questions fréquentes",
+    "contactTitle": "Besoin d'aide supplémentaire ?",
+    "contactSubtitle": "Notre équipe basée à Ngaoundéré est à votre disposition",
+    "whatsappBtn": "Écrire sur WhatsApp",
+    "callBtn": "Appeler le support",
+    "emailBtn": "Envoyer un email",
+    "faqs": {
+      "registerQ": "Comment créer un compte ADMA ?",
+      "registerA": "Téléchargez l'application, entrez votre numéro de téléphone (+237). Vous recevrez un code OTP par SMS. Saisissez-le pour finaliser votre inscription sans mot de passe.",
+      "providerQ": "Comment devenir prestataire ?",
+      "providerA": "Connectez-vous, allez dans l'onglet Profil, cliquez sur 'Créer ma fiche' et remplissez les détails de votre métier. Votre fiche sera immédiatement visible des clients.",
+      "verificationQ": "Comment fonctionne la vérification d'identité ?",
+      "verificationA": "Prenez une photo de votre CNI depuis la section 'Demande de vérification'. Notre équipe examine votre demande sous 48h pour vous attribuer le badge officiel.",
+      "subscriptionQ": "Quels sont les plans d'abonnement ?",
+      "subscriptionA": "ADMA propose 4 forfaits : Gratuit, Premium, Professionnel et Entreprise, avec une visibilité et une portée kilométrique adaptées à vos besoins.",
+      "paymentQ": "Comment payer un abonnement ?",
+      "paymentA": "Depuis la page Abonnements, choisissez votre plan, puis réglez simplement par Orange Money ou MTN Mobile Money via notre passerelle sécurisée KPay.",
+      "notificationsQ": "Pourquoi je ne reçois pas de notifications ?",
+      "notificationsA": "Vérifiez que les notifications sont autorisées dans les réglages de votre téléphone et dans 'Paramètres > Notifications' de l'application."
+    }
+  },
+  "legal": {
+    "title": "Conditions & Confidentialité",
+    "subtitle": "Informations légales, protection des données et engagements ADMA",
+    "onlineLink": "Consulter la politique complète en ligne",
+    "dataTitle": "Protection des données",
+    "dataText": "ADMA collecte uniquement les informations nécessaires à la mise en relation entre clients et prestataires : coordonnées, photos de profil et identifiants de compte. Ces données sont chiffrées en transit (HTTPS) et stockées sur des serveurs sécurisés. Elles ne sont jamais vendues à des tiers.",
+    "usageTitle": "Conditions d'utilisation",
+    "usageText": "L'application est réservée à un usage légal et responsable. Il est interdit d'y publier des contenus illicites, des menaces, du spam ou des informations mensongères. Les prestataires s'engagent à fournir des informations exactes et à jour.",
+    "responsibilityTitle": "Responsabilité",
+    "responsibilityText": "ADMA est une plateforme d'intermédiation technique. Nous ne sommes pas partie prenante aux contrats passés entre clients et prestataires, et déclinons toute responsabilité en cas de litige direct entre les parties.",
+    "intellectualTitle": "Propriété intellectuelle",
+    "intellectualText": "L'ensemble des contenus de l'application (logos, textes, icônes, graphismes) est la propriété exclusive d'ADMA. Toute reproduction non autorisée est interdite.",
+    "cniTitle": "Pièces d'identité et vérification",
+    "cniText": "Les documents d'identité transmis pour vérification sont chiffrés et stockés sur un espace sécurisé. Ils sont supprimés de nos serveurs 24h après validation ou rejet de la demande.",
+    "rightsTitle": "Vos droits",
+    "rightsText": "Conformément à la réglementation sur la protection des données, vous disposez d'un droit d'accès, de rectification et de suppression de vos données personnelles."
   }
 }

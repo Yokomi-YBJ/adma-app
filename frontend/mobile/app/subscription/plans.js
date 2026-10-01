@@ -1,6 +1,6 @@
 /**
  * ADMA — Écran des plans d'abonnement
- * Design moderne avec affichage de la portée (rayon)
+ * Multilingue : Français / Anglais / Fulfulde
  */
 import { useState } from 'react';
 import {
@@ -12,194 +12,143 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import {
   Check,
   ChevronLeft,
-  Star,
   Zap,
   Crown,
   MapPin,
-  Clock,
+  Award,
+  CheckCircle2
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 
-// ─── Données locales des plans ──────────────────────────────────
-const PLANS_DATA = [
-  {
-    id: 'free',
-    label_fr: 'Gratuit',
-    price: 0,
-    radius: 3,
-    radiusLabel: '3 km',
-    color: '#059669',
-    bg: '#ECFDF5',
-    icon: Star,
-    features: [
-      'Fiche de base visible',
-      'Contactable par les clients',
-      'Avis et score de confiance',
-      'Portée : 3 km',
-    ],
-  },
+// Le plan "free" a été retiré, on ne garde que les plans professionnels
+const PLANS_CONFIG = [
   {
     id: 'premium',
-    label_fr: 'Premium',
     price: 1000,
-    radius: 6,
-    radiusLabel: '6 km',
     color: '#0284C7',
     bg: '#E0F2FE',
-    icon: Star,
-    features: [
-      'Tout du gratuit',
-      'Photo de profil HD mise en avant',
-      'Galerie 3 photos',
-      'Statistiques de base',
-      'Boost de visibilité',
-      'Portée : 6 km',
-    ],
+    icon: Zap,
   },
   {
     id: 'professional',
-    label_fr: 'Professional',
     price: 2500,
-    radius: 9,
-    radiusLabel: '9 km',
     color: '#6D28D9',
     bg: '#EDE9FE',
-    icon: Zap,
-    features: [
-      'Tout du Premium',
-      "Galerie jusqu'à 10 photos",
-      'Lien vers votre site web',
-      'Statistiques avancées (vues, clics)',
-      'Badge Professionnel',
-      'Portée : 9 km',
-    ],
+    icon: Award,
   },
   {
     id: 'enterprise',
-    label_fr: 'Enterprise',
     price: 5000,
-    radius: null,
-    radiusLabel: 'Illimité',
     color: '#B45309',
     bg: '#FEF3C7',
     icon: Crown,
-    features: [
-      'Tout du Pro',
-      'Galerie illimitée',
-      'Fiche multi-services',
-      'Support prioritaire',
-      'Badge Entreprise gold',
-      'Portée illimitée',
-    ],
   },
 ];
 
-function PlanCard({ plan, isCurrent, onSelect }) {
-  const Icon = plan.icon;
-  const colorsPlan = {
-    bg: plan.bg,
-    border: plan.color,
-    text: plan.color,
-    icon: plan.color,
-  };
-  const isPopular = plan.id === 'professional';
-  const isFree = plan.id === 'free';
+function PlanCard({ planConfig, isCurrent, onSelect }) {
+  const { t } = useTranslation();
+  const Icon = planConfig.icon;
+  const isPopular = planConfig.id === 'professional';
+
+  const planName = t(`plans.${planConfig.id}.label`, planConfig.id);
+  const planRadius = t(`plans.${planConfig.id}.radius`, '');
+  const features = t(`plans.${planConfig.id}.features`, { returnObjects: true }) || [];
 
   return (
     <View
       style={[
         styles.planCard,
-        { borderColor: isCurrent ? colorsPlan.border : colors.borderLight },
-        isCurrent && styles.planCardCurrent,
-        isPopular && styles.planCardPopular,
+        isCurrent && { borderColor: planConfig.color, borderWidth: 2 },
+        isPopular && !isCurrent && { borderColor: planConfig.color, borderWidth: 1.5 },
       ]}
     >
-      {isPopular && (
-        <View style={styles.popularBadge}>
-          <Text style={styles.popularText}>⭐ Le plus populaire</Text>
-        </View>
-      )}
-
-      <View style={styles.planHeader}>
-        <View style={[styles.planIconWrap, { backgroundColor: colorsPlan.bg }]}>
-          <Icon size={24} color={colorsPlan.icon} strokeWidth={2} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.planName, { color: colorsPlan.text }]}>
-            {plan.label_fr}
-          </Text>
-          <View style={styles.radiusRow}>
-            <MapPin size={14} color={colorsPlan.icon} strokeWidth={2} />
-            <Text style={[styles.radiusText, { color: colorsPlan.text }]}>
-              Portée : {plan.radiusLabel}
+      {/* Badges (Populaire ou Actuel) */}
+      <View style={styles.badgesContainer}>
+        {isPopular && !isCurrent && (
+          <View style={[styles.badge, { backgroundColor: planConfig.color }]}>
+            <Award size={12} color="#FFF" style={styles.badgeIcon} />
+            <Text style={styles.badgeText}>
+              {t('plans.popularBadge', 'POPULAIRE')}
             </Text>
           </View>
-        </View>
+        )}
         {isCurrent && (
-          <View style={[styles.currentBadge, { backgroundColor: colorsPlan.bg }]}>
-            <Check size={14} color={colorsPlan.icon} strokeWidth={3} />
-            <Text style={[styles.currentText, { color: colorsPlan.text }]}>Actuel</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.priceContainer}>
-        {isFree ? (
-          <View style={styles.freePriceBadge}>
-            <Text style={styles.freePriceText}>0 FCFA</Text>
-          </View>
-        ) : (
-          <>
-            <Text style={[styles.planPrice, { color: colorsPlan.text }]}>
-              {plan.price.toLocaleString('fr-FR')}
+          <View style={[styles.badge, { backgroundColor: colors.text }]}>
+            <CheckCircle2 size={12} color="#FFF" style={styles.badgeIcon} />
+            <Text style={styles.badgeText}>
+              {t('plans.currentBadge', 'PLAN ACTUEL')}
             </Text>
-            <Text style={[styles.planCurrency, { color: colorsPlan.text }]}> FCFA/mois</Text>
-          </>
+          </View>
         )}
       </View>
 
-      <View style={styles.featuresList}>
-        {plan.features.map((feat, i) => {
-          const isRadius = feat.startsWith('Portée');
-          return (
-            <View key={i} style={[styles.featureRow, isRadius && styles.radiusFeature]}>
-              <View style={[styles.checkCircle, { backgroundColor: colorsPlan.bg }]}>
-                <Check size={11} color={colorsPlan.icon} strokeWidth={3} />
-              </View>
-              <Text style={[styles.featureText, isRadius && { fontWeight: '700', color: colorsPlan.text }]}>
-                {feat}
+      {/* En-tête de la carte */}
+      <View style={styles.planHeader}>
+        <View style={styles.planTitleRow}>
+          <View style={[styles.planIconWrap, { backgroundColor: planConfig.bg }]}>
+            <Icon size={22} color={planConfig.color} strokeWidth={2.5} />
+          </View>
+          <View style={styles.planTitleTextWrap}>
+            <Text style={[styles.planName, { color: planConfig.color }]}>
+              {planName.toUpperCase()}
+            </Text>
+            <View style={styles.radiusRow}>
+              <MapPin size={12} color={colors.textMuted} strokeWidth={2} />
+              <Text style={styles.radiusText}>
+                {t('plans.radius', 'Portée')} : {planRadius}
               </Text>
             </View>
-          );
-        })}
+          </View>
+        </View>
       </View>
 
-      {!isCurrent && !isFree && (
+      {/* Section Prix Centrale */}
+      <View style={styles.priceSection}>
+        <Text style={styles.priceAmount}>
+          {planConfig.price.toLocaleString('fr-FR')}
+        </Text>
+        <Text style={styles.priceCurrency}>
+          FCFA <Text style={styles.pricePeriod}>{t('subscription.perMonth', '/ mois')}</Text>
+        </Text>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Liste des fonctionnalités */}
+      <View style={styles.featuresList}>
+        {Array.isArray(features) &&
+          features.map((feat, idx) => (
+            <View key={idx} style={styles.featureRow}>
+              <View style={[styles.checkWrap, { backgroundColor: planConfig.bg }]}>
+                <Check size={14} color={planConfig.color} strokeWidth={3} />
+              </View>
+              <Text style={styles.featureText}>{feat}</Text>
+            </View>
+          ))}
+      </View>
+
+      {/* Bouton d'action */}
+      <View style={styles.actionContainer}>
         <Button
-          title={`Passer au ${plan.label_fr}`}
-          onPress={() => onSelect(plan)}
-          variant={isPopular ? 'primary' : 'secondary'}
-          size="md"
-          style={{ marginTop: 16 }}
+          title={
+            isCurrent
+              ? t('plans.keepBtn', 'Conserver mon plan')
+              : t('plans.selectBtn', 'Choisir ce plan')
+          }
+          variant={isCurrent ? 'outline' : isPopular ? 'primary' : 'outline'}
+          onPress={() => onSelect(planConfig)}
+          style={[
+            styles.actionButton,
+            isPopular && !isCurrent && { backgroundColor: planConfig.color, borderColor: planConfig.color }
+          ]}
         />
-      )}
-      {isCurrent && !isFree && (
-        <View style={[styles.activeBar, { backgroundColor: colorsPlan.bg }]}>
-          <Check size={14} color={colorsPlan.icon} strokeWidth={3} />
-          <Text style={[styles.activeText, { color: colorsPlan.text }]}>Plan actif</Text>
-        </View>
-      )}
-      {isFree && isCurrent && (
-        <View style={[styles.activeBar, { backgroundColor: colorsPlan.bg }]}>
-          <Check size={14} color={colorsPlan.icon} strokeWidth={3} />
-          <Text style={[styles.activeText, { color: colorsPlan.text }]}>Plan gratuit actif</Text>
-        </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -207,249 +156,256 @@ function PlanCard({ plan, isCurrent, onSelect }) {
 export default function PlansScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const provider = useAuthStore((s) => s.provider);
 
   const currentPlan = provider?.plan || 'free';
 
-  function selectPlan(plan) {
+  function handleSelectPlan(plan) {
+    if (plan.id === currentPlan) {
+      router.back();
+      return;
+    }
+
+    const planLabel = t(`plans.${plan.id}.label`, plan.id);
     router.push({
       pathname: '/subscription/payment',
-      params: { planId: plan.id, price: plan.price, label: plan.label_fr },
+      params: {
+        planId: plan.id,
+        price: plan.price,
+        label: planLabel,
+      },
     });
   }
 
   return (
-    <View style={styles.flex}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={22} color={colors.navy} />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header Minimaliste */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          activeOpacity={0.6}
+        >
+          <ChevronLeft size={28} color={colors.text} strokeWidth={2.5} />
         </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Abonnements</Text>
-          <Text style={styles.subtitle}>Boostez votre visibilité locale</Text>
-        </View>
+        <Text style={styles.headerTitle}>{t('plans.header', 'Abonnements')}</Text>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {currentPlan !== 'free' && provider?.plan_expires_at && (
-          <View style={styles.expiryBanner}>
-            <Clock size={14} color={colors.primary} />
-            <Text style={styles.expiryText}>
-              Plan {currentPlan} — expire le{' '}
-              {new Date(provider.plan_expires_at).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
-        )}
-
-        {PLANS_DATA.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            isCurrent={currentPlan === plan.id}
-            onSelect={selectPlan}
-          />
-        ))}
-
-        <Text style={styles.legalNote}>
-          Paiement sécurisé via KPay (Orange Money / MTN MoMo).{'\n'}
-          Abonnement mensuel renouvelable. Annulable à tout moment depuis votre profil.
-        </Text>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>ADMA — Tous droits réservés</Text>
+        <View style={styles.titleSection}>
+          <Text style={styles.pageTitle}>{t('plans.title', "Choisissez votre plan")}</Text>
+          <Text style={styles.pageSub}>
+            {t('plans.subtitle', 'Développez votre activité et attirez plus de clients grâce à nos outils professionnels.')}
+          </Text>
         </View>
+
+        <View style={styles.cardsContainer}>
+          {PLANS_CONFIG.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              planConfig={plan}
+              isCurrent={currentPlan === plan.id}
+              onSelect={handleSelectPlan}
+            />
+          ))}
+        </View>
+
+        <View style={{ height: 60 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background || '#F8FAFC',
+  },
   header: {
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    backgroundColor: 'transparent',
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 0.5,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  titleSection: {
+    marginBottom: 32,
     alignItems: 'center',
   },
-  headerText: { flex: 1 },
-  title: { fontSize: 22, fontWeight: '800', color: colors.navy, letterSpacing: -0.3 },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-
-  expiryBanner: {
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  pageSub: {
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 10,
+  },
+  cardsContainer: {
+    gap: 20,
+  },
+  planCard: {
+    backgroundColor: colors.white || '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.borderLight || '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 1,
+    position: 'relative',
+  },
+  badgesContainer: {
+    position: 'absolute',
+    top: -14,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.primaryBg,
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-  },
-  expiryText: { fontSize: 13, color: colors.primary, fontWeight: '600', flex: 1 },
-
-  planCard: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: colors.borderLight,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  planCardCurrent: {
-    borderWidth: 2.5,
-    backgroundColor: colors.surface + '80',
-  },
-  planCardPopular: {
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderBottomLeftRadius: 14,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  popularText: { fontSize: 11, fontWeight: '800', color: colors.white, letterSpacing: 0.3 },
-
+  badgeIcon: {
+    marginRight: 6,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
   planHeader: {
+    marginBottom: 20,
+  },
+  planTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 12,
+    gap: 16,
   },
   planIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  planName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+  planTitleTextWrap: {
+    flex: 1,
+  },
+  planName: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
   radiusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 4,
   },
-  radiusText: { fontSize: 13, fontWeight: '600' },
-  currentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+  radiusText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textMuted,
   },
-  currentText: { fontSize: 12, fontWeight: '700' },
-
-  priceContainer: {
+  priceSection: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 16,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    marginBottom: 4,
   },
-  planPrice: { fontSize: 28, fontWeight: '900' },
-  planCurrency: { fontSize: 14, fontWeight: '500', marginLeft: 4 },
-
-  // ✅ Badge pour "0 FCFA"
-  freePriceBadge: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 18,
-    paddingVertical: 6,
-    borderRadius: 20,
+  priceAmount: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -1,
   },
-  freePriceText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
+  priceCurrency: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginLeft: 8,
+    marginBottom: 6,
   },
-
-  featuresList: { gap: 10 },
+  pricePeriod: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textMuted,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.borderLight || '#F1F5F9',
+    marginVertical: 24,
+  },
+  featuresList: {
+    gap: 14,
+  },
   featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  radiusFeature: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  checkCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featureText: { fontSize: 14, color: colors.textSecondary, flex: 1 },
-
-  activeBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 16,
-    paddingVertical: 10,
+  checkWrap: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
-  },
-  activeText: { fontSize: 14, fontWeight: '700' },
-
-  legalNote: {
-    fontSize: 12,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: 8,
-    paddingHorizontal: 10,
-  },
-  footer: {
-    marginTop: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  footerText: {
-    fontSize: 11,
-    color: colors.textDisabled,
+  featureText: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+    flex: 1,
+    lineHeight: 20,
+  },
+  actionContainer: {
+    marginTop: 32,
+  },
+  actionButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
   },
 });

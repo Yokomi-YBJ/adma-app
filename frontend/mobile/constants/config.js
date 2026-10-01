@@ -1,4 +1,4 @@
-export const API_URL = 'http://192.168.1.151:5000/api/v1';
+export const API_URL = 'http://192.168.114.88:5000/api/v1';
 export const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '';
 
 export const PLANS = {

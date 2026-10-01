@@ -204,8 +204,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Version */}
-        <Text style={styles.version}>Version 1.0.0</Text>
+     
 
         {/* Modal modification (conservée) */}
         {provider && (

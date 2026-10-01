@@ -2,7 +2,7 @@
  * ADMA — Layout racine
  * Initialise : i18n, cache, auth, réseau, notifications push
  */
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,7 +12,6 @@ import { initI18n }   from '../i18n';
 import { initCache }  from '../services/cache';
 import { useAuthStore }    from '../store/auth.store';
 import { useNetworkStore } from '../store/network.store';
-// ✅ Correction : import depuis notifications.js
 import { registerForPushNotifications, setupNotificationListeners } from '../services/notifications';
 import { colors } from '../constants/colors';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
@@ -41,29 +40,27 @@ export default function RootLayout() {
   const subscribeNetwork = useNetworkStore((s) => s.subscribe);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
-  const bootstrap = useCallback(async () => {
-    await Promise.all([
-      initI18n(),
-      initCache(),
-    ]);
-    await init();
-    // ✅ On n'enregistre les notifications que si l'utilisateur est connecté
-    if (isLoggedIn) {
-      await registerForPushNotifications();
-    }
-    setReady(true);
-  }, [isLoggedIn]);
-
+  // ── 1. Bootstrap initial — une seule fois au mount ──────────────
   useEffect(() => {
-    bootstrap();
+    (async () => {
+      await Promise.all([initI18n(), initCache()]);
+      await init();
+      setReady(true);
+    })();
     const unsub = subscribeNetwork();
     return unsub;
   }, []);
 
-  // ✅ Ajout des listeners de notifications une fois le layout monté
+  // ── 2. Enregistrement push — à chaque connexion ─────────────────
+  useEffect(() => {
+    if (ready && isLoggedIn) {
+      registerForPushNotifications();
+    }
+  }, [ready, isLoggedIn]);
+
+  // ── 3. Listeners notifications ──────────────────────────────────
   useEffect(() => {
     if (!ready) return;
-    // On écoute les notifications même si non connecté (pour les notifications en arrière-plan)
     const cleanup = setupNotificationListeners(router);
     return cleanup;
   }, [ready]);

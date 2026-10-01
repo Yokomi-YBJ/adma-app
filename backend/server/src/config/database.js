@@ -5,6 +5,14 @@ let pool;
 
 export function getPool() {
   if (!pool) {
+    const sslConfig = config.db.ssl
+      ? {
+          ssl: {
+            rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true',
+          },
+        }
+      : {};
+
     pool = mysql.createPool({
       host:               config.db.host,
       port:               config.db.port,
@@ -19,13 +27,15 @@ export function getPool() {
       charset:            'utf8mb4',
       timezone:           '+01:00',
       decimalNumbers:     true,
-      ...(config.db.ssl ? { ssl: { rejectUnauthorized: false } } : {}),
+      ...sslConfig,
     });
   }
   return pool;
 }
 
+// Wrapper sécurisé utilisant les requêtes préparées (prepared statements de mysql2)
 export async function query(sql, params = []) {
+  // nosemgrep: javascript.lang.security.audit.sqli.node-mysql-sqli.node-mysql-sqli
   return getPool().execute(sql, params);
 }
 
