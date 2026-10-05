@@ -9,6 +9,7 @@
     "build": "eas build --platform all"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
     "@formatjs/intl-pluralrules": "^6.3.15",
     "@maplibre/maplibre-react-native": "^10.4.2",
     "@react-native-async-storage/async-storage": "^2.1.0",

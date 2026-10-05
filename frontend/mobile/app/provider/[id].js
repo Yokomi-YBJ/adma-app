@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft, TrendingUp, Eye, MapPin, Star, Phone, MessageCircle,
-  ChevronRight, Share2, Flag, Heart, CheckCircle2, Shield,
+  ChevronRight, Share2, Flag, Heart,
   ThumbsUp, ThumbsDown, Minus, Edit3, X,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
@@ -21,6 +21,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { useTranslation } from 'react-i18next';
 import { CACHE_TTL } from '../../constants/config';
 import { SkeletonProviderDetail } from '../../components/ui/Skeleton';
+import VerifiedBadge from '../../components/ui/VerifiedBadge';
 import { showAppModal } from '../../components/ui/AppModal';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -76,41 +77,72 @@ const meter = StyleSheet.create({
   reviewCount: { fontSize: 12, color: colors.textMuted },
 });
 
-// ─── ReviewItem ──────────────────────────────────────────────────
+// ─── ReviewItem (avec avatar + pastille de verdict) ─────────────
 function ReviewItem({ review, isOwnReview }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'fr';
-  const icons = {
-    recommend:  <ThumbsUp size={14} color={colors.success} fill={colors.success} />,
-    neutral:    <Minus size={14} color={colors.warning} />,
-    discourage: <ThumbsDown size={14} color={colors.danger} fill={colors.danger} />,
+
+  const verdictIcons = {
+    recommend:  <ThumbsUp size={11} color={colors.white} fill={colors.white} />,
+    neutral:    <Minus size={11} color={colors.white} />,
+    discourage: <ThumbsDown size={11} color={colors.white} fill={colors.white} />,
   };
-  const bgColors = {
-    recommend:  colors.successBg,
-    neutral:    colors.warningBg,
-    discourage: colors.dangerBg,
+  const verdictColors = {
+    recommend:  colors.success,
+    neutral:    colors.warning,
+    discourage: colors.danger,
   };
+
+  const avatarUri = review.reviewerAvatar || review.reviewer_avatar;
+  const reviewerName = isOwnReview
+    ? t('provider.yourReview')
+    : (review.reviewerName || review.reviewer_name || t('provider.you'));
+  const initials = reviewerName
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const verdictColor = verdictColors[review.verdict] || colors.textMuted;
+
   return (
     <View style={[rv.item, isOwnReview && rv.ownReview]}>
       <View style={rv.header}>
-        <View style={[rv.verdict, { backgroundColor: bgColors[review.verdict] || colors.surface }]}>
-          {icons[review.verdict]}
-        </View>
-        <Text style={rv.reviewer}>
-          {isOwnReview ? t('provider.yourReview') : (review.reviewerName || review.reviewer_name || t('provider.you'))}
-        </Text>
-        {isOwnReview && (
-          <View style={rv.ownBadge}>
-            <Text style={rv.ownBadgeText}>{t('provider.you')}</Text>
-          </View>
-        )}
-        <Text style={rv.date}>
-          {new Date(review.createdAt || review.created_at).toLocaleDateString(
-            lang === 'en' ? 'en-US' : 'fr-FR',
-            { month: 'short', day: 'numeric' }
+        {/* Avatar avec pastille de verdict en coin */}
+        <View style={rv.avatarWrapper}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={rv.avatar} />
+          ) : (
+            <View style={[rv.avatar, rv.avatarFallback]}>
+              <Text style={rv.avatarInitials}>{initials}</Text>
+            </View>
           )}
-        </Text>
+          <View style={[rv.verdictDot, { backgroundColor: verdictColor }]}>
+            {verdictIcons[review.verdict]}
+          </View>
+        </View>
+
+        <View style={rv.headerText}>
+          <View style={rv.nameRow}>
+            <Text style={rv.reviewer} numberOfLines={1}>
+              {reviewerName}
+            </Text>
+            {isOwnReview && (
+              <View style={rv.ownBadge}>
+                <Text style={rv.ownBadgeText}>{t('provider.you')}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={rv.date}>
+            {new Date(review.createdAt || review.created_at).toLocaleDateString(
+              lang === 'en' ? 'en-US' : 'fr-FR',
+              { month: 'short', day: 'numeric' }
+            )}
+          </Text>
+        </View>
       </View>
+
       {review.comment && <Text style={rv.comment}>{review.comment}</Text>}
       {review.response && (
         <View style={rv.response}>
@@ -124,20 +156,112 @@ function ReviewItem({ review, isOwnReview }) {
 
 const rv = StyleSheet.create({
   item: {
-    padding: 14, backgroundColor: colors.white, borderRadius: 12,
-    marginBottom: 10, borderWidth: 1, borderColor: colors.borderLight,
+    padding: 14,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
-  ownReview: { borderColor: colors.primary, backgroundColor: colors.primaryBg + '30' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  verdict: { width: 28, height: 28, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  reviewer: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.text },
-  ownBadge: { backgroundColor: colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 12 },
-  ownBadgeText: { fontSize: 9, fontWeight: '800', color: colors.white },
-  date: { fontSize: 11, color: colors.textMuted },
-  comment: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
-  response: { marginTop: 10, padding: 10, backgroundColor: colors.primaryBg, borderRadius: 8 },
-  responseLabel: { fontSize: 11, fontWeight: '700', color: colors.primary, marginBottom: 4 },
-  responseText: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+  ownReview: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg + '30',
+  },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+
+  avatarWrapper: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+  },
+  avatarFallback: {
+    backgroundColor: colors.primaryBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitials: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  verdictDot: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+
+  headerText: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  reviewer: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    flexShrink: 1,
+  },
+  ownBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+  },
+  ownBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.white,
+  },
+  date: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+
+  comment: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  response: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: colors.primaryBg,
+    borderRadius: 8,
+  },
+  responseLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  responseText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
 });
 
 // ─── Modal d'édition d'avis ─────────────────────────────────────
@@ -514,18 +638,7 @@ export default function ProviderDetailScreen() {
         <View style={styles.mainInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{provider.name}</Text>
-            {verStatus === 'verified' && (
-              <View style={styles.verifiedChip}>
-                <CheckCircle2 size={14} color={colors.primary} fill={colors.primaryBg} />
-                <Text style={styles.verifiedText}>{t('provider.verified')}</Text>
-              </View>
-            )}
-            {verStatus === 'verified_id' && (
-              <View style={[styles.verifiedChip, { backgroundColor: colors.infoBg }]}>
-                <Shield size={14} color={colors.info} />
-                <Text style={[styles.verifiedText, { color: colors.info }]}>{t('profile.badge.verified_id')}</Text>
-              </View>
-            )}
+            <VerifiedBadge type={verStatus} size={22} />
           </View>
           <Text style={styles.specialty}>{provider.specialty}</Text>
           <View style={styles.locationRow}>
@@ -708,12 +821,6 @@ const styles = StyleSheet.create({
   mainInfo: { padding: 20, backgroundColor: colors.white },
   nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   name: { fontSize: 22, fontWeight: '800', color: colors.navy, flex: 1 },
-  verifiedChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
-  },
-  verifiedText: { fontSize: 12, fontWeight: '700', color: colors.primary },
   specialty: { fontSize: 15, color: colors.textSecondary, marginBottom: 10 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   locationText: { fontSize: 13, color: colors.textMuted },

@@ -9,14 +9,14 @@ import {
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
-  User, Settings, Briefcase, Shield,
-  CheckCircle2, Clock, AlertCircle, Star, ChevronRight,
+  User, Settings, Briefcase, Star, ChevronRight,
   Edit3, CheckCheck, Wifi, Phone, MessageSquare,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
+import VerifiedBadge from '../../components/ui/VerifiedBadge';
 import api from '../../services/api';
 
 // ── Couleurs de plan ─────────────────────────────────────────────
@@ -28,13 +28,6 @@ const PLAN_COLORS = {
 };
 
 // ── Icônes de statut de vérification (les labels viennent de t()) ─
-const VERIFICATION_ICONS = {
-  none:        AlertCircle,
-  pending:     Clock,
-  verified_id: Shield,
-  verified:    CheckCircle2,
-};
-
 const VERIFICATION_COLORS = {
   none:        colors.textMuted,
   pending:     colors.warning,
@@ -84,7 +77,6 @@ export default function ProfileScreen() {
   const initials = fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const verStatus = provider?.verificationStatus || 'none';
   const verColor  = VERIFICATION_COLORS[verStatus] || VERIFICATION_COLORS.none;
-  const verIcon   = VERIFICATION_ICONS[verStatus]  || VERIFICATION_ICONS.none;
   const verLabel  = t(`profile.badge.${verStatus}`);
   const plan      = provider?.plan || 'free';
 
@@ -155,7 +147,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push('/subscription/plans')}
                 />
                 <ProLink
-                  icon={<Shield size={18} color={verColor} />}
+                  icon={<VerifiedBadge type={verStatus} size={18} />}
                   title={t('profile.verificationRequest')}
                   value={verLabel}
                   valueColor={verColor}
@@ -202,7 +194,10 @@ function ProviderPreview({ provider, verLabel, verColor, t }) {
           </View>
         )}
         <View style={{ flex: 1 }}>
-          <Text style={styles.providerName}>{provider.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.providerName}>{provider.name}</Text>
+            <VerifiedBadge type={provider.verificationStatus} size={18} />
+          </View>
           <Text style={styles.providerSpecialty}>{provider.specialty}</Text>
           <View style={[styles.availBadge, { backgroundColor: availColor + '18' }]}>
             <View style={[styles.availDot, { backgroundColor: availColor }]} />

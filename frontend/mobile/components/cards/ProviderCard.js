@@ -1,14 +1,8 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { MapPin, ShieldCheck, CheckCircle2, Star, Navigation, ThumbsUp } from 'lucide-react-native';
+import { MapPin, Star, Navigation, ThumbsUp } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import { useTranslation } from 'react-i18next';
-
-const BADGE_CONFIGS = {
-  new:      { bg: colors.surface,   text: colors.textMuted, dot: colors.textDisabled, label: 'Nouveau' },
-  caution:  { bg: colors.dangerBg,  text: colors.danger,    dot: colors.danger,       label: 'Prudence' },
-  correct:  { bg: colors.warningBg, text: colors.warningDark, dot: colors.warning,   label: 'Correct' },
-  reliable: { bg: colors.successBg, text: colors.successDark, dot: colors.success,   label: 'Très fiable' },
-};
+import VerifiedBadge from '../ui/VerifiedBadge';
 
 const PLAN_STYLES = {
   enterprise:   { bg: '#0B162C', text: '#F8FAFC', border: '#1E293B', label: 'ENTREPRISE' },
@@ -16,40 +10,31 @@ const PLAN_STYLES = {
   premium:      { bg: '#EBF7F7', text: '#0D9488', border: '#9FDEDA', label: 'PREMIUM' },
 };
 
-function TrustBadge({ badge, reviewCount, trustScore }) {
-  const { t }  = useTranslation();
-  const cfg    = BADGE_CONFIGS[badge] || BADGE_CONFIGS.new;
-  const label  = t(`trustBadge.${badge}`, cfg.label);
+function TrustBadge({ reviewCount, trustScore }) {
+  const { t } = useTranslation();
 
-  return (
-    <View style={[styles.trustBadge, { backgroundColor: cfg.bg }]}>
-      <View style={[styles.trustDot, { backgroundColor: cfg.dot }]} />
-      <Text style={[styles.trustText, { color: cfg.text }]}>
-        {label}
-        {trustScore > 0 ? ` ${trustScore}%` : ''}
-        {reviewCount > 0 ? ` (${reviewCount})` : ''}
-      </Text>
-    </View>
-  );
-}
-
-function VerificationBadge({ status }) {
-  if (status === 'verified') {
+  if (!reviewCount || reviewCount === 0) {
     return (
-      <View style={styles.verifiedBadge}>
-        <CheckCircle2 size={11} color={colors.primaryDark} strokeWidth={2.5} />
-        <Text style={styles.verifiedText}>Vérifié</Text>
+      <View style={[styles.trustBadge, { backgroundColor: colors.surface }]}>
+        <View style={[styles.trustDot, { backgroundColor: colors.textDisabled }]} />
+        <Text style={[styles.trustText, { color: colors.textMuted }]}>
+          {t('trustBadge.new', 'Nouveau')}
+        </Text>
       </View>
     );
   }
-  if (status === 'verified_id') {
+
+  if (trustScore >= 80) {
     return (
-      <View style={[styles.verifiedBadge, { backgroundColor: colors.infoBg, borderColor: '#BFDBFE' }]}>
-        <ShieldCheck size={11} color={colors.infoDark} strokeWidth={2.5} />
-        <Text style={[styles.verifiedText, { color: colors.infoDark }]}>Identité certifiée</Text>
+      <View style={[styles.trustBadge, { backgroundColor: colors.successBg }]}>
+        <View style={[styles.trustDot, { backgroundColor: colors.success }]} />
+        <Text style={[styles.trustText, { color: colors.successDark }]}>
+          {t('trustBadge.trusted', 'Très apprécié')}
+        </Text>
       </View>
     );
   }
+
   return null;
 }
 
@@ -64,7 +49,6 @@ function DistanceBadge({ distanceKm }) {
 }
 
 export function ProviderCard({ provider, onPress, showDistance = false }) {
-  const badge      = provider.trustBadge   || 'new';
   const photoUri   = provider.photoUrl     || provider.photo_url;
   const name       = provider.name         || '';
   const specialty  = provider.specialty    || '';
@@ -98,7 +82,10 @@ export function ProviderCard({ provider, onPress, showDistance = false }) {
       {/* Informations */}
       <View style={styles.info}>
         <View style={styles.headerRow}>
-          <Text style={styles.name} numberOfLines={1}>{name}</Text>
+          <View style={styles.nameWrap}>
+            <Text style={styles.name} numberOfLines={1}>{name}</Text>
+            <VerifiedBadge type={verStatus} size={15} style={{ marginLeft: 4 }} />
+          </View>
           {planStyle && (
             <View style={[styles.planBadge, { backgroundColor: planStyle.bg, borderColor: planStyle.border }]}>
               <Star size={9} color={planStyle.text} fill={planStyle.text} />
@@ -117,8 +104,7 @@ export function ProviderCard({ provider, onPress, showDistance = false }) {
         </View>
 
         <View style={styles.bottomRow}>
-          <VerificationBadge status={verStatus} />
-          <TrustBadge badge={badge} reviewCount={reviews} trustScore={trustScore} />
+          <TrustBadge reviewCount={reviews} trustScore={trustScore} />
           {showDistance && <DistanceBadge distanceKm={provider.distanceKm} />}
         </View>
       </View>
@@ -190,11 +176,11 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 2,
   },
+  nameWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 6 },
   name: {
     fontSize: 15,
     fontWeight: '700',
     color: colors.navy,
-    flex: 1,
     letterSpacing: -0.2,
   },
   specialty: {
@@ -236,22 +222,6 @@ const styles = StyleSheet.create({
   trustText: {
     fontSize: 11,
     fontWeight: '600',
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primaryBg,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primaryLight,
-  },
-  verifiedText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primaryDark,
   },
   distanceBadge: {
     flexDirection: 'row',

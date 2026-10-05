@@ -106,6 +106,8 @@
   },
   "provider": {
     "verified": "Tellaama",
+    "verifiedId": "CNI tellaama",
+    "certified": "ADMA Tellaama",
     "premiumBadge": "Premium",
     "trustScore": "Jimmre tiiɗnde",
     "reviews": "Miijooji",
@@ -156,9 +158,7 @@
   },
   "trustBadge": {
     "new": "Keso",
-    "caution": "Santu",
-    "correct": "Ummi",
-    "reliable": "Tiiɗnde masin"
+    "trusted": "Wuurɗo haa ɓuri"
   },
   "create": {
     "title": "Hollu karɗi am",
@@ -320,7 +320,7 @@
       "none": "Tellaaka",
       "pending": "Ɗo tella",
       "verified_id": "CNI tellaama",
-      "verified": "Tellaama"
+      "verified": "ADMA Tellaama"
     }
   },
   "verification": {

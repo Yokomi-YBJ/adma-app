@@ -35,6 +35,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { showAppModal } from '../../components/ui/AppModal';
+import VerifiedBadge from '../../components/ui/VerifiedBadge';
 
 async function pickImage() {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -291,11 +292,8 @@ export default function VerificationScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.statusScroll}>
           <View style={styles.verifiedHeroCard}>
-            <View style={styles.verifiedIconWrap}>
-              <CheckCircle2 size={46} color={colors.primary} />
-            </View>
             <View style={styles.verifiedBadge}>
-              <Shield size={14} color={colors.primary} />
+              <VerifiedBadge type={status} size={22} />
               <Text style={styles.verifiedBadgeText}>{t('verification.approved', 'Compte vérifié')}</Text>
             </View>
             <Text style={styles.verifiedHeroTitle}>{t('verification.congrats', 'Félicitations !')}</Text>
@@ -647,15 +645,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
     marginBottom: 20,
-  },
-  verifiedIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 26,
-    backgroundColor: colors.primaryBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
   },
   verifiedBadge: {
     flexDirection: 'row',
