@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Bell, ChevronLeft } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 import api from '../../services/api';
@@ -20,13 +21,14 @@ const defaultPrefs = {
 export default function NotificationPreferencesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [prefs, setPrefs] = useState(defaultPrefs);
+  const { t }  = useTranslation();
+
+  const [prefs, setPrefs]     = useState(defaultPrefs);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]   = useState(false);
 
   useEffect(() => {
     let mounted = true;
-
     async function load() {
       try {
         const res = await api.get('/users/notification-preferences');
@@ -38,16 +40,15 @@ export default function NotificationPreferencesScreen() {
         if (mounted) setPrefs(parsed);
       } catch (error) {
         showAppModal({
-          title: 'Erreur',
-          message: error?.response?.data?.message || 'Impossible de charger les préférences.',
-          confirmText: 'OK',
+          title: t('common.error'),
+          message: error?.response?.data?.message || t('common.error'),
+          confirmText: t('common.ok'),
           variant: 'danger',
         });
       } finally {
         if (mounted) setLoading(false);
       }
     }
-
     load();
     return () => { mounted = false; };
   }, []);
@@ -57,16 +58,16 @@ export default function NotificationPreferencesScreen() {
     try {
       await api.put('/users/notification-preferences', prefs);
       showAppModal({
-        title: 'Préférences enregistrées',
-        message: 'Vos notifications ont bien été mises à jour.',
-        confirmText: 'OK',
+        title: t('notificationPrefs.savedSuccess'),
+        message: t('notificationPrefs.subtitle'),
+        confirmText: t('common.ok'),
         variant: 'success',
       });
     } catch (error) {
       showAppModal({
-        title: 'Erreur',
-        message: error?.response?.data?.message || 'La mise à jour a échoué.',
-        confirmText: 'OK',
+        title: t('common.error'),
+        message: error?.response?.data?.message || t('common.saveError'),
+        confirmText: t('common.ok'),
         variant: 'danger',
       });
     } finally {
@@ -79,12 +80,12 @@ export default function NotificationPreferencesScreen() {
   }
 
   const items = [
-    { key: 'new_review', label: 'Nouveaux avis', description: 'Recevoir une alerte lorsqu’un client laisse un avis.' },
-    { key: 'review_response', label: 'Réponses aux avis', description: 'Recevoir une notification quand le prestataire répond.' },
-    { key: 'verification_update', label: 'Mises à jour de vérification', description: 'Suivre le statut de votre demande de vérification.' },
-    { key: 'subscription_reminder', label: 'Rappels d’abonnement', description: 'Recevoir des rappels avant l’expiration de votre plan.' },
-    { key: 'favorite_update', label: 'Favoris', description: 'Être informé sur les activités liées à vos favoris.' },
-    { key: 'contact_reminder', label: 'Rappels de contact', description: 'Recevoir des relances utiles pour rester actif.' },
+    { key: 'new_review',            label: t('notificationPrefs.new_review.title'),            description: t('notificationPrefs.new_review.desc') },
+    { key: 'review_response',       label: t('notificationPrefs.review_response.title'),       description: t('notificationPrefs.review_response.desc') },
+    { key: 'verification_update',   label: t('notificationPrefs.verification_update.title'),   description: t('notificationPrefs.verification_update.desc') },
+    { key: 'subscription_reminder', label: t('notificationPrefs.subscription_reminder.title'), description: t('notificationPrefs.subscription_reminder.desc') },
+    { key: 'favorite_update',       label: t('notificationPrefs.favorite_update.title'),       description: t('notificationPrefs.favorite_update.desc') },
+    { key: 'contact_reminder',      label: t('notificationPrefs.contact_reminder.title'),      description: t('notificationPrefs.contact_reminder.desc') },
   ];
 
   return (
@@ -93,7 +94,7 @@ export default function NotificationPreferencesScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={20} color={colors.navy} />
         </TouchableOpacity>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>{t('notificationPrefs.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -103,8 +104,8 @@ export default function NotificationPreferencesScreen() {
             <Bell size={18} color={colors.primary} />
           </View>
           <View style={styles.summaryText}>
-            <Text style={styles.summaryTitle}>Centre de notifications</Text>
-            <Text style={styles.summarySubtitle}>Contrôlez les alertes qui vous intéressent.</Text>
+            <Text style={styles.summaryTitle}>{t('notificationPrefs.centerTitle')}</Text>
+            <Text style={styles.summarySubtitle}>{t('notificationPrefs.centerSubtitle')}</Text>
           </View>
         </View>
 
@@ -127,7 +128,7 @@ export default function NotificationPreferencesScreen() {
         </View>
 
         <Button
-          title="Enregistrer les préférences"
+          title={t('notificationPrefs.saveBtn')}
           onPress={handleSave}
           loading={saving}
           size="lg"
@@ -139,97 +140,45 @@ export default function NotificationPreferencesScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  flex: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomWidth: 1, borderBottomColor: colors.borderLight,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 40, height: 40, borderRadius: 12,
     backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.navy,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
+  title: { fontSize: 18, fontWeight: '800', color: colors.navy },
+  content: { padding: 16, paddingBottom: 40 },
   summary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: 16,
-    marginBottom: 18,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.white, borderRadius: 18,
+    borderWidth: 1, borderColor: colors.borderLight,
+    padding: 16, marginBottom: 18,
   },
   iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 42, height: 42, borderRadius: 12,
     backgroundColor: colors.primaryBg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
     marginRight: 12,
   },
-  summaryText: {
-    flex: 1,
-  },
-  summaryTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.navy,
-  },
-  summarySubtitle: {
-    marginTop: 4,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
+  summaryText: { flex: 1 },
+  summaryTitle: { fontSize: 15, fontWeight: '700', color: colors.navy },
+  summarySubtitle: { marginTop: 4, fontSize: 12, color: colors.textMuted },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    overflow: 'hidden',
+    backgroundColor: colors.white, borderRadius: 18,
+    borderWidth: 1, borderColor: colors.borderLight, overflow: 'hidden',
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.borderLight,
   },
-  textWrap: {
-    flex: 1,
-    marginRight: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  description: {
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.textMuted,
-  },
+  textWrap: { flex: 1, marginRight: 12 },
+  label: { fontSize: 14, fontWeight: '700', color: colors.text },
+  description: { marginTop: 4, fontSize: 12, lineHeight: 18, color: colors.textMuted },
 });

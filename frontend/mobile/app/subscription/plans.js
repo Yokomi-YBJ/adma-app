@@ -1,411 +1,303 @@
 /**
- * ADMA — Écran des plans d'abonnement
- * Multilingue : Français / Anglais / Fulfulde
+ * ADMA — Écran Forfaits (fidélité tarifaire)
  */
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  View, Text, StyleSheet, Pressable, Platform, Dimensions, ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring, withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import {
-  Check,
-  ChevronLeft,
-  Zap,
-  Crown,
-  MapPin,
-  Award,
-  CheckCircle2
-} from 'lucide-react-native';
-import { colors } from '../../constants/colors';
-import { useAuthStore } from '../../store/auth.store';
-import { Button } from '../../components/ui/Button';
+import { useRouter } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
+import api from '../../services/api';
 
-// Le plan "free" a été retiré, on ne garde que les plans professionnels
-const PLANS_CONFIG = [
-  {
-    id: 'premium',
-    price: 1000,
-    color: '#0284C7',
-    bg: '#E0F2FE',
-    icon: Zap,
-  },
-  {
-    id: 'professional',
-    price: 2500,
-    color: '#6D28D9',
-    bg: '#EDE9FE',
-    icon: Award,
-  },
-  {
-    id: 'enterprise',
-    price: 5000,
-    color: '#B45309',
-    bg: '#FEF3C7',
-    icon: Crown,
-  },
-];
+const { width } = Dimensions.get('window');
 
-function PlanCard({ planConfig, isCurrent, onSelect }) {
-  const { t } = useTranslation();
-  const Icon = planConfig.icon;
-  const isPopular = planConfig.id === 'professional';
+const COLORS = {
+  bg:     '#FAFBFC',
+  dark:   '#0B162C',
+  medium: '#1C2942',
+  muted:  '#3B556D',
+  accent: '#5FC2BA',
+  white:  '#FFFFFF',
+  border: '#EAEAEA',
+  track:  '#F0F2F5',
+};
 
-  const planName = t(`plans.${planConfig.id}.label`, planConfig.id);
-  const planRadius = t(`plans.${planConfig.id}.radius`, '');
-  const features = t(`plans.${planConfig.id}.features`, { returnObjects: true }) || [];
+const PLAN_KEYS = ['premium', 'professional', 'enterprise'];
 
-  return (
-    <View
-      style={[
-        styles.planCard,
-        isCurrent && { borderColor: planConfig.color, borderWidth: 2 },
-        isPopular && !isCurrent && { borderColor: planConfig.color, borderWidth: 1.5 },
-      ]}
-    >
-      {/* Badges (Populaire ou Actuel) */}
-      <View style={styles.badgesContainer}>
-        {isPopular && !isCurrent && (
-          <View style={[styles.badge, { backgroundColor: planConfig.color }]}>
-            <Award size={12} color="#FFF" style={styles.badgeIcon} />
-            <Text style={styles.badgeText}>
-              {t('plans.popularBadge', 'POPULAIRE')}
-            </Text>
-          </View>
-        )}
-        {isCurrent && (
-          <View style={[styles.badge, { backgroundColor: colors.text }]}>
-            <CheckCircle2 size={12} color="#FFF" style={styles.badgeIcon} />
-            <Text style={styles.badgeText}>
-              {t('plans.currentBadge', 'PLAN ACTUEL')}
-            </Text>
-          </View>
-        )}
-      </View>
+const RADIUS_SCALES = { premium: 1, professional: 1.6, enterprise: 2.5 };
 
-      {/* En-tête de la carte */}
-      <View style={styles.planHeader}>
-        <View style={styles.planTitleRow}>
-          <View style={[styles.planIconWrap, { backgroundColor: planConfig.bg }]}>
-            <Icon size={22} color={planConfig.color} strokeWidth={2.5} />
-          </View>
-          <View style={styles.planTitleTextWrap}>
-            <Text style={[styles.planName, { color: planConfig.color }]}>
-              {planName.toUpperCase()}
-            </Text>
-            <View style={styles.radiusRow}>
-              <MapPin size={12} color={colors.textMuted} strokeWidth={2} />
-              <Text style={styles.radiusText}>
-                {t('plans.radius', 'Portée')} : {planRadius}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Section Prix Centrale */}
-      <View style={styles.priceSection}>
-        <Text style={styles.priceAmount}>
-          {planConfig.price.toLocaleString('fr-FR')}
-        </Text>
-        <Text style={styles.priceCurrency}>
-          FCFA <Text style={styles.pricePeriod}>{t('subscription.perMonth', '/ mois')}</Text>
-        </Text>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Liste des fonctionnalités */}
-      <View style={styles.featuresList}>
-        {Array.isArray(features) &&
-          features.map((feat, idx) => (
-            <View key={idx} style={styles.featureRow}>
-              <View style={[styles.checkWrap, { backgroundColor: planConfig.bg }]}>
-                <Check size={14} color={planConfig.color} strokeWidth={3} />
-              </View>
-              <Text style={styles.featureText}>{feat}</Text>
-            </View>
-          ))}
-      </View>
-
-      {/* Bouton d'action */}
-      <View style={styles.actionContainer}>
-        <Button
-          title={
-            isCurrent
-              ? t('plans.keepBtn', 'Conserver mon plan')
-              : t('plans.selectBtn', 'Choisir ce plan')
-          }
-          variant={isCurrent ? 'outline' : isPopular ? 'primary' : 'outline'}
-          onPress={() => onSelect(planConfig)}
-          style={[
-            styles.actionButton,
-            isPopular && !isCurrent && { backgroundColor: planConfig.color, borderColor: planConfig.color }
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
+const SEGMENT_WIDTH = (width - 48 - 8) / 3;
 
 export default function PlansScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const provider = useAuthStore((s) => s.provider);
+  const router = useRouter();
 
-  const currentPlan = provider?.plan || 'free';
+  const [loading, setLoading]       = useState(true);
+  const [data, setData]             = useState(null);
+  const [selectedPlan, setSelected] = useState('premium');
 
-  function handleSelectPlan(plan) {
-    if (plan.id === currentPlan) {
-      router.back();
-      return;
-    }
+  const indicatorPosition = useSharedValue(0);
+  const radiusScale       = useSharedValue(1);
+  const planIndex         = useSharedValue(0);
 
-    const planLabel = t(`plans.${plan.id}.label`, plan.id);
-    router.push({
-      pathname: '/subscription/payment',
-      params: {
-        planId: plan.id,
-        price: plan.price,
-        label: planLabel,
-      },
-    });
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/providers/me/pricing');
+        const d = res.data.data;
+        setData(d);
+        const initial = d?.plan === 'free' || !d?.plan ? 'premium' : d.plan;
+        setSelected(initial);
+        const idx = PLAN_KEYS.indexOf(initial);
+        indicatorPosition.value = idx;
+        planIndex.value = idx;
+        radiusScale.value = RADIUS_SCALES[initial];
+      } catch {
+        setData(null);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    const idx = PLAN_KEYS.indexOf(selectedPlan);
+    planIndex.value = idx;
+    indicatorPosition.value = withSpring(idx, { damping: 20, stiffness: 200 });
+    radiusScale.value = withSpring(RADIUS_SCALES[selectedPlan], { damping: 15, stiffness: 120 });
+  }, [selectedPlan]);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorPosition.value * SEGMENT_WIDTH }],
+  }));
+
+  const radiusStyle = useAnimatedStyle(() => {
+    const isEnterprise = planIndex.value === PLAN_KEYS.indexOf('enterprise');
+    return {
+      transform: [{ scale: radiusScale.value }],
+      borderColor: withTiming(isEnterprise ? COLORS.accent : COLORS.muted, { duration: 300 }),
+      backgroundColor: withTiming(
+        isEnterprise ? 'rgba(95, 194, 186, 0.05)' : 'rgba(59, 85, 109, 0.05)',
+        { duration: 300 }
+      ),
+    };
+  });
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator color={COLORS.accent} />
+      </SafeAreaView>
+    );
   }
 
+  if (!data) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={15}>
+            <ChevronLeft size={24} color={COLORS.dark} strokeWidth={2} />
+          </Pressable>
+        </View>
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>{t('plans.noProvider.title')}</Text>
+          <Text style={styles.emptyBody}>{t('plans.noProvider.body')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const currentPlanData = data.plans[selectedPlan];
+  const isActivePlan    = data.plan === selectedPlan;
+  const currentStep     = isActivePlan ? Math.min(data.loyaltyMonths || 0, 2) : 0;
+  const immediatePrice  = currentPlanData.prices[currentStep];
+
+  const handlePay = () => {
+    router.push({
+      pathname: '/subscription/payment',
+      params: { plan: selectedPlan, amount: immediatePrice },
+    });
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header Minimaliste */}
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          activeOpacity={0.6}
-        >
-          <ChevronLeft size={28} color={colors.text} strokeWidth={2.5} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('plans.header', 'Abonnements')}</Text>
-        <View style={{ width: 44 }} />
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={15}>
+          <ChevronLeft size={24} color={COLORS.dark} strokeWidth={2} />
+        </Pressable>
+        <Text style={styles.headerTitle}>{t('plans.title')}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.titleSection}>
-          <Text style={styles.pageTitle}>{t('plans.title', "Choisissez votre plan")}</Text>
-          <Text style={styles.pageSub}>
-            {t('plans.subtitle', 'Développez votre activité et attirez plus de clients grâce à nos outils professionnels.')}
+      <View style={styles.segmentedControl}>
+        <Animated.View style={[styles.activeIndicator, indicatorStyle]} />
+        {PLAN_KEYS.map((key) => {
+          const isSelected = selectedPlan === key;
+          return (
+            <Pressable
+              key={key}
+              style={styles.segmentBtn}
+              onPress={() => setSelected(key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
+            >
+              <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
+                {t(`plans.${key}.name`)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.visualizerContainer}>
+          <Animated.View style={[styles.radarCircle, radiusStyle]}>
+            <View style={styles.radarCenter} />
+          </Animated.View>
+          <View style={styles.radiusBadge}>
+            <Text style={styles.radiusText}>
+              {currentPlanData.radius === null
+                ? t('plans.radius.unlimited')
+                : t('plans.radius.km', { val: currentPlanData.radius })}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.pricingContainer}>
+          <Text style={styles.priceLabel}>
+            {isActivePlan ? t('plans.next_payment') : t('plans.first_payment')}
           </Text>
-        </View>
 
-        <View style={styles.cardsContainer}>
-          {PLANS_CONFIG.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              planConfig={plan}
-              isCurrent={currentPlan === plan.id}
-              onSelect={handleSelectPlan}
-            />
-          ))}
-        </View>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceValue}>{immediatePrice.toLocaleString('fr-FR')}</Text>
+            <Text style={styles.priceCurrency}>FCFA</Text>
+          </View>
 
-        <View style={{ height: 60 }} />
-      </ScrollView>
-    </View>
+          <View style={styles.timeline}>
+            <View style={styles.timelineLine} />
+            {[0, 1, 2].map((stepIndex) => {
+              const isPast   = isActivePlan && stepIndex < currentStep;
+              const isActive = isActivePlan && stepIndex === currentStep;
+              const priceAtStep = currentPlanData.prices[stepIndex];
+              const stepLabel = stepIndex === 2
+                ? t('plans.month_3_plus')
+                : t('plans.month_x', { val: stepIndex + 1 });
+
+              return (
+                <View key={stepIndex} style={styles.timelineNode}>
+                  <View style={[
+                    styles.nodeCircle,
+                    isActive && styles.nodeCircleActive,
+                    isPast && styles.nodeCirclePast,
+                  ]} />
+                  <Text style={[styles.nodeLabel, (isActive || isPast) && styles.nodeLabelActive]}>
+                    {stepLabel}
+                  </Text>
+                  <Text style={[
+                    styles.nodePrice,
+                    isActive && styles.nodePriceActive,
+                    isPast && styles.nodePricePast,
+                  ]}>
+                    {priceAtStep}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <Pressable style={styles.payButton} onPress={handlePay} accessibilityRole="button">
+          <Text style={styles.payButtonText}>
+            {isActivePlan
+              ? t('plans.renew_for', { price: immediatePrice.toLocaleString('fr-FR') })
+              : t('plans.start_for',  { price: immediatePrice.toLocaleString('fr-FR') })}
+          </Text>
+        </Pressable>
+        <Text style={styles.graceNote}>{t('plans.grace_period_note')}</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background || '#F8FAFC',
-  },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   header: {
-    height: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    backgroundColor: 'transparent',
+    height: 56, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingHorizontal: 16,
   },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+  backBtn:     { width: 40, height: 40, justifyContent: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '600', color: COLORS.dark, letterSpacing: 0.2 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginBottom: 8, textAlign: 'center' },
+  emptyBody:  { fontSize: 14, color: COLORS.muted, textAlign: 'center', lineHeight: 20 },
+
+  segmentedControl: {
+    flexDirection: 'row', marginHorizontal: 24, marginTop: 8,
+    backgroundColor: COLORS.track, borderRadius: 12, padding: 4, position: 'relative',
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    letterSpacing: 0.5,
+  activeIndicator: {
+    position: 'absolute', top: 4, left: 4, bottom: 4,
+    width: SEGMENT_WIDTH, backgroundColor: COLORS.white, borderRadius: 8,
+    shadowColor: COLORS.dark, shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 2, elevation: 2,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+  segmentBtn: {
+    flex: 1, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', zIndex: 1,
   },
-  titleSection: {
-    marginBottom: 32,
-    alignItems: 'center',
+  segmentText:       { fontSize: 13, fontWeight: '500', color: COLORS.muted, letterSpacing: 0.3 },
+  segmentTextActive: { color: COLORS.dark, fontWeight: '600' },
+
+  content: { flex: 1, paddingHorizontal: 24 },
+  visualizerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 200 },
+  radarCircle: {
+    width: 100, height: 100, borderRadius: 50, borderWidth: 1,
+    justifyContent: 'center', alignItems: 'center', position: 'absolute',
   },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -0.5,
-    textAlign: 'center',
-    marginBottom: 8,
+  radarCenter: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.dark },
+  radiusBadge: {
+    position: 'absolute', bottom: 20, backgroundColor: COLORS.white,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  pageSub: {
-    fontSize: 15,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 10,
+  radiusText: { fontSize: 12, fontWeight: '600', color: COLORS.dark, letterSpacing: 0.5 },
+
+  pricingContainer: { paddingTop: 32, paddingBottom: 24 },
+  priceLabel: { fontSize: 14, color: COLORS.muted, fontWeight: '500', marginBottom: 4 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 32 },
+  priceValue: { fontSize: 48, fontWeight: '300', color: COLORS.dark, letterSpacing: -1.5 },
+  priceCurrency: { fontSize: 20, fontWeight: '400', color: COLORS.muted, marginLeft: 8 },
+
+  timeline: { flexDirection: 'row', justifyContent: 'space-between', position: 'relative', marginTop: 16 },
+  timelineLine: {
+    position: 'absolute', top: 6, left: 20, right: 20,
+    height: 2, backgroundColor: COLORS.border, zIndex: 0,
   },
-  cardsContainer: {
-    gap: 20,
+  timelineNode: { alignItems: 'center', width: 60, zIndex: 1 },
+  nodeCircle: {
+    width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.bg,
+    borderWidth: 2, borderColor: COLORS.border, marginBottom: 12,
   },
-  planCard: {
-    backgroundColor: colors.white || '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: colors.borderLight || '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 1,
-    position: 'relative',
+  nodeCircleActive: { borderColor: COLORS.dark, backgroundColor: COLORS.dark },
+  nodeCirclePast:   { borderColor: COLORS.dark },
+  nodeLabel:        { fontSize: 11, color: COLORS.muted, fontWeight: '500', marginBottom: 4 },
+  nodeLabelActive:  { color: COLORS.dark, fontWeight: '600' },
+  nodePrice:        { fontSize: 13, color: COLORS.muted, fontWeight: '500' },
+  nodePriceActive:  { color: COLORS.dark, fontWeight: '700' },
+  nodePricePast:    { textDecorationLine: 'line-through', opacity: 0.5 },
+
+  footer: { paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 0 : 24, paddingTop: 16 },
+  payButton: {
+    backgroundColor: COLORS.dark, height: 56, borderRadius: 16,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 16,
   },
-  badgesContainer: {
-    position: 'absolute',
-    top: -14,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  badgeIcon: {
-    marginRight: 6,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  planHeader: {
-    marginBottom: 20,
-  },
-  planTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  planIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planTitleTextWrap: {
-    flex: 1,
-  },
-  planName: {
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  radiusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  radiusText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  priceSection: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 4,
-  },
-  priceAmount: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -1,
-  },
-  priceCurrency: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-    marginLeft: 8,
-    marginBottom: 6,
-  },
-  pricePeriod: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.borderLight || '#F1F5F9',
-    marginVertical: 24,
-  },
-  featuresList: {
-    gap: 14,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  checkWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  featureText: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '500',
-    flex: 1,
-    lineHeight: 20,
-  },
-  actionContainer: {
-    marginTop: 32,
-  },
-  actionButton: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 16,
+  payButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '600', letterSpacing: 0.2 },
+  graceNote: {
+    fontSize: 11, color: COLORS.muted, textAlign: 'center', lineHeight: 16, opacity: 0.7,
   },
 });

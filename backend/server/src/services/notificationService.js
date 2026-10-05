@@ -202,13 +202,23 @@ export async function notifySubscriptionActivated(userId, planName) {
   });
 }
 
-export async function notifySubscriptionExpiring(userId, planName, daysLeft) {
+export async function notifySubscriptionExpiring(userId, planName, daysLeft, nextPrice, discount) {
+  const planLabels = {
+    premium:      'Premium',
+    professional: 'Professional',
+    enterprise:   'Enterprise',
+  };
+  const label = planLabels[planName] || planName;
+  const discountText = discount > 0 ? ` (−${discount}% fidélité)` : '';
+
   return createNotification(userId, {
-    type: 'subscription_expiring', channelId: 'payments',
+    type: 'subscription_expiring',
+    channelId: 'payments',
     titleFr: 'Abonnement bientôt expiré',
-    bodyFr:  `Votre plan ${planName} expire dans ${daysLeft} jour(s). Renouvelez !`,
     titleEn: 'Subscription expiring soon',
-    bodyEn:  `Your ${planName} plan expires in ${daysLeft} day(s).`,
+    bodyFr:  `Votre plan ${label} expire dans ${daysLeft} jour(s). Renouvelez à ${nextPrice} F${discountText} pour garder votre visibilité.`,
+    bodyEn:  `Your ${label} plan expires in ${daysLeft} day(s). Renew at ${nextPrice} F${discountText} to keep your visibility.`,
+    data: { type: 'subscription_expiring', plan: planName },
   });
 }
 

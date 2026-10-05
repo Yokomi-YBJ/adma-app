@@ -12,8 +12,8 @@ export const PLANS = {
 // Correspond à ce que le serveur applique dans la requête Haversine
 export const PLAN_RADIUS = {
   free:         3,
-  premium:      6,
-  professional: 9,
+  premium:      5,
+  professional: 8,
   enterprise:   null, // illimité
 };
 

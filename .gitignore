@@ -70,7 +70,4 @@ dist-server/
 .Trashes
 ehthumbs.db
 Thumbs.db
-google-services.json
-google-services.b64
-*.b64google-services.json
 .env

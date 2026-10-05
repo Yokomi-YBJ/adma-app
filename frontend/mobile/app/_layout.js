@@ -94,6 +94,7 @@ export default function RootLayout() {
             <Stack.Screen name="verification/index"        options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="subscription/plans"        options={{ headerShown: false }} />
             <Stack.Screen name="subscription/payment"      options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="subscription/success"      options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="notifications/index"       options={{ headerShown: false }} />
             <Stack.Screen name="settings/index"            options={{ headerShown: false }} />
             <Stack.Screen name="settings/edit-profile"     options={{ headerShown: false, presentation: 'modal' }} />

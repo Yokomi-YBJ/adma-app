@@ -410,15 +410,17 @@ export default function CreateProviderScreen() {
               <View style={styles.radiusInfo}>
                 <Text style={styles.radiusTitle}>{t('create.geoRadiusTitle', 'Rayon selon votre plan')}</Text>
                 {[
-                  { plan: t('plans.free', 'Gratuit'),            radius: '3 km',     color: colors.textMuted },
-                  { plan: t('plans.premium', 'Premium'),          radius: '6 km',     color: colors.primary   },
-                  { plan: t('plans.professional', 'Professionnel'), radius: '9 km',   color: colors.navyMid   },
-                  { plan: t('plans.enterprise', 'Entreprise'),     radius: t('plans.unlimited', 'Illimité'), color: colors.navy },
+                  { plan: t('plans.free', 'Gratuit'),            radius: PLAN_RADIUS.free,     color: colors.textMuted },
+                  { plan: t('plans.premium', 'Premium'),          radius: PLAN_RADIUS.premium,  color: colors.primary   },
+                  { plan: t('plans.professional', 'Professionnel'), radius: PLAN_RADIUS.professional, color: colors.navyMid },
+                  { plan: t('plans.enterprise', 'Entreprise'),     radius: PLAN_RADIUS.enterprise, color: colors.navy },
                 ].map(r => (
                   <View key={r.plan} style={styles.radiusRow}>
                     <View style={[styles.radiusDot, { backgroundColor: r.color }]} />
                     <Text style={styles.radiusPlan}>{r.plan}</Text>
-                    <Text style={[styles.radiusKm, { color: r.color }]}>{r.radius}</Text>
+                    <Text style={[styles.radiusKm, { color: r.color }]}>
+                      {r.radius === null ? t('plans.unlimited', 'Illimité') : `${r.radius} km`}
+                    </Text>
                   </View>
                 ))}
               </View>

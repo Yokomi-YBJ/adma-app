@@ -1,23 +1,25 @@
 /**
  * ADMA — Onboarding
  * Illustrations SVG personnalisées + design slide coloré
+ * + animation de chargement lors du finish
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Dimensions, StatusBar,
+  Dimensions, StatusBar, Animated, Easing,
 } from 'react-native';
 import { useRouter }           from 'expo-router';
 import { useSafeAreaInsets }   from 'react-native-safe-area-context';
 import AsyncStorage            from '@react-native-async-storage/async-storage';
 import { ChevronRight }        from 'lucide-react-native';
 import { SvgXml }              from 'react-native-svg';
+import { useTranslation }      from 'react-i18next';
 import { colors }              from '../../constants/colors';
+import { useAuthStore }        from '../../store/auth.store';
 
 const { width, height } = Dimensions.get('window');
 
-// ── Illustrations SVG inline ──────────────────────────────────────
-
+// ── Illustrations SVG (inchangées) ────────────────────────────────
 const SVG_1 = `<svg viewBox="0 0 320 280" xmlns="http://www.w3.org/2000/svg">
   <circle cx="160" cy="140" r="110" fill="#5FC2BA" opacity="0.10"/>
   <circle cx="260" cy="60"  r="36"  fill="#5FC2BA" opacity="0.18"/>
@@ -127,39 +129,7 @@ const SVG_3 = `<svg viewBox="0 0 320 280" xmlns="http://www.w3.org/2000/svg">
   <rect x="232" y="53" width="28" height="3" rx="1.5" fill="white" opacity="0.7"/>
 </svg>`;
 
-const SLIDES = [
-  {
-    id:          '1',
-    bg:          '#EBF7F7',
-    accent:      '#5FC2BA',
-    svg:         SVG_1,
-    title:       'Trouvez le bon prestataire',
-    description: 'Mécaniciens, électriciens, couturiers...\nTous les artisans de Ngaoundéré réunis en un seul endroit.',
-    btnLabel:    'Suivant',
-  },
-  {
-    id:          '2',
-    bg:          '#EEF2FF',
-    accent:      '#4B6BFB',
-    svg:         SVG_2,
-    title:       'Vérifiez avant de contacter',
-    description: 'Score de confiance, avis réels et badges de vérification\npour faire le bon choix en toute sécurité.',
-    btnLabel:    'Suivant',
-  },
-  {
-    id:          '3',
-    bg:          '#F0FDF4',
-    accent:      '#16A34A',
-    svg:         SVG_3,
-    title:       'Contactez directement',
-    description: 'Un appel ou un message WhatsApp en un tap.\nPas d\'intermédiaire, pas de commission.',
-    btnLabel:    'Commencer',
-  },
-];
-
-import { useTranslation } from 'react-i18next';
-
-// ── Dots ──────────────────────────────────────────────────────────
+// ── Dots (indicateur de slide) ────────────────────────────────────
 function Dots({ current, total, accent }) {
   return (
     <View style={st.dotsRow}>
@@ -189,32 +159,116 @@ function Slide({ item }) {
   );
 }
 
-// ── Écran ─────────────────────────────────────────────────────────
+// ── Loading overlay : trois points animés ─────────────────────────
+function LoadingOverlay({ visible, accent }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const make = (dot, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 380,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: 380,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.delay((2 - delay / 150) * 150),
+        ])
+      );
+
+    const a1 = make(dot1, 0);
+    const a2 = make(dot2, 150);
+    const a3 = make(dot3, 300);
+    a1.start(); a2.start(); a3.start();
+
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const dots = [dot1, dot2, dot3];
+
+  return (
+    <View style={st.overlay} pointerEvents="auto">
+      <View style={st.overlayCard}>
+        <View style={st.dotsLoader}>
+          {dots.map((dot, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                st.loadingDot,
+                {
+                  backgroundColor: accent,
+                  opacity: dot.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                  transform: [{
+                    translateY: dot.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, -6],
+                    }),
+                  }],
+                },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ── Écran principal ──────────────────────────────────────────────
 export default function OnboardingScreen() {
-  const router  = useRouter();
-  const insets  = useSafeAreaInsets();
-  const listRef = useRef(null);
-  const { t }   = useTranslation();
-  const [idx, setIdx] = useState(0);
+  const router     = useRouter();
+  const insets     = useSafeAreaInsets();
+  const listRef    = useRef(null);
+  const { t }      = useTranslation();
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+
+  const [idx,       setIdx]       = useState(0);
+  const [finishing, setFinishing] = useState(false);
 
   const slidesData = [
     {
-      ...SLIDES[0],
-      title: t('onboarding.step1Title', SLIDES[0].title),
-      description: t('onboarding.step1Desc', SLIDES[0].description),
-      btnLabel: t('create.next', 'Suivant'),
+      id: '1',
+      bg: '#EBF7F7',
+      accent: '#5FC2BA',
+      svg: SVG_1,
+      title:       t('onboarding.step1Title'),
+      description: t('onboarding.step1Desc'),
+      btnLabel:    t('onboarding.next'),
     },
     {
-      ...SLIDES[1],
-      title: t('onboarding.step2Title', SLIDES[1].title),
-      description: t('onboarding.step2Desc', SLIDES[1].description),
-      btnLabel: t('create.next', 'Suivant'),
+      id: '2',
+      bg: '#EEF2FF',
+      accent: '#4B6BFB',
+      svg: SVG_2,
+      title:       t('onboarding.step2Title'),
+      description: t('onboarding.step2Desc'),
+      btnLabel:    t('onboarding.next'),
     },
     {
-      ...SLIDES[2],
-      title: t('onboarding.step3Title', SLIDES[2].title),
-      description: t('onboarding.step3Desc', SLIDES[2].description),
-      btnLabel: t('onboarding.getStarted', 'Commencer'),
+      id: '3',
+      bg: '#F0FDF4',
+      accent: '#16A34A',
+      svg: SVG_3,
+      title:       t('onboarding.step3Title'),
+      description: t('onboarding.step3Desc'),
+      btnLabel:    t('onboarding.getStarted'),
     },
   ];
 
@@ -222,10 +276,15 @@ export default function OnboardingScreen() {
   const isLast  = idx === slidesData.length - 1;
 
   async function finish() {
-    await AsyncStorage.setItem('adma_onboarded', '1');
-    const { useAuthStore } = await import('../../store/auth.store');
-    const isLoggedIn = useAuthStore.getState().isLoggedIn;
-    router.replace(isLoggedIn ? '/(tabs)' : '/(auth)/login');
+    if (finishing) return;
+    setFinishing(true);
+    try {
+      await AsyncStorage.setItem('adma_onboarded', '1');
+    } catch {}
+    // Petit délai pour laisser l'animation se voir (perception de fluidité)
+    setTimeout(() => {
+      router.replace(isLoggedIn ? '/(tabs)' : '/(auth)/login');
+    }, 400);
   }
 
   function next() {
@@ -247,22 +306,28 @@ export default function OnboardingScreen() {
     <View style={[st.flex, { backgroundColor: current.bg }]}>
       <StatusBar barStyle="dark-content" backgroundColor={current.bg} />
 
-      {/* Bouton Passer */}
       <View style={[st.topBar, { paddingTop: insets.top + 12 }]}>
         <View />
         {!isLast && (
-          <TouchableOpacity style={st.skipBtn} onPress={finish}>
-            <Text style={[st.skipText, { color: current.accent }]}>{t('onboarding.skip', 'Passer')}</Text>
+          <TouchableOpacity
+            style={st.skipBtn}
+            onPress={finish}
+            disabled={finishing}
+            activeOpacity={0.6}
+          >
+            <Text style={[st.skipText, { color: current.accent }]}>
+              {t('onboarding.skip')}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Carrousel */}
       <FlatList
         ref={listRef}
         data={slidesData}
         horizontal
         pagingEnabled
+        scrollEnabled={!finishing}
         showsHorizontalScrollIndicator={false}
         keyExtractor={s => s.id}
         onMomentumScrollEnd={onMomentumScrollEnd}
@@ -270,7 +335,6 @@ export default function OnboardingScreen() {
         getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
       />
 
-      {/* Footer : texte + navigation */}
       <View style={[st.footer, { paddingBottom: insets.bottom + 28 }]}>
         <View style={st.textBlock}>
           <Text style={st.title}>{current.title}</Text>
@@ -281,8 +345,9 @@ export default function OnboardingScreen() {
           <Dots current={idx} total={slidesData.length} accent={current.accent} />
 
           <TouchableOpacity
-            style={[st.nextBtn, { backgroundColor: current.accent }]}
+            style={[st.nextBtn, { backgroundColor: current.accent, opacity: finishing ? 0.7 : 1 }]}
             onPress={next}
+            disabled={finishing}
             activeOpacity={0.85}
           >
             <Text style={st.nextBtnText}>{current.btnLabel}</Text>
@@ -290,6 +355,8 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <LoadingOverlay visible={finishing} accent={current.accent} />
     </View>
   );
 }
@@ -323,4 +390,37 @@ const st = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
   },
   nextBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+
+  // Overlay de chargement
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 22, 44, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  overlayCard: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 32,
+    paddingVertical: 28,
+    borderRadius: 24,
+    minWidth: 120,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  dotsLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 24,
+  },
+  loadingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
 });

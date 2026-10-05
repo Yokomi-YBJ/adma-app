@@ -22,13 +22,14 @@
   },
   "onboarding": {
     "step1Title": "Yiyto jofniido booɗɗo",
-    "step1Desc": "Mekanik, kuran, nyaoowo... Goolooɓe Ngaoundere fuu nder junngo maa.",
+    "step1Desc": "Mekanik, kuran, nyaoowo...\nGoolooɓe Ngaoundere fuu nder nokkuure wootere.",
     "step2Title": "Tellu ko a noddata",
-    "step2Desc": "Jimmre tiiɗnde, miijooji laaɓɗi ngam a suɓoo ko woodi.",
+    "step2Desc": "Jimmre tiiɗnde, miijooji laaɓɗi e maandeeji\nngam a suɓoo booɗɗum.",
     "step3Title": "Noddu ɗon ɗon",
-    "step3Desc": "Noddu koo neldu ɓataake WhatsApp ɗon ɗon nder app.",
+    "step3Desc": "Noddu koo neldu ɓataake WhatsApp e meemugol wootel.\nAlaa hakkunde, alaa komisiyoŋ.",
     "getStarted": "Fuɗɗu",
-    "skip": "Ɓeydu"
+    "skip": "Ɓeydu",
+    "next": "Yeeso"
   },
   "tabs": {
     "home": "Suudu",
@@ -43,7 +44,11 @@
     "recommended": "Jofniiɓe muuɗɗinaaɓe",
     "new": "Jofniiɓe kesi",
     "seeAll": "Yiy fow",
-    "noConnection": "A woodaa internet - keeje resndaaɗe"
+    "noConnection": "A woodaa internet - keeje resndaaɗe",
+    "greetingMorning": "Jam waali",
+    "greetingAfternoon": "Jam ñalawma",
+    "greetingEvening": "Jam hiiri",
+    "noProviders": "Alaa jofniido woodi"
   },
   "search": {
     "title": "Yiyto",
@@ -67,7 +72,37 @@
     "nearbyDisabled": "Yiyto jaalorde",
     "permDenied": "Nokkuure uddaama",
     "permDeniedMsg": "Mabbu nokkuure maa ngam yiyde jofniiɓe takko maa.",
-    "permActivate": "Mabbu"
+    "permActivate": "Mabbu",
+    "chooseCategory": "Suɓo juulorde",
+    "searchCategory": "Yiylo juulorde...",
+    "selectCategory": "Suɓo juulorde",
+    "chooseCity": "Suɓo ngesa",
+    "searchCity": "Yiylo ngesa...",
+    "selectCity": "Suɓo ngesa",
+    "verifiedOnly": "Tellaaɓe tan",
+    "availableNow": "Woodiɓe jooni",
+    "clear": "Ittu",
+    "apply": "Huutoro",
+    "switchToClassic": "Yiylo ɓooyngo",
+    "nearbyBadge": "Takko am — jofniiɓe nder keerol maɓɓe",
+    "resultsCount_one": "{{count}} keɓal",
+    "resultsCount_other": "{{count}} keɓale",
+    "emptyTitle": "Alaa keɓal",
+    "emptyMessage": "Ƴeewto konnguɗi walla cuɓe goɗɗe.",
+    "emptyNearbyTitle": "Alaa jofniido takko maa",
+    "emptyNearbyMessage": "Alaa jofniiɓe ɓe mbinndi nokkuure golle nder nokkuure maa jooni.",
+    "locationDisabled": "Nokkuure ãaama",
+    "locationDisabledBody": "Ñiiɓnu nokkuure nder teelte telefoŋ maa ngam yiyde jofniiɓe takko maa.",
+    "activate": "Ñiiɓnu",
+    "viewOnMap": "Yiy e kartal"
+  },
+  "map": {
+    "backToList": "Doggol",
+    "loading": "No loowa...",
+    "results_one": "{{count}} gollotooɗo",
+    "results_other": "{{count}} gollotooɓe",
+    "noProviders": "Alaa jofniido nder nokkuure ndee",
+    "mapError": "Waawaa loowde kartal"
   },
   "provider": {
     "verified": "Tellaama",
@@ -99,8 +134,25 @@
     "geoNone": "Nokkuure hollitaaka",
     "geoUpdateSuccess": "Nokkuure golle hesɗitinaama",
     "geoDeleteConfirm": "A yiytaako nder 'Takko am'. A ɗo yidi jokkude?",
+    "editProfile": "Waylu karɗi am",
+    "currentRadius": "Daygol maa jooni :",
+    "geoDefinedHint": "Meemu \"Hesɗitin\" to a waylii nokkuure golle maa.",
+    "geoUndefinedText": "Alaa nokkuure — a yiytaako nder \"Takko am\"",
     "newProvider": "Jofniido keso",
-    "locationNotSet": "Nokkuure hollitaaka"
+    "available": "Woodi",
+    "busy": "Kalfinaama",
+    "unavailable": "Alaa",
+    "recommendations": "Muuɗɗinal",
+    "noLocation": "Nokkuure hollitaaka",
+    "myStats": "Limmle am",
+    "stats": "Limmle",
+    "yourReview": "Miijo maa",
+    "you": "Aan",
+    "providerReply": "Jaabawol jofniido :",
+    "editMyReview": "Waylu miijo am",
+    "seeRemaining_one": "Yiy miijo {{count}} heddiiɗo",
+    "seeRemaining_other": "Yiy miijooji {{count}} heddiiɗi",
+    "geoDeleteTitle": "Momtu nokkuure GPS"
   },
   "trustBadge": {
     "new": "Keso",
@@ -114,9 +166,11 @@
     "step2": "Nokkuure e noddugol",
     "step3": "Foto e firo",
     "step4": "Wakkatiiji",
+    "stepOf": "Daawe {{step}} nder {{total}}",
     "next": "Yeeso",
     "back": "Ɓooyde",
     "submit": "Tellu karɗi am",
+    "submitting": "Ɗo tella...",
     "categoryLabel": "Juulorde *",
     "nameLabel": "Innde karɗi *",
     "namePlaceholder": "Misaali: Moussa Kuran",
@@ -132,25 +186,58 @@
     "both": "Ɗiɗo fuu",
     "phoneLabel": "Nimero telefon",
     "whatsappLabel": "Nimero WhatsApp",
+    "websiteLabel": "Lien internet (haanaali)",
     "photoLabel": "Foto profil",
+    "photoSub": "Foto booɗnde ɗon ɓeyda hoolaare yimɓe",
     "addPhoto": "Sos foto",
     "changePhoto": "Waylu foto",
     "availabilityLabel": "Woodaangal",
+    "availabilitySub": "Hollu darnde maa jooni",
     "available": "Woodi",
     "busy": "Kalfinaama",
     "unavailable": "Alaa",
     "hoursLabel": "Wakkatiiji (haanaali)",
     "success": "Karɗi tellaama booɗɗum",
+    "successMsg": "Karɗi maa yiyteeki jooni dow Adma.",
+    "viewProfile": "Yiy karɗi am",
     "error": "Fenaande waɗi",
     "geoTitle": "Nokkuure GPS",
-    "geoHint": "Wonu nder nokkuure golle maa to a meemi ɗoo",
+    "geoHint": "Res nokkuure maa ngam a yiytee nder 'Takko am'.",
     "geoSet": "Res nokkuure am ɗoo",
     "geoDefined": "Nokkuure resndaama",
+    "geoNone": "Hollitaaka (haanaali)",
     "geoSetting": "Ɗo ɗaɓɓa nokkuure...",
     "geoRemove": "Momtu",
     "geoRadiusTitle": "Daygol bee plan maa",
     "geoPermDenied": "Nokkuure uddaama",
-    "geoPermMsg": "Mabbu nokkuure ngam resde zone maa."
+    "geoPermDeniedMsg": "Mabbu nokkuure ngam resde zone maa.",
+    "geoError": "Waawaa heɓde nokkuure maa. Ɗaɓɓu kine.",
+    "permPhoto": "Mabbu yiyde fotooji maa.",
+    "selectCategory": "Suɓo juulorde...",
+    "searchCategory": "Yiylo golle, kuugal...",
+    "modalCatTitle": "Suɓo juulorde",
+    "selectCity": "Suɓo ngesa...",
+    "searchCity": "Yiylo ngesa...",
+    "modalCityTitle": "Suɓo ngesa",
+    "selectNeighborhood": "Suɓo kuuje...",
+    "searchNeighborhood": "Yiylo kuuje...",
+    "modalNeighTitle": "Suɓo kuuje",
+    "selectCityFirst": "Suɓo ngesa arande.",
+    "selectAvailability": "Suɓo darnde...",
+    "modalAvailTitle": "Darnde woodaangal",
+    "errCategory": "Juulorde ɗon haani",
+    "errName": "Innde ɗon haani",
+    "errSpecialty": "Fartaŋŋe ɗon haani",
+    "errCity": "Ngesa ɗon haani",
+    "errNeighborhood": "Kuuje ɗon haani",
+    "errPhone": "Nimero telefon ɗon haani",
+    "errWhatsapp": "Nimero WhatsApp ɗon haani",
+    "errNameSpecialty": "Innde, fartaŋŋe, juulorde, ngesa e kuuje fuu ɗon haani.",
+    "tipsTitle": "Sawriiji foto booɗnde",
+    "tip1": "Yeeso koo nokkuure golle ɓanŋi",
+    "tip2": "Ɓaawo laaɓɗo e golle",
+    "tip3": "Foto laaɓnde e kesum",
+    "summaryTitle": "Kootoowo karɗi maa"
   },
   "review": {
     "title": "Haala miijooji",
@@ -163,7 +250,14 @@
     "success": "Miijooji neldaama",
     "alreadyReviewed": "A neldii miijooji ko adii",
     "cantReviewOwn": "A waawaa neldude miijooji dow karɗi maa",
-    "response": "Jaabawol jofniido"
+    "response": "Jaabawol jofniido",
+    "yourReview": "Miijo maa",
+    "question": "Noy njiɗ-ɗaa ngal golle?",
+    "commentOptional": "Haala (haanaali)",
+    "commentEditPH": "Haal ko njiyɗaa e jofniido oo...",
+    "update": "Hesɗitin",
+    "updating": "Ɗo hesɗitina...",
+    "disclaimer": "Miijo maa ɗon haani laatinde goonga, dow ko njiyɗaa tigi. Miijooji fenaande momtete."
   },
   "report": {
     "title": "Fida",
@@ -186,7 +280,12 @@
     "title": "Muuɗɗinaaɓe",
     "empty": "Alaa muuɗɗinaaɓe",
     "emptyHint": "Meemu ɓernde dow karɗi jofniido ngam resde mo",
-    "loginRequired": "Naatu ngam yiyde muuɗɗinaaɓe maa"
+    "loginRequired": "Naatu ngam yiyde muuɗɗinaaɓe maa",
+    "loginMessage": "Naatu ngam yiyde jofniiɓe muuɗɗinaaɓe maa",
+    "signIn": "Naatu",
+    "browseProviders": "Yiy jofniiɓe",
+    "countSingular": "jofniido",
+    "countPlural": "jofniiɓe"
   },
   "profile": {
     "title": "Profil am",
@@ -211,6 +310,12 @@
     "confirmDelete": "Ɗum momtan konte maa e keeje fuu.",
     "verificationRequest": "Ɗaɓɓirgal tellemgol",
     "verificationStatus": "Darnde tellemgol",
+    "headerTitle": "Profil am",
+    "proSpace": "Nokkuure golle",
+    "loadingCard": "Ɗo loowa karɗi maa...",
+    "becomeProvider": "Wonu golloowo",
+    "becomeProviderDesc": "Sos karɗi maa boo a hollu golle maa e ujunnaaje yimɓe.",
+    "noCard": "A alaa karɗi golloowo jooni.",
     "badge": {
       "none": "Tellaaka",
       "pending": "Ɗo tella",
@@ -268,32 +373,10 @@
     "perMonth": "/lewru",
     "free": "Meere",
     "features": {
-      "free": [
-        "Karɗi arandeje",
-        "Wurtugol nder yiytugol",
-        "Noddol diga yimɓe"
-      ],
-      "premium": [
-        "Fuu nder Meere",
-        "Foto HD",
-        "Fotooji 3",
-        "Jimmre mawnde",
-        "Limmle arandeje"
-      ],
-      "professional": [
-        "Fuu nder Premium",
-        "Fotooji 10",
-        "Lien site web",
-        "Limmle mawɗe",
-        "Maande Pro"
-      ],
-      "enterprise": [
-        "Fuu nder Pro",
-        "Fotooji keewɗi",
-        "Walligo jaawngo",
-        "Karɗi kuuje ɗuuɗɗe",
-        "Maande Enterprise"
-      ]
+      "free": ["Karɗi arandeje", "Wurtugol nder yiytugol", "Noddol diga yimɓe"],
+      "premium": ["Fuu nder Meere", "Foto HD", "Fotooji 3", "Jimmre mawnde", "Limmle arandeje"],
+      "professional": ["Fuu nder Premium", "Fotooji 10", "Lien site web", "Limmle mawɗe", "Maande Pro"],
+      "enterprise": ["Fuu nder Pro", "Fotooji keewɗi", "Walligo jaawngo", "Karɗi kuuje ɗuuɗɗe", "Maande Enterprise"]
     },
     "pay": "Yoɓu",
     "payWith": "Yoɓ bee",
@@ -305,10 +388,60 @@
     "expiresOn": "Ɗo timma nyande {{date}}",
     "expiringSoon": "Plan maa ɗo timma jooni"
   },
+  "plans": {
+    "title": "Ceɗe",
+    "noProvider": {
+      "title": "Alaa fiisgol golloowo",
+      "body": "Sosu fiisgol maa ngam heɓde ceɗe."
+    },
+    "premium": { "name": "Premium" },
+    "professional": { "name": "Professional" },
+    "enterprise": { "name": "Enterprise" },
+    "radius": {
+      "km": "Heeɓotoo e {{val}} km",
+      "unlimited": "Heeɓotoo tawa alaa keerol"
+    },
+    "next_payment": "Njoɓdi aroore",
+    "first_payment": "Njoɓdi adanndi",
+    "month_x": "Lewru {{val}}",
+    "month_3_plus": "Lewru 3+",
+    "renew_for": "Lartu ngam {{price}} F",
+    "start_for": "Fuɗɗo e {{price}} F",
+    "grace_period_note": "Njoɓdi koolaaɗo fuɗɗotoo kadi caggal balɗe 30 tawa ceɗe ngalaa.",
+    "popularBadge": "Ɓurduɗo yiɗeede",
+    "currentBadge": "Plan jooni",
+    "selectBtn": "Suɓo plan o",
+    "keepBtn": "Heɗɗo e plan am",
+    "free": { "label": "Meere", "radius": "3 km" },
+    "unlimited": "Tawa alaa keerol"
+  },
+  "payment": {
+    "title": "Njoɓdi",
+    "total": "Njoɓdi fof",
+    "chooseOperator": "Suɓo opeeraatoor maa",
+    "phoneLabel": "Limto ngam ɗaccude",
+    "note": "A heɓay habaru e telefoŋ maa ngam teeŋtinde njoɓdi ndi.",
+    "payButton": "Njoɓ {{amount}} FCFA",
+    "error": {
+      "operator": "Suɓo opaeraatoor",
+      "phone": "Limto Kameruun ngo moƴƴaani",
+      "generic": "Njoɓdi waawaa",
+      "timeout": "Sahaa teeŋtinal ɓennii",
+      "failed": "Njoɓdi saliima"
+    },
+    "success": {
+      "title": "Njoɓdi teeŋtinii",
+      "body": "Ceɗe maa {{plan}} gollotoo jooni.",
+      "amountLabel": "Njoɓdi ndi ndokkaa",
+      "hint": "Fiisgol maa heeɓotoo jooni wano ceɗe maa.",
+      "done": "Rutto e profil"
+    }
+  },
   "notifications": {
     "title": "Kaaɗunde",
     "empty": "Alaa kaaɗunde",
-    "markAllRead": "Janngu fuu",
+    "emptyMessage": "A habaranteeɗaa habaruuji kesi, teeŋtinal e jeertinaango abonma.",
+    "markAllRead": "Tar fof",
     "settings": "Suɓanɗe kaaɗunde",
     "new_review": "Miijo keso",
     "review_response": "Jaabawol miijo maa",
@@ -335,7 +468,10 @@
     "yes": "Eey",
     "no": "Alaa",
     "ok": "OK",
+    "info": "Habaru",
     "loading": "Ɗo wooda...",
+    "saving": "Ɗo resna...",
+    "saveChanges": "Res wayle",
     "error": "Fenaande",
     "success": "Woodi",
     "retry": "Ɗaɓɓu kine",
@@ -346,88 +482,9 @@
     "optional": "Haanaali",
     "characterCount": "{{count}}/{{max}} harfeere",
     "distanceKm": "{{km}} km daga maa",
-    "back": "Rutto"
-  },
-  "plans": {
-    "title": "Plans kawtal",
-    "subtitle": "Ɓeydu golle maa ngam heɓugo jofniiɓe heewɓe haa Ngaoundere",
-    "popularBadge": "Ɓurduɗo yiɗeede",
-    "currentBadge": "Plan jooni",
-    "selectBtn": "Suɓo plan o",
-    "keepBtn": "Heɗɗo e plan am",
-    "free": {
-      "label": "Meere",
-      "radius": "3 km",
-      "features": [
-        "Karɗi arandeje yiytoonde",
-        "Noddol diga yimɓe",
-        "Miijooji e jimmre tiiɗnde",
-        "Ɗatal: 3 km"
-      ]
-    },
-    "premium": {
-      "label": "Premium",
-      "radius": "6 km",
-      "features": [
-        "Koo ɗume nder Meere",
-        "Foto profil HD mawɗum",
-        "Kootooji 3",
-        "Limooje arandeeje",
-        "Ɓeydol yiyteende",
-        "Ɗatal: 6 km"
-      ]
-    },
-    "professional": {
-      "label": "Pro",
-      "radius": "12 km",
-      "features": [
-        "Koo ɗume nder Premium",
-        "Arandol nder yiytugol",
-        "Kootooji 6",
-        "Badge tellaaɗo arando",
-        "Limooje laaɓɗe",
-        "Ɗatal: 12 km"
-      ]
-    },
-    "enterprise": {
-      "label": "Enterprise",
-      "radius": "Ngaoundere fuu",
-      "features": [
-        "Koo ɗume nder Pro",
-        "Ɗatal mawngal (Ngaoundere fuu)",
-        "Badge Enterprise laawol",
-        "Wallitorde nyalnde fuu",
-        "Golle feere-feere",
-        "Kootooji haa 12"
-      ]
-    }
-  },
-  "payment": {
-    "title": "Yoɓol reenaangol",
-    "selectOperator": "Suɓo mobayil maa",
-    "phoneLabel": "Nimero telefon ngam yoɓugo",
-    "phonePlaceholder": "6XXXXXXXX (Orange koo MTN)",
-    "invalidPhone": "Nimero telefon fenaande.",
-    "chooseOperator": "Suɓo laawol yoɓol tafoo.",
-    "summary": "Keeje yoɓol",
-    "planLabel": "Plan suɓaaɗo",
-    "duration": "Balɗe",
-    "days30": "Balɗe 30",
-    "amountToPay": "Ceedol yoɓetengol",
-    "payBtn": "Yoɓ {{amount}} FCFA",
-    "confirmTitle": "Tellu yoɓol",
-    "confirmMessage": "A yoɓan {{amount}} FCFA nder konte maa {{operator}} ({{phone}}).",
-    "confirmBtn": "Tellu yoɓol",
-    "cancelBtn": "Waylu",
-    "processingTitle": "Yoɓol ɗon yaha...",
-    "processingDesc": "Ndaaru telefon maa, naatnu kooduure PIN Mobile Money ngam a tellina yoɓol ngol.",
-    "successTitle": "Yoɓol heɓi jam !",
-    "successDesc": "Plan maa fuɗɗii boo karɗi maa heɓi baawɗe mum fuu jooni.",
-    "failedTitle": "Yoɓol heɓaay",
-    "failedDesc": "Yoɓol timmaay koo saldaama. Ɗaɓɓu kine.",
-    "retryBtn": "Ɗaɓɓu kine",
-    "backToPlans": "Rutto haa plans",
-    "goToProfile": "Yiyto profil am"
+    "back": "Rutto",
+    "saveError": "Hesɗitinol heɓaani.",
+    "deleteError": "Momtugol heɓaani."
   },
   "settings": {
     "title": "Teeltanɗe",
@@ -477,37 +534,22 @@
     "confirmProviderTitle": "Momtu karɗi",
     "confirmProviderMsg": "Ɗum firtataako sam. Keeje golle maa fuu momtete.",
     "confirmAccountTitle": "Momtu konte",
-    "confirmAccountMsg": "A ɗo yidi momtude konte maa koo? Ɗum firtataako."
+    "confirmAccountMsg": "A ɗo yidi momtude konte maa koo? Ɗum firtataako.",
+    "attention": "Hakkil"
   },
   "notificationPrefs": {
     "title": "Suɓanɗe tinndinooje",
     "subtitle": "Suɓo kaaɗunde ɗe a yidi heɓugo",
     "saveBtn": "Res suɓanɗe",
     "savedSuccess": "Suɓanɗe maa resndaama jam.",
-    "new_review": {
-      "title": "Miijooji kesi",
-      "desc": "Heɓ tinndinoore to neɗɗo waɗi miijo dow karɗi maa."
-    },
-    "review_response": {
-      "title": "Jaabawol miijo",
-      "desc": "Heɓ tinndinoore to jofniido jaabi miijo maa."
-    },
-    "verification_update": {
-      "title": "Darnde tellemgol",
-      "desc": "Hakkil e ɗaɓɓirgal maa ngam heɓugo maande."
-    },
-    "subscription_reminder": {
-      "title": "Siftorgo plan",
-      "desc": "Heɓ tinndinoore ko plan maa timma."
-    },
-    "favorite_update": {
-      "title": "Keeje muuɗɗinaaɓe",
-      "desc": "Tinndinoore to jofniiɓe maa muuɗɗinaaɓe mbaylii kuuje."
-    },
-    "contact_reminder": {
-      "title": "Siftorgo e sawri",
-      "desc": "Sawriiji ngam ɓeydugo golle maa e siftorɗe."
-    }
+    "centerTitle": "Suudu kaaɗunde",
+    "centerSubtitle": "Toppit kaaɗunde ɗe njiɗ-ɗaa.",
+    "new_review": { "title": "Miijooji kesi", "desc": "Heɓ tinndinoore to neɗɗo waɗi miijo dow karɗi maa." },
+    "review_response": { "title": "Jaabawol miijo", "desc": "Heɓ tinndinoore to jofniido jaabi miijo maa." },
+    "verification_update": { "title": "Darnde tellemgol", "desc": "Hakkil e ɗaɓɓirgal maa ngam heɓugo maande." },
+    "subscription_reminder": { "title": "Siftorgo plan", "desc": "Heɓ tinndinoore ko plan maa timma." },
+    "favorite_update": { "title": "Keeje muuɗɗinaaɓe", "desc": "Tinndinoore to jofniiɓe maa muuɗɗinaaɓe mbaylii kuuje." },
+    "contact_reminder": { "title": "Siftorgo e sawri", "desc": "Sawriiji ngam ɓeydugo golle maa e siftorɗe." }
   },
   "support": {
     "title": "Suudu ballal e FAQ",
@@ -537,7 +579,12 @@
   "legal": {
     "title": "Sariya e Reenaare",
     "subtitle": "Keeje sariya, reenaare keeje e alkawalji ADMA",
+    "heroTitle": "Keeje maa, toppitagol maa",
+    "heroSub": "ADMA ɗo waɗa koo ɗume ngam reena nder sirri maa.",
     "onlineLink": "Ndaaru sariya fuu nder internet",
+    "policyTitle": "Sariya reenaare sirri",
+    "policyUrl": "adma.onrender.com/confidentialite",
+    "footer": "To a huutori ADMA, a jaɓii sariya ɗee.\nKesɗitinol cakkitiiɗo : lewru seeɗto 2026",
     "dataTitle": "Reenaare keeje",
     "dataText": "ADMA ɗon resnda tan keeje haanɗe ngam jokkondirgo yimɓe: nimero telefon, kootooji profil e konte. Keeje ɗe ɗon reenaa boo yeeyataake sam.",
     "usageTitle": "Laabi huutoraade",

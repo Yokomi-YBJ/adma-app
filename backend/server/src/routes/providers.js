@@ -23,6 +23,8 @@ router.get('/nearby', optionalAuth, ctrl.searchNearby);
 // ── Recherche cartographique (bounding box) ──────────────────────
 router.get('/map', optionalAuth, ctrl.searchOnMap);
 
+router.get('/me/pricing', authenticate, ctrl.getMyPricing);
+
 // ── Ma fiche ──────────────────────────────────────────────────────
 router.get('/me',  authenticate, ctrl.getMyProvider);
 

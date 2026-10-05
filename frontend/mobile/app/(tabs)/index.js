@@ -1,7 +1,5 @@
 /**
  * ADMA — Écran d'accueil
- * Design propre, thème clair, performances optimisées
- * Loading : le header reste visible, seul le contenu est remplacé par un skeleton
  */
 import { useEffect, useState, useCallback } from 'react';
 import {
@@ -91,12 +89,11 @@ export default function HomeScreen() {
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Bonjour';
-    if (h < 18) return 'Bon après-midi';
-    return 'Bonsoir';
+    if (h < 12) return t('home.greetingMorning');
+    if (h < 18) return t('home.greetingAfternoon');
+    return t('home.greetingEvening');
   };
 
-  // ─── Skeleton du contenu (sans le header) ──────────────────────
   const SkeletonContent = () => (
     <View>
       <View style={{ margin: 20 }}>
@@ -108,12 +105,7 @@ export default function HomeScreen() {
           {[1,2,3,4].map((i, idx) => (
             <SkeletonBox
               key={i}
-              style={{
-                width: 80,
-                height: 90,
-                borderRadius: 16,
-                marginRight: idx < 3 ? 10 : 0,
-              }}
+              style={{ width: 80, height: 90, borderRadius: 16, marginRight: idx < 3 ? 10 : 0 }}
             />
           ))}
         </View>
@@ -124,7 +116,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header fixe */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.greeting}>
@@ -141,13 +132,10 @@ export default function HomeScreen() {
           activeOpacity={0.7}
         >
           <Bell size={22} color={colors.navy} strokeWidth={2.2} />
-          {unreadCount > 0 && (
-            <View style={styles.unreadBadgeDot} />
-          )}
+          {unreadCount > 0 && <View style={styles.unreadBadgeDot} />}
         </TouchableOpacity>
       </View>
 
-      {/* Contenu scrollable */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -164,7 +152,6 @@ export default function HomeScreen() {
           <SkeletonContent />
         ) : (
           <>
-            {/* Bannière hors-ligne */}
             {isOffline && (
               <View style={styles.offlineBanner}>
                 <WifiOff size={14} color={colors.warning} />
@@ -172,7 +159,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* Barre de recherche */}
             <TouchableOpacity
               style={styles.searchBar}
               onPress={() => router.push('/(tabs)/search')}
@@ -182,7 +168,6 @@ export default function HomeScreen() {
               <Text style={styles.searchPlaceholder}>{t('home.searchPlaceholder')}</Text>
             </TouchableOpacity>
 
-            {/* Catégories */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{t('home.categories')}</Text>
@@ -211,14 +196,13 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Prestataires recommandés */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
               </View>
               {providers.length === 0 ? (
                 <View style={styles.emptyProviders}>
-                  <Text style={styles.emptyText}>Aucun prestataire disponible</Text>
+                  <Text style={styles.emptyText}>{t('home.noProviders')}</Text>
                 </View>
               ) : (
                 providers.map((provider) => (
@@ -241,9 +225,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.background },
-
-  // ✅ Ajout d'un style pour le ScrollView pour éviter les problèmes de layout
-  scrollView: { flex: 1 },
+  scrollView:   { flex: 1 },
 
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -256,23 +238,17 @@ const styles = StyleSheet.create({
   locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
   location:     { fontSize: 13, color: colors.primary, fontWeight: '600' },
   notifIconBtn: {
-    width: 44, height: 44,
-    borderRadius: 14,
+    width: 44, height: 44, borderRadius: 14,
     backgroundColor: colors.surface,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
     position: 'relative',
   },
   unreadBadgeDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    position: 'absolute', top: 10, right: 10,
+    width: 9, height: 9, borderRadius: 4.5,
     backgroundColor: colors.danger,
-    borderWidth: 1.5,
-    borderColor: colors.white,
+    borderWidth: 1.5, borderColor: colors.white,
   },
 
   offlineBanner: {
@@ -308,15 +284,8 @@ const styles = StyleSheet.create({
   seeAllBtn:    { flexDirection: 'row', alignItems: 'center', gap: 2 },
   seeAll:       { fontSize: 13, color: colors.primary, fontWeight: '600' },
 
-  // ✅ Wrapper pour éviter les problèmes de layout du FlatList horizontal
-  categoryListWrapper: {
-    paddingHorizontal: 16,
-    height: 120, // Hauteur fixe pour éviter les problèmes de mesure
-  },
-  categoriesList: {
-    paddingRight: 10,
-    // On s'assure que la liste a un alignement correct
-  },
+  categoryListWrapper: { paddingHorizontal: 16, height: 120 },
+  categoriesList:      { paddingRight: 10 },
 
   emptyProviders: { margin: 20, padding: 32, backgroundColor: colors.surface, borderRadius: 16, alignItems: 'center' },
   emptyText:    { color: colors.textMuted, fontSize: 14 },

@@ -6,7 +6,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
-  Search, SlidersHorizontal, X, Check, Navigation, MapPin, AlertCircle, Map as MapIcon,
+  Search, SlidersHorizontal, X, Check, LocateFixed, MapPin, AlertCircle, Crosshair,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors }             from '../../constants/colors';
@@ -353,7 +353,6 @@ export default function SearchScreen() {
 
   const myRadius = provider?.plan ? PLAN_RADIUS[provider.plan] : null;
 
-  // Afficher le bouton flottant uniquement en mode "Autour de moi" avec résultats
   const showMapFab = nearbyMode && userCoords && providers.length > 0;
 
   return (
@@ -390,7 +389,7 @@ export default function SearchScreen() {
           >
             {geoLoading
               ? <ActivityIndicator size="small" color={nearbyMode ? colors.white : colors.primary} />
-              : <Navigation size={18} color={nearbyMode ? colors.white : colors.primary} strokeWidth={2.5} />
+              : <LocateFixed size={18} color={nearbyMode ? colors.white : colors.primary} strokeWidth={2.5} />
             }
           </TouchableOpacity>
 
@@ -414,7 +413,7 @@ export default function SearchScreen() {
 
         {!initLoading && total > 0 && (
           <Text style={styles.resultsCount}>
-            {'${total} résultats'}
+            {t('search.resultsCount', { count: total })}
           </Text>
         )}
       </View>
@@ -451,7 +450,7 @@ export default function SearchScreen() {
           ListEmptyComponent={
             !loading ? (
               <EmptyState
-                icon={nearbyMode ? Navigation : Search}
+                icon={nearbyMode ? LocateFixed : Search}
                 title={nearbyMode ? t('search.emptyNearbyTitle') : t('search.emptyTitle')}
                 message={nearbyMode ? t('search.emptyNearbyMessage') : t('search.emptyMessage')}
                 action={nearbyMode ? enableNearbyMode : () => setFilters({ categoryId:null, cityId:null, neighborhoodId:null, verified:false, available:false })}
@@ -467,7 +466,6 @@ export default function SearchScreen() {
         />
       )}
 
-      {/* Bouton flottant : Voir sur la carte */}
       {showMapFab && (
         <TouchableOpacity
           style={[styles.mapFab, { bottom: insets.bottom + 20 }]}
@@ -477,7 +475,7 @@ export default function SearchScreen() {
           })}
           activeOpacity={0.9}
         >
-          <MapIcon size={18} color={colors.white} strokeWidth={2.5} />
+          <Crosshair size={18} color={colors.white} strokeWidth={2.5} />
           <Text style={styles.mapFabText}>{t('search.viewOnMap')}</Text>
         </TouchableOpacity>
       )}

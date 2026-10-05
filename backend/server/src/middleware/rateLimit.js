@@ -34,3 +34,15 @@ export const reportRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, max: 5, standardHeaders: 'draft-7', legacyHeaders: false,
   message: hit("Trop de signalements. Attendez une heure."),
 });
+
+// ── Paiements ─────────────────────────────────────────────────────
+// 3 tentatives de paiement par 10 minutes par utilisateur
+// Évite le spam d'appels à KPay (chaque initiate coûte une requête API)
+export const paymentRateLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => `user_${req.user?.id || req.ip}`,
+  message: hit('Trop de tentatives de paiement. Attendez 10 minutes.'),
+});

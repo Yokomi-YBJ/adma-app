@@ -1,6 +1,6 @@
 /**
  * ADMA — Écran Carte "Autour de moi"
- * Affiche les prestataires avec clustering natif MapLibre
+ * Bbox large (35 km) pour inclure les providers enterprise lointains
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
@@ -9,15 +9,25 @@ import {
 import {
   MapView, Camera, ShapeSource, CircleLayer, SymbolLayer, UserLocation,
 } from '@maplibre/maplibre-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 import api from '../services/api';
 
-// Style OpenFreeMap : gratuit, sans clé API, couverture mondiale
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+
+// ── Limites Cameroun ──────────────────────────────────────────────
+const CAMEROON = { west: 8.4, south: 1.6, east: 16.3, north: 13.2 };
+
+// ── Polices hébergées par OpenFreeMap ─────────────────────────────
+const FONT_REGULAR = ['Noto Sans Regular'];
+const FONT_BOLD    = ['Noto Sans Bold'];
+
+// ── Bbox initiale : ~35 km de côté ────────────────────────────────
+// 0.35° de latitude ≈ 39 km, 0.35° de longitude ≈ 38 km à Ngaoundéré
+const INITIAL_BBOX_DELTA = 0.35;
 
 export default function MapScreen() {
   const { t } = useTranslation();
@@ -25,25 +35,26 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
 
-  const cameraRef = useRef(null);
+  const cameraRef     = useRef(null);
   const lastBoundsRef = useRef(null);
 
   const [providers, setProviders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
 
   const initialLat = params.lat ? parseFloat(params.lat) : 7.3167;
   const initialLng = params.lng ? parseFloat(params.lng) : 13.5833;
 
-  const fetchProviders = useCallback(async (bounds) => {
+  // ── Fetch avec bbox explicite ───────────────────────────────────
+  const fetchProviders = useCallback(async ({ west, south, east, north }) => {
     setLoading(true);
     try {
       const p = new URLSearchParams({
-        north: bounds[1],
-        south: bounds[3],
-        east:  bounds[2],
-        west:  bounds[0],
-        lat:   initialLat,
-        lng:   initialLng,
+        north: String(north),
+        south: String(south),
+        east:  String(east),
+        west:  String(west),
+        lat:   String(initialLat),
+        lng:   String(initialLng),
       });
       const res = await api.get(`/providers/map?${p}`);
       setProviders(res.data.data?.providers || []);
@@ -53,31 +64,75 @@ export default function MapScreen() {
     setLoading(false);
   }, [initialLat, initialLng]);
 
-  // Charger une première fois au démarrage (rayon ~5 km)
+  // ── Fetch initial — bbox large ──────────────────────────────────
   useEffect(() => {
-    const delta = 0.05; // ~5km
-    fetchProviders([
-      initialLng - delta,
-      initialLat + delta,
-      initialLng + delta,
-      initialLat - delta,
-    ]);
+    fetchProviders({
+      west:  initialLng - INITIAL_BBOX_DELTA,
+      east:  initialLng + INITIAL_BBOX_DELTA,
+      south: initialLat - INITIAL_BBOX_DELTA,
+      north: initialLat + INITIAL_BBOX_DELTA,
+    });
   }, []);
 
-  // GeoJSON des prestataires
+  // ── Handler de changement de région ─────────────────────────────
+  const handleRegionChange = useCallback((feature) => {
+    const props = feature?.properties || {};
+    const center = props.center;
+    if (!center) return;
+    const [lng, lat] = center;
+
+    // Snap-back si on sort du Cameroun
+    if (lng < CAMEROON.west || lng > CAMEROON.east || lat < CAMEROON.south || lat > CAMEROON.north) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: [
+          Math.min(Math.max(lng, CAMEROON.west), CAMEROON.east),
+          Math.min(Math.max(lat, CAMEROON.south), CAMEROON.north),
+        ],
+        animationDuration: 300,
+      });
+      return;
+    }
+
+    // Bounds de la vue (MapLibre v10 → visibleBounds)
+    const raw = props.visibleBounds || props.bounds;
+    if (!Array.isArray(raw) || raw.length !== 4) return;
+
+    const [west, south, east, north] = raw;
+
+    // Élargir la bbox de 20% pour anticiper les déplacements légers
+    const padLat = (north - south) * 0.2;
+    const padLng = (east - west)  * 0.2;
+
+    const paddedBounds = {
+      west:  Math.max(west  - padLng, CAMEROON.west),
+      east:  Math.min(east  + padLng, CAMEROON.east),
+      south: Math.max(south - padLat, CAMEROON.south),
+      north: Math.min(north + padLat, CAMEROON.north),
+    };
+
+    const key = `${paddedBounds.west},${paddedBounds.south},${paddedBounds.east},${paddedBounds.north}`;
+    if (lastBoundsRef.current === key) return;
+    lastBoundsRef.current = key;
+
+    fetchProviders(paddedBounds);
+  }, [fetchProviders]);
+
+  // ── GeoJSON ─────────────────────────────────────────────────────
   const geojson = {
     type: 'FeatureCollection',
-    features: providers.map((p) => ({
-      type: 'Feature',
-      id: p.id,
-      geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
-      properties: {
+    features: providers
+      .filter((p) => p.latitude != null && p.longitude != null)
+      .map((p) => ({
+        type: 'Feature',
         id: p.id,
-        name: p.name,
-        plan: p.plan || 'free',
-        verificationStatus: p.verification_status || 'none',
-      },
-    })),
+        geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
+        properties: {
+          id: p.id,
+          name: p.name,
+          plan: p.plan || 'free',
+          verificationStatus: p.verification_status || 'none',
+        },
+      })),
   };
 
   return (
@@ -87,21 +142,16 @@ export default function MapScreen() {
         mapStyle={MAP_STYLE}
         logoEnabled={false}
         attributionEnabled={false}
-        onRegionDidChange={(feature) => {
-          const bounds = feature?.properties?.bounds;
-          if (!bounds) return;
-          const key = bounds.join(',');
-          if (lastBoundsRef.current === key) return;
-          lastBoundsRef.current = key;
-          fetchProviders(bounds);
-        }}
+        onRegionDidChange={handleRegionChange}
       >
         <Camera
           ref={cameraRef}
           defaultSettings={{
             centerCoordinate: [initialLng, initialLat],
-            zoomLevel: 12,
+            zoomLevel: 10,
           }}
+          maxZoomLevel={16}
+          minZoomLevel={6}
         />
 
         <UserLocation visible={true} />
@@ -127,7 +177,7 @@ export default function MapScreen() {
             }
           }}
         >
-          {/* Cercles des clusters */}
+          {/* Clusters */}
           <CircleLayer
             id="clusters-circle"
             filter={['has', 'point_count']}
@@ -139,7 +189,7 @@ export default function MapScreen() {
               circleStrokeColor: '#FFFFFF',
             }}
           />
-          {/* Nombre dans les clusters */}
+
           <SymbolLayer
             id="clusters-count"
             filter={['has', 'point_count']}
@@ -147,11 +197,12 @@ export default function MapScreen() {
               textField: ['get', 'point_count_abbreviated'],
               textSize: 13,
               textColor: '#FFFFFF',
-              textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
+              textFont: FONT_BOLD,
               textAllowOverlap: true,
             }}
           />
-          {/* Marqueurs individuels — couleur selon plan */}
+
+          {/* Marqueurs individuels */}
           <CircleLayer
             id="unclustered-circle"
             filter={['!', ['has', 'point_count']]}
@@ -176,27 +227,50 @@ export default function MapScreen() {
               circleStrokeColor: '#FFFFFF',
             }}
           />
+
+          {/* Noms des providers */}
+          <SymbolLayer
+            id="unclustered-label"
+            filter={['!', ['has', 'point_count']]}
+            style={{
+              textField:           ['get', 'name'],
+              textSize:            12,
+              textColor:           colors.navy,
+              textFont:            FONT_BOLD,
+              textAnchor:          'top',
+              textOffset:          [0, 1.4],
+              textMaxWidth:        8,
+              textHaloColor:       '#FFFFFF',
+              textHaloWidth:       1.5,
+              textAllowOverlap:    false,
+              textIgnorePlacement: false,
+              textOptional:        false,
+            }}
+          />
         </ShapeSource>
       </MapView>
 
-      {/* Bouton retour liste */}
-      <TouchableOpacity
-        style={[styles.backBtn, { top: insets.top + 12 }]}
-        onPress={() => router.back()}
-        activeOpacity={0.85}
+      <View
+        pointerEvents="box-none"
+        style={[styles.overlay, { paddingTop: insets.top + 12 }]}
       >
-        <X size={18} color={colors.navy} strokeWidth={2.5} />
-        <Text style={styles.backText}>{t('map.backToList')}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.85}
+        >
+          <X size={18} color={colors.navy} strokeWidth={2.5} />
+          <Text style={styles.backText}>{t('map.backToList')}</Text>
+        </TouchableOpacity>
 
-      {/* Compteur */}
-      <View style={[styles.counter, { top: insets.top + 12 }]}>
-        <Text style={styles.counterText}>
-          {loading
-            ? t('map.loading')
-            : t('map.results', { count: providers.length })}
-        </Text>
-        {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />}
+        <View style={styles.counter}>
+          <Text style={styles.counterText}>
+            {loading
+              ? t('map.loading')
+              : t('map.results', { count: providers.length })}
+          </Text>
+          {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />}
+        </View>
       </View>
     </View>
   );
@@ -205,9 +279,14 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   map:  { flex: 1 },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+  },
   backBtn: {
-    position: 'absolute',
-    left: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -223,8 +302,6 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: 14, fontWeight: '700', color: colors.navy },
   counter: {
-    position: 'absolute',
-    right: 16,
     backgroundColor: colors.white,
     paddingHorizontal: 12,
     paddingVertical: 8,

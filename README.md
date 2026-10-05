@@ -71,19 +71,37 @@ Pour les administrateurs :
 
 ### 2.4 Modèle économique
 
-Le projet inclut un modèle de monétisation basé sur des plans d’abonnement pour les prestataires, avec plusieurs niveaux :
-- free,
-- premium,
-- professional,
-- enterprise.
+Le projet inclut un modèle de monétisation basé sur des plans d’abonnement pour les prestataires.
 
-Les paiements sont intégrés via KPay, un service de paiement mobile money au Cameroun.
+#### Grille tarifaire et fidélité
 
-Les revenus peuvent provenir :
-- des abonnements premium des prestataires,
-- des commissions sur transactions ou paiements,
-- la monétisation de fonctionnalités avancées,
-- le développement de services supplémentaires pour les professionnels.
+Chaque plan dispose d’une grille tarifaire évolutive qui récompense la fidélité : le prix baisse progressivement tant que le prestataire renouvelle sans interruption. Après 30 jours sans renouvellement, le compteur de fidélité repart à zéro.
+
+| Plan | Mois 1 | Mois 2 | Mois 3+ | Rayon de visibilité |
+|---|---:|---:|---:|---|
+| Free | 0 F | 0 F | 0 F | 3 km |
+| Premium | 1 300 F | 1 100 F | 850 F | 5 km |
+| Professional | 3 900 F | 3 200 F | 2 500 F | 8 km |
+| Enterprise | 7 500 F | 6 200 F | 4 900 F | Illimité |
+
+Le rayon de visibilité détermine la distance maximale à laquelle la fiche du prestataire est affichée aux clients dans les recherches géolocalisées (« Autour de moi » et vue carte).
+
+#### Fonctionnalités par plan
+
+- **Free** : fiche de base, visible dans les résultats, contactable par les clients.
+- **Premium** : tout du gratuit + photo HD mise en avant, galerie 3 photos, statistiques de base.
+- **Professional** : tout du Premium + tête de liste dans la recherche, galerie 6 photos, lien site web, statistiques détaillées, badge de vérification prioritaire.
+- **Enterprise** : tout du Professionnel + portée maximale, badge Entreprise certifié, support prioritaire 7j/7, fiche multi-spécialités, galerie étendue.
+
+#### Moyens de paiement
+
+Les paiements sont intégrés via KPay, un service de paiement mobile money au Cameroun (Orange Money et MTN MoMo).
+
+#### Sources de revenus
+
+- abonnements des prestataires,
+- monétisation de fonctionnalités avancées,
+- développement de services supplémentaires pour les professionnels.
 
 ### 2.5 Expérience utilisateur prévue
 
@@ -299,6 +317,7 @@ Cette organisation reflète le besoin d’un système à la fois transactionnel 
 - i18next pour l’internationalisation
 - Axios
 - NetInfo / expo-location / expo-notifications
+- MapLibre React Native pour la cartographie
 
 ---
 
@@ -378,8 +397,7 @@ Les services regroupent les intégrations externes et les traitements complexes 
 - `imgdbService.js` : stockage ou suppression d’images,
 - `notificationService.js` : notifications push / e-mail,
 - `cacheService.js` : gestion du cache,
-- `twilioService.js` : OTP SMS,
-- `notificationService.js` : envoi de messages et rappels.
+- `smsService.js` : envoi de SMS OTP.
 
 #### middleware
 Les middlewares présentent :
@@ -489,6 +507,33 @@ Les tables `admin_logs`, `otp_codes`, `refresh_tokens` assurent :
 - la révocation des tokens,
 - le nettoyage automatique des données expirées.
 
+### 7.9 Fidélité tarifaire
+
+La table `providers` contient deux colonnes dédiées au système de fidélité :
+
+- `loyalty_months` (TINYINT UNSIGNED, défaut 0) : nombre de mois consécutifs payés sans interruption.
+- `last_renewal_at` (TIMESTAMP, null par défaut) : date du dernier renouvellement.
+
+Règles de calcul appliquées côté backend (`pricingService.js`) :
+
+- `loyalty_months = 0` : plein tarif (mois 1)
+- `loyalty_months = 1` : tarif intermédiaire (mois 2)
+- `loyalty_months >= 2` : tarif plancher (mois 3+)
+
+Le compteur est incrémenté à chaque renouvellement :
+
+- si le renouvellement a lieu avant expiration : +1
+- si le renouvellement a lieu dans les 30 jours suivant l’expiration : +1 (grâce)
+- au-delà de 30 jours : réinitialisation à zéro
+
+La table `subscriptions` conserve un historique de chaque paiement avec :
+
+- `amount` : montant réellement payé
+- `base_amount` : prix plein (avant remise)
+- `discount_percent` : pourcentage de remise appliqué
+
+Ceci permet un audit précis du chiffre d’affaires et de l’impact du programme de fidélité.
+
 ---
 
 ## 8. Sécurité du projet
@@ -594,11 +639,12 @@ Un prestataire peut souscrire à un plan premium avec paiement via KPay.
 
 Le flux est :
 1. vérification de la validité du plan,
-2. création d’un enregistrement de paiement,
-3. appel à l’API KPay,
-4. réception du statut,
-5. activation du plan si paiement réussi,
-6. mise à jour des données de plan et dates d’expiration.
+2. calcul du prix de fidélité via `pricingService.js`,
+3. création d’un enregistrement de paiement,
+4. appel à l’API KPay,
+5. réception du statut,
+6. activation du plan si paiement réussi,
+7. mise à jour du compteur de fidélité et des dates d’expiration.
 
 ### 9.7 Webhooks KPay
 
@@ -641,7 +687,14 @@ Important : le body est traité en `raw` avant le JSON parsing global pour garan
 - Recherche et filtrage des prestataires.
 
 #### GET `/api/v1/providers/nearby`
-- Recherche autour d’une zone géographique.
+- Recherche autour d’une zone géographique avec filtrage par rayon de plan.
+
+#### GET `/api/v1/providers/map`
+- Recherche dans une bounding box pour l’affichage carte.
+- Paramètres : `north`, `south`, `east`, `west`, `lat`, `lng`.
+
+#### GET `/api/v1/providers/me/pricing`
+- Retourne la grille tarifaire et le statut de fidélité du prestataire connecté.
 
 #### GET `/api/v1/providers/me`
 - Retourne ma fiche prestataire.
@@ -677,6 +730,9 @@ Important : le body est traité en `raw` avant le JSON parsing global pour garan
 
 #### POST `/api/v1/reviews`
 - Ajout d’un avis.
+
+#### PUT `/api/v1/reviews/:id`
+- Modification d’un avis.
 
 #### POST `/api/v1/reviews/:id/response`
 - Réponse du prestataire à un avis.
@@ -769,11 +825,11 @@ Important : le body est traité en `raw` avant le JSON parsing global pour garan
 
 Le backend démarre plusieurs tâches automatiques via `node-cron` :
 
-- suppression des CNI après 24 heures,
-- rappels d’abonnement dans 3 jours,
-- désactivation des plans expirés,
-- nettoyage des tokens OTP et refresh,
-- relances sur prestataires inactifs.
+- suppression des CNI après 24 heures (chaque heure),
+- rappels d’abonnement 3 jours avant expiration (8h chaque matin),
+- désactivation des plans expirés et réinitialisation de la fidélité après 30 jours (00h05),
+- nettoyage des tokens OTP et refresh (2h chaque nuit),
+- relances sur prestataires inactifs depuis 30 jours (dimanche 10h).
 
 Ces jobs garantissent la propreté du système et la bonne gestion des données temporaires.
 
@@ -818,6 +874,7 @@ KPAY_BASE_URL=https://admin.kpay.site/api/v1
 KPAY_WEBHOOK_SECRET=...
 RESEND_API_KEY=...
 RESEND_FROM_EMAIL=...
+ADMIN_ALERT_EMAIL=admin@adma.cm
 EXPO_ACCESS_TOKEN=...
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 ```
@@ -874,7 +931,7 @@ backend/database/migrations/
 backend/database/seeds/
 ```
 
-La structure de base est créée par SQL. Les données initiales incluent les villes, quarts et catégories.
+La structure de base est créée par SQL. Les données initiales incluent les villes, quartiers et catégories.
 
 ---
 
@@ -932,6 +989,25 @@ Les modules à surveiller pour expansion :
 - système de recommandation ML,
 - analytics et dashboards plus poussés,
 - passage vers une architecture microservices si nécessaire.
+
+### 14.6 Cohérence des rayons de visibilité
+
+Les rayons de visibilité par plan doivent rester cohérents entre les différentes couches :
+
+- `backend/server/src/services/pricingService.js` déclare `PLAN_RADIUS_KM` et expose les rayons des offres payantes dans `PLANS_GRID` pour la grille de tarification.
+- `backend/server/src/controllers/providerController.js` applique les rayons dans `searchNearby` et `searchOnMap` à l’aide de sa constante `PLAN_RADIUS_KM`; les requêtes de proximité transmettent les valeurs aux clauses `CASE`.
+- `frontend/mobile/constants/config.js` expose `PLAN_RADIUS` pour l’affichage et les usages mobiles.
+
+Grille de référence :
+
+| Plan | Rayon |
+|---|---|
+| free | 3 km |
+| premium | 5 km |
+| professional | 8 km |
+| enterprise | Illimité (`Infinity` côté backend, `null` côté mobile) |
+
+La recherche « Autour de moi » calcule une distance Haversine et la compare au rayon du plan. La vue carte commence par sélectionner les prestataires dans la bounding box demandée, puis applique également le rayon du plan lorsque la position du client est fournie. La bounding box n’est pas elle-même le rayon de visibilité.
 
 ---
 
@@ -996,7 +1072,9 @@ Le projet a été pensé non seulement pour répondre à un besoin fonctionnel, 
 - `backend/server/src/routes/` : endpoints API
 - `backend/server/src/controllers/` : logique métier
 - `backend/server/src/services/` : intégrations externes
+- `backend/server/src/services/pricingService.js` : calcul de la grille tarifaire et de la fidélité
 - `backend/database/migrations/001_schema.sql` : schéma principal
+- `backend/database/migrations/004-loyalty_pricing.sql` : migration fidélité
 - `backend/database/seeds/` : données initiales
 - `frontend/admin/src/` : interface admin
 - `frontend/mobile/app/` : application mobile
@@ -1038,7 +1116,34 @@ Ce dépôt est un projet de développement interne / applicatif, sans licence ex
 
 ---
 
-## 22. Note de développement
+## 22. Changelog
+
+### v1.1 — Fidélité tarifaire
+
+- Ajout du système de fidélité évolutif.
+- Ajout des colonnes `loyalty_months` et `last_renewal_at` sur `providers`.
+- Ajout des colonnes `base_amount` et `discount_percent` sur `subscriptions`.
+- Ajout de la colonne `plan_intent` sur `payments`.
+- Ajout du service backend `pricingService.js`.
+- Ajout des écrans mobile `subscription/plans.js`, `subscription/payment.js` et `subscription/success.js`.
+- Uniformisation des rayons de visibilité : 3 / 5 / 8 km / illimité.
+- Renforcement de la sécurité des paiements (idempotence, `FOR UPDATE`, rate limiting).
+- Ajout du monitoring admin et du broadcast de notifications.
+- Ajout du support multilingue français, anglais et fulfulde.
+- Ajout du module cartographique (MapLibre React Native + OpenFreeMap).
+- Ajout du bouton « Voir sur la carte » dans la recherche.
+
+### v1.0 — Version initiale
+
+- MVP backend Node.js / Express + MySQL.
+- Application mobile React Native / Expo.
+- Dashboard admin React + Vite.
+- Intégrations : Twilio, Cloudinary, KPay, Resend, Expo Push.
+- Système d’avis, signalements et vérification CNI.
+- Système de notifications push avec canaux Android.
+- Recherche géolocalisée « Autour de moi ».
+
+## 23. Note de développement
 
 Ce README a été rédigé pour servir à la fois de document :
 - utilisateur / gestionnaire non technique,

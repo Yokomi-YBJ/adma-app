@@ -22,13 +22,14 @@
   },
   "onboarding": {
     "step1Title": "Find the right provider",
-    "step1Desc": "Mechanics, electricians, tailors... All artisans in Ngaoundere at a click.",
+    "step1Desc": "Mechanics, electricians, tailors...\nAll artisans of Ngaoundéré in one place.",
     "step2Title": "Verify before contacting",
-    "step2Desc": "Trust score, verified reviews and verification badges to make the right choice.",
+    "step2Desc": "Trust score, real reviews and verification badges\nto make the right choice safely.",
     "step3Title": "Contact directly",
-    "step3Desc": "Call or send a WhatsApp message directly from the app.",
+    "step3Desc": "A call or a WhatsApp message in one tap.\nNo middleman, no commission.",
     "getStarted": "Get Started",
-    "skip": "Skip"
+    "skip": "Skip",
+    "next": "Next"
   },
   "tabs": {
     "home": "Home",
@@ -37,13 +38,17 @@
     "profile": "Profile"
   },
   "home": {
-    "location": "Ngaoundere, Cameroon",
+    "location": "Ngaoundéré, Cameroon",
     "searchPlaceholder": "Search a service provider...",
     "categories": "Categories",
     "recommended": "Recommended providers",
     "new": "New providers",
     "seeAll": "See all",
-    "noConnection": "Offline - cached data"
+    "noConnection": "Offline - cached data",
+    "greetingMorning": "Hello",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "noProviders": "No providers available"
   },
   "search": {
     "title": "Search",
@@ -67,7 +72,37 @@
     "nearbyDisabled": "Classic search",
     "permDenied": "Location disabled",
     "permDeniedMsg": "Enable location in your phone settings to see nearby providers.",
-    "permActivate": "Enable"
+    "permActivate": "Enable",
+    "chooseCategory": "Choose a category",
+    "searchCategory": "Search a category...",
+    "selectCategory": "Select a category",
+    "chooseCity": "Choose a city",
+    "searchCity": "Search a city...",
+    "selectCity": "Select a city",
+    "verifiedOnly": "Verified only",
+    "availableNow": "Available now",
+    "clear": "Clear",
+    "apply": "Apply",
+    "switchToClassic": "Classic search",
+    "nearbyBadge": "Around me — providers within their service radius",
+    "resultsCount_one": "{{count}} result",
+    "resultsCount_other": "{{count}} results",
+    "emptyTitle": "No results",
+    "emptyMessage": "Try other keywords or filters.",
+    "emptyNearbyTitle": "No provider around you",
+    "emptyNearbyMessage": "There are no providers with a service area defined in your location yet.",
+    "locationDisabled": "Location disabled",
+    "locationDisabledBody": "Enable location in your phone settings to see providers around you.",
+    "activate": "Enable",
+    "viewOnMap": "View on map"
+  },
+  "map": {
+    "backToList": "List",
+    "loading": "Loading...",
+    "results_one": "{{count}} provider",
+    "results_other": "{{count}} providers",
+    "noProviders": "No provider in this area",
+    "mapError": "Unable to load map"
   },
   "provider": {
     "verified": "Verified",
@@ -98,7 +133,26 @@
     "geoUpdate": "Update",
     "geoNone": "Zone not defined",
     "geoUpdateSuccess": "Service zone updated",
-    "geoDeleteConfirm": "You will no longer appear in \"Near me\". Continue?"
+    "geoDeleteConfirm": "You will no longer appear in \"Near me\". Continue?",
+    "editProfile": "Edit my profile",
+    "currentRadius": "Your current radius:",
+    "geoDefinedHint": "Tap \"Update\" if you changed your work area.",
+    "geoUndefinedText": "No zone defined — you don't appear in \"Near me\"",
+    "newProvider": "New provider",
+    "available": "Available",
+    "busy": "Busy",
+    "unavailable": "Unavailable",
+    "recommendations": "Recommendations",
+    "noLocation": "Location not set",
+    "myStats": "My statistics",
+    "stats": "Statistics",
+    "yourReview": "Your review",
+    "you": "You",
+    "providerReply": "Provider's reply:",
+    "editMyReview": "Edit my review",
+    "seeRemaining_one": "See {{count}} more review",
+    "seeRemaining_other": "See {{count}} more reviews",
+    "geoDeleteTitle": "Delete GPS zone"
   },
   "trustBadge": {
     "new": "New",
@@ -112,9 +166,11 @@
     "step2": "Location and contact",
     "step3": "Photo and description",
     "step4": "Availability",
+    "stepOf": "Step {{step}} of {{total}}",
     "next": "Next",
     "back": "Back",
     "submit": "Publish my profile",
+    "submitting": "Publishing...",
     "categoryLabel": "Category *",
     "nameLabel": "Profile name *",
     "namePlaceholder": "e.g. Moussa Electrical",
@@ -130,25 +186,58 @@
     "both": "Both",
     "phoneLabel": "Phone number",
     "whatsappLabel": "WhatsApp number",
+    "websiteLabel": "Website (optional)",
     "photoLabel": "Profile photo",
+    "photoSub": "A good professional photo increases client trust",
     "addPhoto": "Add a photo",
     "changePhoto": "Change photo",
     "availabilityLabel": "Availability",
+    "availabilitySub": "Set your current status",
     "available": "Available",
     "busy": "Busy",
     "unavailable": "Unavailable",
     "hoursLabel": "Hours (optional)",
     "success": "Profile created successfully",
+    "successMsg": "Your profile is now visible on Adma.",
+    "viewProfile": "View my profile",
     "error": "Error creating profile",
     "geoTitle": "GPS Service Zone",
-    "geoHint": "Be in your work area when you tap this button",
+    "geoHint": "Set your zone to appear in \"Near me\" search.",
     "geoSet": "Set my service zone here",
     "geoDefined": "Service zone defined",
+    "geoNone": "Not defined (optional)",
     "geoSetting": "Getting location...",
     "geoRemove": "Remove",
     "geoRadiusTitle": "Detection radius by plan",
     "geoPermDenied": "Location disabled",
-    "geoPermMsg": "Enable location in settings to define your service zone."
+    "geoPermDeniedMsg": "Enable location in settings to define your service zone.",
+    "geoError": "Unable to get your position. Try again.",
+    "permPhoto": "Allow access to your photos.",
+    "selectCategory": "Choose a category...",
+    "searchCategory": "Search a trade, service...",
+    "modalCatTitle": "Select a category",
+    "selectCity": "Choose a city...",
+    "searchCity": "Search a city...",
+    "modalCityTitle": "Select a city",
+    "selectNeighborhood": "Choose a neighborhood...",
+    "searchNeighborhood": "Search a neighborhood...",
+    "modalNeighTitle": "Select a neighborhood",
+    "selectCityFirst": "Please choose a city first.",
+    "selectAvailability": "Choose a status...",
+    "modalAvailTitle": "Availability status",
+    "errCategory": "Category required",
+    "errName": "Name required",
+    "errSpecialty": "Specialty required",
+    "errCity": "City required",
+    "errNeighborhood": "Neighborhood required",
+    "errPhone": "Phone number required",
+    "errWhatsapp": "WhatsApp number required",
+    "errNameSpecialty": "Name, specialty, category, city and neighborhood are required.",
+    "tipsTitle": "Tips for a good photo",
+    "tip1": "Well-lit face or workplace",
+    "tip2": "Clean and professional background",
+    "tip3": "Sharp and recent photo",
+    "summaryTitle": "Summary of your profile"
   },
   "review": {
     "title": "Leave a review",
@@ -161,7 +250,14 @@
     "success": "Review published",
     "alreadyReviewed": "You have already reviewed this provider",
     "cantReviewOwn": "You cannot review your own profile",
-    "response": "Provider's reply"
+    "response": "Provider's reply",
+    "yourReview": "Your review",
+    "question": "What is your rating?",
+    "commentOptional": "Comment (optional)",
+    "commentEditPH": "Describe your experience with this provider...",
+    "update": "Update",
+    "updating": "Updating...",
+    "disclaimer": "Your review must be honest and based on a real experience. Fake reviews will be removed."
   },
   "report": {
     "title": "Report",
@@ -184,7 +280,12 @@
     "title": "Favorites",
     "empty": "No favorites yet",
     "emptyHint": "Tap the heart on a provider's profile to save them",
-    "loginRequired": "Sign in to save favorites"
+    "loginRequired": "Sign in to save favorites",
+    "loginMessage": "Sign in to see your favorite providers",
+    "signIn": "Sign in",
+    "browseProviders": "Browse providers",
+    "countSingular": "provider",
+    "countPlural": "providers"
   },
   "profile": {
     "title": "My Profile",
@@ -209,6 +310,12 @@
     "confirmDelete": "This action is irreversible. Your account and all data will be deleted.",
     "verificationRequest": "Verification request",
     "verificationStatus": "Verification status",
+    "headerTitle": "My Profile",
+    "proSpace": "Professional Area",
+    "loadingCard": "Loading your profile…",
+    "becomeProvider": "Become a Provider",
+    "becomeProviderDesc": "Create your profile and offer your services to thousands of clients.",
+    "noCard": "You don't have a provider profile yet.",
     "badge": {
       "none": "Unverified",
       "pending": "Under review",
@@ -266,32 +373,10 @@
     "perMonth": "/month",
     "free": "Free",
     "features": {
-      "free": [
-        "Basic profile",
-        "Visible in results",
-        "Contact from clients"
-      ],
-      "premium": [
-        "Everything in Free",
-        "HD profile photo",
-        "3-photo gallery",
-        "Highlighted score",
-        "Basic stats"
-      ],
-      "professional": [
-        "Everything in Premium",
-        "10-photo gallery",
-        "Website link",
-        "Advanced stats",
-        "Premium badge"
-      ],
-      "enterprise": [
-        "Everything in Pro",
-        "Unlimited gallery",
-        "Priority support",
-        "Multi-service profile",
-        "Enterprise badge"
-      ]
+      "free": ["Basic profile", "Visible in results", "Contact from clients"],
+      "premium": ["Everything in Free", "HD profile photo", "3-photo gallery", "Highlighted score", "Basic stats"],
+      "professional": ["Everything in Premium", "10-photo gallery", "Website link", "Advanced stats", "Premium badge"],
+      "enterprise": ["Everything in Pro", "Unlimited gallery", "Priority support", "Multi-service profile", "Enterprise badge"]
     },
     "pay": "Pay",
     "payWith": "Pay with",
@@ -303,10 +388,60 @@
     "expiresOn": "Expires on {{date}}",
     "expiringSoon": "Your subscription is expiring soon"
   },
+  "plans": {
+    "title": "Plans",
+    "noProvider": {
+      "title": "No provider profile",
+      "body": "Create your provider profile to access plans."
+    },
+    "premium": { "name": "Premium" },
+    "professional": { "name": "Professional" },
+    "enterprise": { "name": "Enterprise" },
+    "radius": {
+      "km": "Visible within {{val}} km",
+      "unlimited": "Unlimited visibility"
+    },
+    "next_payment": "Next payment",
+    "first_payment": "First payment",
+    "month_x": "Month {{val}}",
+    "month_3_plus": "Month 3+",
+    "renew_for": "Renew for {{price}} F",
+    "start_for": "Start at {{price}} F",
+    "grace_period_note": "Loyalty discount resets after 30 consecutive days without an active plan.",
+    "popularBadge": "Popular",
+    "currentBadge": "Current plan",
+    "selectBtn": "Choose this plan",
+    "keepBtn": "Keep my plan",
+    "free": { "label": "Free", "radius": "3 km" },
+    "unlimited": "Unlimited"
+  },
+  "payment": {
+    "title": "Payment",
+    "total": "Total to pay",
+    "chooseOperator": "Choose your operator",
+    "phoneLabel": "Number to debit",
+    "note": "You will receive a notification on your phone to confirm the payment.",
+    "payButton": "Pay {{amount}} FCFA",
+    "error": {
+      "operator": "Choose an operator",
+      "phone": "Invalid Cameroonian number",
+      "generic": "Payment unavailable",
+      "timeout": "Confirmation timeout",
+      "failed": "Payment declined"
+    },
+    "success": {
+      "title": "Payment confirmed",
+      "body": "Your {{plan}} plan is now active.",
+      "amountLabel": "Amount paid",
+      "hint": "Your profile is now visible according to your plan.",
+      "done": "Back to profile"
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications",
-    "markAllRead": "Mark all as read",
+    "emptyMessage": "You will be notified about new reviews, verifications and subscription reminders.",
+    "markAllRead": "Mark all read",
     "settings": "Notification settings",
     "new_review": "New review",
     "review_response": "Reply to your review",
@@ -333,7 +468,10 @@
     "yes": "Yes",
     "no": "No",
     "ok": "OK",
+    "info": "Information",
     "loading": "Loading...",
+    "saving": "Saving...",
+    "saveChanges": "Save changes",
     "error": "Error",
     "success": "Success",
     "retry": "Retry",
@@ -343,88 +481,10 @@
     "required": "Required field",
     "optional": "Optional",
     "characterCount": "{{count}}/{{max}} characters",
-    "distanceKm": "{{km}} km from you"
-  },
-  "plans": {
-    "title": "Subscription Plans",
-    "subtitle": "Grow your business and reach more clients in Ngaoundéré",
-    "popularBadge": "Popular",
-    "currentBadge": "Current plan",
-    "selectBtn": "Choose this plan",
-    "keepBtn": "Keep my plan",
-    "free": {
-      "label": "Free",
-      "radius": "3 km",
-      "features": [
-        "Basic visible profile",
-        "Direct contact by clients",
-        "Reviews and trust score",
-        "Coverage: 3 km"
-      ]
-    },
-    "premium": {
-      "label": "Premium",
-      "radius": "6 km",
-      "features": [
-        "Everything in Free",
-        "HD profile photo highlighted",
-        "3-photo gallery",
-        "Basic analytics",
-        "Visibility boost",
-        "Coverage: 6 km"
-      ]
-    },
-    "professional": {
-      "label": "Professional",
-      "radius": "12 km",
-      "features": [
-        "Everything in Premium",
-        "Top placement in search results",
-        "6-photo gallery",
-        "Priority verification badge",
-        "Detailed analytics",
-        "Coverage: 12 km"
-      ]
-    },
-    "enterprise": {
-      "label": "Enterprise",
-      "radius": "Entire Ngaoundéré",
-      "features": [
-        "Everything in Professional",
-        "Max coverage (entire Ngaoundéré)",
-        "Certified Enterprise badge",
-        "Priority support 7d/7",
-        "Multi-services profile",
-        "Up to 12 photos gallery"
-      ]
-    }
-  },
-  "payment": {
-    "title": "Secure Payment",
-    "selectOperator": "Select your mobile operator",
-    "phoneLabel": "Phone number to be charged",
-    "phonePlaceholder": "6XXXXXXXX (Orange or MTN)",
-    "invalidPhone": "Invalid phone number.",
-    "chooseOperator": "Please select a payment operator.",
-    "summary": "Order summary",
-    "planLabel": "Selected plan",
-    "duration": "Validity duration",
-    "days30": "30 days",
-    "amountToPay": "Amount to pay",
-    "payBtn": "Pay {{amount}} FCFA",
-    "confirmTitle": "Confirm payment",
-    "confirmMessage": "You will be charged {{amount}} FCFA on your {{operator}} account ({{phone}}).",
-    "confirmBtn": "Confirm payment",
-    "cancelBtn": "Edit",
-    "processingTitle": "Processing payment...",
-    "processingDesc": "Please check your phone and approve the prompt by entering your secret Mobile Money PIN.",
-    "successTitle": "Payment successful!",
-    "successDesc": "Your subscription has been activated successfully. Your profile now enjoys all the new benefits.",
-    "failedTitle": "Payment failed",
-    "failedDesc": "The transaction could not be completed or was cancelled. Please try again.",
-    "retryBtn": "Try again",
-    "backToPlans": "Back to plans",
-    "goToProfile": "View profile"
+    "distanceKm": "{{km}} km from you",
+    "back": "Back",
+    "saveError": "Update failed.",
+    "deleteError": "Delete failed."
   },
   "settings": {
     "title": "Settings",
@@ -474,37 +534,22 @@
     "confirmProviderTitle": "Delete provider profile",
     "confirmProviderMsg": "This action is irreversible. All your professional data will be deleted.",
     "confirmAccountTitle": "Delete my account",
-    "confirmAccountMsg": "Are you sure you want to delete your account? This cannot be undone."
+    "confirmAccountMsg": "Are you sure you want to delete your account? This cannot be undone.",
+    "attention": "Warning"
   },
   "notificationPrefs": {
     "title": "Notification Preferences",
     "subtitle": "Choose which alerts you wish to receive",
     "saveBtn": "Save preferences",
     "savedSuccess": "Preferences saved successfully.",
-    "new_review": {
-      "title": "New reviews",
-      "desc": "Get notified when a client leaves a review on your profile."
-    },
-    "review_response": {
-      "title": "Review responses",
-      "desc": "Get notified when a provider replies to your review."
-    },
-    "verification_update": {
-      "title": "Verification status",
-      "desc": "Track updates regarding your verification request."
-    },
-    "subscription_reminder": {
-      "title": "Subscription reminders",
-      "desc": "Get notified before your plan expires."
-    },
-    "favorite_update": {
-      "title": "Favorite updates",
-      "desc": "Get notified when your saved providers update their profile."
-    },
-    "contact_reminder": {
-      "title": "Reminders & tips",
-      "desc": "Helpful tips to grow your activity and follow-ups."
-    }
+    "centerTitle": "Notification center",
+    "centerSubtitle": "Control the alerts that matter to you.",
+    "new_review": { "title": "New reviews", "desc": "Get notified when a client leaves a review on your profile." },
+    "review_response": { "title": "Review responses", "desc": "Get notified when a provider replies to your review." },
+    "verification_update": { "title": "Verification status", "desc": "Track updates regarding your verification request." },
+    "subscription_reminder": { "title": "Subscription reminders", "desc": "Get notified before your plan expires." },
+    "favorite_update": { "title": "Favorite updates", "desc": "Get notified when your saved providers update their profile." },
+    "contact_reminder": { "title": "Reminders & tips", "desc": "Helpful tips to grow your activity and follow-ups." }
   },
   "support": {
     "title": "Help Center & FAQ",
@@ -534,7 +579,12 @@
   "legal": {
     "title": "Terms & Privacy",
     "subtitle": "Legal information, data protection and ADMA commitments",
+    "heroTitle": "Your data, your control",
+    "heroSub": "ADMA is committed to protecting your privacy and handling your data transparently.",
     "onlineLink": "View complete policy online",
+    "policyTitle": "Privacy policy",
+    "policyUrl": "adma.onrender.com/confidentialite",
+    "footer": "By using ADMA, you accept these terms.\nLast updated: September 2026",
     "dataTitle": "Data Protection",
     "dataText": "ADMA only collects information necessary to connect clients and service providers: contact details, profile photos and account identifiers. All data is encrypted in transit (HTTPS) and never sold to third parties.",
     "usageTitle": "Terms of Use",

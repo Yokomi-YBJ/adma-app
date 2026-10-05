@@ -10,16 +10,17 @@ import { query } from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { uploadProviderPhoto, uploadGalleryPhoto, uploadCNIDocument, deleteImage } from '../services/imgdbService.js';
 import { notifyNewFavorite } from '../services/notificationService.js';
+import { computePrice, getPlansGrid } from '../services/pricingService.js';
 import { invalidateCache } from '../services/cacheService.js';
 
 const PAGE_SIZE = 20;
 
 // ── Rayons par plan (km) ──────────────────────────────────────────
 const PLAN_RADIUS_KM = {
-  free:         5,
-  premium:      8,
-  professional: 12,
-  enterprise:   99999,
+  free:         3,
+  premium:      5,
+  professional: 8,
+  enterprise:   Infinity,
 };
 
 // ── Recherche ─────────────────────────────────────────────────────
@@ -309,6 +310,33 @@ export const requestVerification = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Demande de vérification envoyée' });
 });
 
+// ── Ma grille tarifaire (fidélité) ─────────────────────────────
+export const getMyPricing = asyncHandler(async (req, res) => {
+  const [rows] = await query(
+    'SELECT plan, loyalty_months, plan_expires_at FROM providers WHERE user_id=? AND deleted_at IS NULL',
+    [req.user.id]
+  );
+
+  if (!rows.length) {
+    return res.json({ success: true, data: null });
+  }
+
+  const p           = rows[0];
+  const loyalty     = p.loyalty_months || 0;
+  const currentPlan = p.plan === 'free' ? null : p.plan;
+
+  res.json({
+    success: true,
+    data: {
+      plan:             p.plan,
+      loyaltyMonths:    loyalty,
+      planExpiresAt:    p.plan_expires_at,
+      monthsUntilFloor: currentPlan ? Math.max(0, 2 - loyalty) : null,
+      plans:            getPlansGrid(),
+    },
+  });
+});
+
 // ── Formateur ─────────────────────────────────────────────────────
 function formatProvider(row, withDetails = false) {
   const base = {
@@ -424,16 +452,17 @@ export const searchNearby = asyncHandler(async (req, res) => {
       ${catFilter}
       ${userFilter}
     HAVING distance_km <= CASE p.plan
-      WHEN 'free'         THEN 5
-      WHEN 'premium'      THEN 8
-      WHEN 'professional' THEN 12
+      WHEN 'free'         THEN ?
+      WHEN 'premium'      THEN ?
+      WHEN 'professional' THEN ?
       ELSE 99999
     END
     ORDER BY distance_km ASC
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
   `;
 
-  const params = [clientLat, clientLng, clientLat, ...catParams, ...userParams];
+  const params = [clientLat, clientLng, clientLat, ...catParams, ...userParams,
+    PLAN_RADIUS_KM.free, PLAN_RADIUS_KM.premium, PLAN_RADIUS_KM.professional];
   const [rows] = await query(sql, params);
 
   const countSql = `
@@ -455,11 +484,12 @@ export const searchNearby = asyncHandler(async (req, res) => {
         ${catFilter}
         ${userFilter}
       HAVING distance_km <= CASE p.plan
-        WHEN 'free' THEN 5 WHEN 'premium' THEN 8
-        WHEN 'professional' THEN 12 ELSE 99999 END
+        WHEN 'free' THEN ? WHEN 'premium' THEN ?
+        WHEN 'professional' THEN ? ELSE 99999 END
     ) sub
   `;
-  const countParams = [clientLat, clientLng, clientLat, ...catParams, ...userParams];
+  const countParams = [clientLat, clientLng, clientLat, ...catParams, ...userParams,
+    PLAN_RADIUS_KM.free, PLAN_RADIUS_KM.premium, PLAN_RADIUS_KM.professional];
   const [[{ total }]] = await query(countSql, countParams);
 
   res.json({
@@ -531,7 +561,7 @@ export const searchOnMap = asyncHandler(async (req, res) => {
   const filtered = rows.filter((p) => {
     if (!clientLat || !clientLng || isNaN(clientLat) || isNaN(clientLng)) return true;
     const dist = haversine(clientLat, clientLng, p.latitude, p.longitude);
-    const maxDist = PLAN_RADIUS_KM[p.plan] || 5;
+    const maxDist = PLAN_RADIUS_KM[p.plan] ?? PLAN_RADIUS_KM.free;
     return dist <= maxDist;
   });
 

@@ -1,6 +1,3 @@
-/**
- * ADMA — Jobs planifiés (node-cron)
- */
 import cron from 'node-cron';
 import { query }        from '../config/database.js';
 import { deleteImages } from '../services/imgdbService.js';
@@ -8,9 +5,9 @@ import {
   notifySubscriptionExpiring,
   notifyInactiveProvider,
 } from '../services/notificationService.js';
+import { computePrice } from '../services/pricingService.js';
 import { logger } from '../utils/logger.js';
 
-// Suppression CNI 24h après certification (chaque heure)
 cron.schedule('0 * * * *', async () => {
   try {
     const [rows] = await query(`
@@ -33,24 +30,30 @@ cron.schedule('0 * * * *', async () => {
   } catch (err) { logger.error('Job CNI', err.message); }
 });
 
-// Rappels abonnements expirant dans 3 jours (8h chaque matin)
 cron.schedule('0 8 * * *', async () => {
   try {
     const [rows] = await query(`
-      SELECT p.user_id, p.plan, p.plan_expires_at FROM providers p
+      SELECT p.user_id, p.plan, p.loyalty_months, p.plan_expires_at
+      FROM providers p
       WHERE p.plan != 'free'
         AND p.plan_expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)
         AND p.is_active = TRUE
     `);
     for (const r of rows) {
       const days = Math.ceil((new Date(r.plan_expires_at) - Date.now()) / 86400000);
-      await notifySubscriptionExpiring(r.user_id, r.plan, days);
+      const nextPricing = computePrice(r.plan, (r.loyalty_months || 0) + 1);
+      await notifySubscriptionExpiring(
+        r.user_id,
+        r.plan,
+        days,
+        nextPricing.finalPrice,
+        nextPricing.discountPercent
+      );
     }
     if (rows.length) logger.info(`Rappels abonnement: ${rows.length}`);
   } catch (err) { logger.error('Job abo reminder', err.message); }
 });
 
-// Désactivation plans expirés (00h05 chaque nuit)
 cron.schedule('5 0 * * *', async () => {
   try {
     const [res] = await query(`
@@ -58,10 +61,19 @@ cron.schedule('5 0 * * *', async () => {
       WHERE plan != 'free' AND plan_expires_at < NOW()
     `);
     if (res.affectedRows > 0) logger.info(`Plans expirés désactivés: ${res.affectedRows}`);
+
+    const [reset] = await query(`
+      UPDATE providers
+      SET loyalty_months = 0
+      WHERE plan = 'free'
+        AND loyalty_months > 0
+        AND last_renewal_at IS NOT NULL
+        AND last_renewal_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
+    `);
+    if (reset.affectedRows > 0) logger.info(`Compteurs fidélité reset: ${reset.affectedRows}`);
   } catch (err) { logger.error('Job plan expiry', err.message); }
 });
 
-// Nettoyage tokens (2h chaque nuit)
 cron.schedule('0 2 * * *', async () => {
   try {
     await query('DELETE FROM otp_codes WHERE expires_at < DATE_SUB(NOW(), INTERVAL 1 DAY)');
@@ -71,7 +83,6 @@ cron.schedule('0 2 * * *', async () => {
   } catch (err) { logger.error('Job cleanup', err.message); }
 });
 
-// Relance prestataires inactifs 30+ jours (dimanche 10h)
 cron.schedule('0 10 * * 0', async () => {
   try {
     const [rows] = await query(`

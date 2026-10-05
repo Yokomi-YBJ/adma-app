@@ -22,7 +22,7 @@ export default function FavoritesScreen() {
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     try {
       const res = await api.get('/favorites');
@@ -34,7 +34,11 @@ export default function FavoritesScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [load]);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(); }, [load]);
+
+  const countLabel = favorites.length > 1
+    ? `${favorites.length} ${t('favorites.countPlural')}`
+    : `${favorites.length} ${t('favorites.countSingular')}`;
 
   if (!user) {
     return (
@@ -45,9 +49,9 @@ export default function FavoritesScreen() {
         <EmptyState
           icon={Heart}
           title={t('favorites.loginRequired')}
-          message="Connectez-vous pour retrouver vos prestataires favoris"
+          message={t('favorites.loginMessage')}
           action={() => router.push('/(auth)/login')}
-          actionLabel="Se connecter"
+          actionLabel={t('favorites.signIn')}
         />
       </View>
     );
@@ -58,7 +62,7 @@ export default function FavoritesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>{t('favorites.title')}</Text>
         {favorites.length > 0 && (
-          <Text style={styles.count}>{favorites.length} prestataire{favorites.length > 1 ? 's' : ''}</Text>
+          <Text style={styles.count}>{countLabel}</Text>
         )}
       </View>
 
@@ -93,7 +97,7 @@ export default function FavoritesScreen() {
               title={t('favorites.empty')}
               message={t('favorites.emptyHint')}
               action={() => router.push('/(tabs)/search')}
-              actionLabel="Parcourir les prestataires"
+              actionLabel={t('favorites.browseProviders')}
             />
           }
         />
