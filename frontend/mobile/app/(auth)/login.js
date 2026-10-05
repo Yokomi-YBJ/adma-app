@@ -1,18 +1,11 @@
 /**
- * ADMA — Écran de connexion (Refonte UI/UX 10/10)
- * Design épuré, animations fluides, retour utilisateur soigné
+ * ADMA — Écran de connexion OTP
+ * Auto-submit verrouillé avec isVerifyingRef pour éviter les appels concurrents
  */
 import { useState, useRef, useEffect } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Keyboard,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, Animated, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,29 +17,53 @@ import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 
 const OTP_RESEND_SECONDS = 60;
+const OTP_LENGTH = 6;
 
 export default function LoginScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
 
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [phone, setPhone]         = useState('');
+  const [code, setCode]           = useState('');
+  const [step, setStep]           = useState(1);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim  = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const codeRef = useRef(null);
-  const phoneRef = useRef(null);
+  const codeRef   = useRef(null);
+  const phoneRef  = useRef(null);
 
+  // Verrous anti-double-submit
+  const lastSubmittedCode = useRef('');
+  const isVerifyingRef    = useRef(false);
+
+  // ── Compte à rebours de renvoi ──
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // ── Auto-submit quand le code atteint 6 chiffres (verrouillé) ──
+  useEffect(() => {
+    if (
+      step === 2 &&
+      code.length === OTP_LENGTH &&
+      !isVerifyingRef.current &&
+      lastSubmittedCode.current !== code
+    ) {
+      isVerifyingRef.current = true;
+      lastSubmittedCode.current = code;
+
+      verifyOTP().finally(() => {
+        isVerifyingRef.current = false;
+      });
+    }
+  }, [code, step]);
 
   const animateTransition = (nextStep) => {
     Animated.sequence([
@@ -92,6 +109,8 @@ export default function LoginScreen() {
     try {
       await api.post('/auth/send-otp', { phone: `+237${clean}` });
       setCountdown(OTP_RESEND_SECONDS);
+      lastSubmittedCode.current = '';
+      setCode('');
       animateTransition(2);
       setTimeout(() => codeRef.current?.focus(), 500);
     } catch (err) {
@@ -101,9 +120,11 @@ export default function LoginScreen() {
   }
 
   async function verifyOTP() {
-    if (code.length !== 6) return;
+    if (code.length !== OTP_LENGTH) return;
+    if (submitting) return;
+
+    setSubmitting(true);
     setError('');
-    setLoading(true);
     Keyboard.dismiss();
 
     try {
@@ -116,19 +137,35 @@ export default function LoginScreen() {
       await login(accessToken, refreshToken, user);
       router.replace(isNew ? '/onboarding' : '/(tabs)');
     } catch (err) {
-      setError(err.response?.data?.message || t('auth.otpInvalid'));
+      const message = err.response?.data?.message || t('auth.otpInvalid');
+      setError(message);
+
+      const codeErr = err.response?.data?.code;
+
+      // Pour les erreurs bloquantes, on vide le champ et on autorise une ressaisie
+      if (codeErr === 'OTP_EXPIRED' || codeErr === 'OTP_MAX_ATTEMPTS') {
+        setCode('');
+        lastSubmittedCode.current = '';
+        setTimeout(() => codeRef.current?.focus(), 300);
+      }
+      // Pour OTP_INVALID, on laisse le code en place pour que l'utilisateur
+      // puisse le corriger manuellement. lastSubmittedCode reste identique
+      // pour ne pas redéclencher l'auto-submit sur le même code.
+    } finally {
+      setSubmitting(false);
     }
-    setLoading(false);
   }
 
   async function resendOTP() {
     if (countdown > 0) return;
     setCode('');
     setError('');
+    lastSubmittedCode.current = '';
     setLoading(true);
     try {
       await api.post('/auth/send-otp', { phone: `+237${phone.replace(/\s/g, '')}` });
       setCountdown(OTP_RESEND_SECONDS);
+      setTimeout(() => codeRef.current?.focus(), 300);
     } catch (err) {
       setError(err.response?.data?.message || t('common.error'));
     }
@@ -152,6 +189,7 @@ export default function LoginScreen() {
                   animateTransition(1);
                   setCode('');
                   setError('');
+                  lastSubmittedCode.current = '';
                   setTimeout(() => phoneRef.current?.focus(), 400);
                 }}
                 activeOpacity={0.7}
@@ -165,7 +203,9 @@ export default function LoginScreen() {
           <Animated.View
             style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
           >
-            <Text style={styles.title}>{step === 1 ? t('auth.title') : t('auth.otpTitle')}</Text>
+            <Text style={styles.title}>
+              {step === 1 ? t('auth.title') : t('auth.otpTitle')}
+            </Text>
             <Text style={styles.subtitle}>
               {step === 1
                 ? t('auth.subtitle')
@@ -205,19 +245,23 @@ export default function LoginScreen() {
                   style={[styles.otpInput, error && styles.inputError]}
                   value={code}
                   onChangeText={(v) => {
-                    const clean = v.replace(/\D/g, '');
+                    const clean = v.replace(/\D/g, '').slice(0, OTP_LENGTH);
                     setCode(clean);
                     setError('');
-                    if (clean.length === 6) verifyOTP();
                   }}
                   keyboardType="number-pad"
-                  maxLength={6}
+                  maxLength={OTP_LENGTH}
                   placeholder="— — — — — —"
                   placeholderTextColor={colors.border}
                   selectionColor={colors.primary}
                   autoFocus
+                  editable={!submitting}
                 />
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                {submitting && (
+                  <Text style={styles.submittingText}>{t('common.loading')}</Text>
+                )}
 
                 <TouchableOpacity
                   style={styles.resendBtn}
@@ -244,15 +288,15 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <Button
             title={
-              loading
+              loading || submitting
                 ? t('common.loading')
                 : step === 1
                 ? t('auth.sendCode')
                 : t('auth.verify')
             }
             onPress={step === 1 ? sendOTP : verifyOTP}
-            loading={loading}
-            disabled={step === 2 && code.length < 6}
+            loading={loading || submitting}
+            disabled={step === 2 && code.length < OTP_LENGTH}
             size="lg"
             style={styles.mainButton}
           />
@@ -397,6 +441,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: '500',
     marginLeft: 4,
+  },
+
+  submittingText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 
   resendBtn: {

@@ -47,65 +47,174 @@ export const sendOTP = asyncHandler(async (req, res) => {
 
   const phone = normalizePhone(req.body.phone);
 
-  // Invalider les anciens OTP
-  await query("UPDATE otp_codes SET used_at=NOW() WHERE phone=? AND used_at IS NULL AND expires_at>NOW()", [phone]);
+  // Invalider tous les anciens OTP non utilisés pour ce numéro
+  const [invalidateResult] = await query(
+    `UPDATE otp_codes
+     SET used_at = NOW()
+     WHERE phone = ?
+       AND used_at IS NULL`,
+    [phone]
+  );
+
+  if (invalidateResult.affectedRows > 0) {
+    logger.debug('sendOTP: anciens OTP invalidés', { phone, count: invalidateResult.affectedRows });
+  }
 
   const code    = generateOTP();
   const hash    = await bcrypt.hash(code, 8);
   const expires = new Date(Date.now() + config.otpExpiresMinutes * 60 * 1000);
 
-  await query('INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES (?,?,?)', [phone, hash, expires]);
+  await query(
+    'INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES (?,?,?)',
+    [phone, hash, expires]
+  );
 
   await sendOTPSms(phone, code, config.otpExpiresMinutes);
 
-  logger.info(`OTP envoyé à ${phone}`);
-  res.json({ success: true, message: 'Code OTP envoyé', data: { phone, expiresAt: expires } });
+  logger.info('sendOTP: OTP envoyé', {
+    phone,
+    expiresInMinutes: config.otpExpiresMinutes,
+    expiresAt: expires.toISOString(),
+  });
+
+  res.json({
+    success: true,
+    message: 'Code OTP envoyé',
+    data: { phone, expiresAt: expires },
+  });
 });
 
-// ── POST /api/v1/auth/verify-otp ────────────────────────────────
+// ── POST /api/v1/auth/verify-otp ─────────────────────────────────
 export const verifyOTP = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) throw new AppError('Données invalides', 422, 'VALIDATION_ERROR', errors.array());
 
-  const phone      = normalizePhone(req.body.phone);
+  const phone = normalizePhone(req.body.phone);
   const { code, deviceInfo } = req.body;
 
-  const [rows] = await query(
-    `SELECT id, code_hash, attempts FROM otp_codes
-     WHERE phone=? AND used_at IS NULL AND expires_at>NOW()
-     ORDER BY created_at DESC LIMIT 1`,
-    [phone]
-  );
-  if (!rows.length) throw new AppError('Code OTP expiré ou introuvable', 400, 'OTP_EXPIRED');
+  logger.debug('verifyOTP: début', {
+    phone,
+    codeLength: String(code || '').length,
+    codeType:   typeof code,
+  });
 
-  const otp = rows[0];
-  if (otp.attempts >= config.otpMaxAttempts) {
-    throw new AppError('Trop de tentatives. Demandez un nouveau code.', 429, 'OTP_MAX_ATTEMPTS');
+  // ── Transaction atomique : SELECT FOR UPDATE + UPDATE ──
+  // Empêche deux requêtes concurrentes de traiter le même OTP
+  const result = await transaction(async (conn) => {
+    const [rows] = await conn.execute(
+      `SELECT id, code_hash, attempts, expires_at, created_at
+       FROM otp_codes
+       WHERE phone = ?
+         AND used_at IS NULL
+         AND expires_at > NOW()
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [phone]
+    );
+
+    if (!rows.length) {
+      return { ok: false, reason: 'NO_OTP' };
+    }
+
+    const otp = rows[0];
+
+    // OTP déjà bloqué (attempts atteint le max lors d'un précédent appel)
+    if (otp.attempts >= config.otpMaxAttempts) {
+      await conn.execute('UPDATE otp_codes SET used_at = NOW() WHERE id = ?', [otp.id]);
+      return { ok: false, reason: 'MAX_ATTEMPTS', otpId: otp.id };
+    }
+
+    const codeStr = String(code || '').trim();
+    const valid   = await bcrypt.compare(codeStr, otp.code_hash);
+
+    // ── Code incorrect ──
+    if (!valid) {
+      await conn.execute('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [otp.id]);
+      const remaining = config.otpMaxAttempts - otp.attempts - 1;
+
+      // Si c'était la dernière tentative, on invalide tout de suite
+      if (remaining <= 0) {
+        await conn.execute('UPDATE otp_codes SET used_at = NOW() WHERE id = ?', [otp.id]);
+      }
+
+      return {
+        ok: false,
+        reason: 'INVALID',
+        otpId: otp.id,
+        attemptsBefore: otp.attempts,
+        remaining,
+      };
+    }
+
+    // ── Code valide ──
+    await conn.execute('UPDATE otp_codes SET used_at = NOW() WHERE id = ?', [otp.id]);
+    return { ok: true, otpId: otp.id };
+  });
+
+  // ── Gestion des cas d'échec ──
+  if (!result.ok) {
+    switch (result.reason) {
+      case 'NO_OTP':
+        logger.warn('verifyOTP: aucun OTP actif', { phone });
+        throw new AppError('Code OTP expiré ou introuvable', 400, 'OTP_EXPIRED');
+
+      case 'MAX_ATTEMPTS':
+        logger.warn('verifyOTP: OTP déjà bloqué, invalidé', { phone, otpId: result.otpId });
+        throw new AppError(
+          'Trop de tentatives. Demandez un nouveau code.',
+          429,
+          'OTP_MAX_ATTEMPTS'
+        );
+
+      case 'INVALID':
+        logger.info('verifyOTP: code incorrect', {
+          phone,
+          otpId: result.otpId,
+          attemptsBefore: result.attemptsBefore,
+          attemptsAfter:  result.attemptsBefore + 1,
+          remaining:      result.remaining,
+        });
+        throw new AppError(
+          result.remaining > 0
+            ? `Code incorrect. ${result.remaining} tentative(s) restante(s).`
+            : 'Code incorrect. Demandez un nouveau code.',
+          400,
+          'OTP_INVALID',
+          { remaining: Math.max(0, result.remaining) }
+        );
+    }
   }
 
-  const valid = await bcrypt.compare(code, otp.code_hash);
-  if (!valid) {
-    await query('UPDATE otp_codes SET attempts=attempts+1 WHERE id=?', [otp.id]);
-    const remaining = config.otpMaxAttempts - otp.attempts - 1;
-    throw new AppError(`Code incorrect. ${remaining} tentative(s) restante(s).`, 400, 'OTP_INVALID', { remaining });
-  }
-  await query('UPDATE otp_codes SET used_at=NOW() WHERE id=?', [otp.id]);
+  // ── Succès ──
+  logger.info('verifyOTP: succès', { phone, otpId: result.otpId });
 
   // Trouver ou créer l'utilisateur
-  const [existing] = await query('SELECT * FROM users WHERE phone=?', [phone]);
-  let user; let isNew = false;
+  const [existing] = await query('SELECT * FROM users WHERE phone = ?', [phone]);
+  let user;
+  let isNew = false;
 
   if (existing.length) {
     user = existing[0];
     if (user.status === 'suspended') throw new AppError('Compte suspendu', 403, 'ACCOUNT_SUSPENDED');
     if (user.status === 'deleted')   throw new AppError('Compte supprimé', 403, 'ACCOUNT_DELETED');
-    await query('UPDATE users SET phone_verified=TRUE, last_seen_at=NOW() WHERE id=?', [user.id]);
+
+    await query(
+      'UPDATE users SET phone_verified = TRUE, last_seen_at = NOW() WHERE id = ?',
+      [user.id]
+    );
   } else {
-    const [result] = await query('INSERT INTO users (phone, phone_verified) VALUES (?,TRUE)', [phone]);
-    await query('INSERT INTO notification_preferences (user_id) VALUES (?)', [result.insertId]);
-    const [newUser] = await query('SELECT * FROM users WHERE id=?', [result.insertId]);
+    const [insertResult] = await query(
+      'INSERT INTO users (phone, phone_verified) VALUES (?, TRUE)',
+      [phone]
+    );
+    await query('INSERT INTO notification_preferences (user_id) VALUES (?)', [insertResult.insertId]);
+
+    const [newUser] = await query('SELECT * FROM users WHERE id = ?', [insertResult.insertId]);
     user = newUser[0];
     isNew = true;
+
+    logger.info('verifyOTP: nouvel utilisateur créé', { userId: user.id, phone });
   }
 
   const accessToken  = generateAccessToken(user.id);
@@ -135,7 +244,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
   if (!raw) throw new AppError('Refresh token manquant', 400, 'MISSING_REFRESH_TOKEN');
 
   const [rows] = await query(
-    'SELECT * FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at>NOW() ORDER BY created_at DESC LIMIT 50'
+    'SELECT * FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() ORDER BY created_at DESC LIMIT 50'
   );
 
   let found = null;
@@ -144,14 +253,18 @@ export const refreshToken = asyncHandler(async (req, res) => {
   }
   if (!found) throw new AppError('Refresh token invalide ou expiré', 401, 'INVALID_REFRESH_TOKEN');
 
-  const [users] = await query('SELECT id, status FROM users WHERE id=? AND status="active"', [found.user_id]);
+  const [users] = await query(
+    'SELECT id, status FROM users WHERE id = ? AND status = "active"',
+    [found.user_id]
+  );
   if (!users.length) throw new AppError('Compte introuvable', 401, 'USER_NOT_FOUND');
 
-  await query('UPDATE refresh_tokens SET revoked_at=NOW() WHERE id=?', [found.id]);
-  const accessToken  = generateAccessToken(found.user_id);
-  const refreshToken = await generateRefreshToken(found.user_id);
+  await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?', [found.id]);
 
-  res.json({ success: true, data: { accessToken, refreshToken } });
+  const accessToken  = generateAccessToken(found.user_id);
+  const newRefresh   = await generateRefreshToken(found.user_id);
+
+  res.json({ success: true, data: { accessToken, refreshToken: newRefresh } });
 });
 
 // ── POST /api/v1/auth/logout ─────────────────────────────────────
@@ -159,11 +272,11 @@ export const logout = asyncHandler(async (req, res) => {
   const raw = req.headers['x-refresh-token'] || req.body?.refreshToken;
   if (raw) {
     const [rows] = await query(
-      'SELECT id, token_hash FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at>NOW() LIMIT 50'
+      'SELECT id, token_hash FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() LIMIT 50'
     );
     for (const row of rows) {
       if (await bcrypt.compare(raw, row.token_hash)) {
-        await query('UPDATE refresh_tokens SET revoked_at=NOW() WHERE id=?', [row.id]);
+        await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?', [row.id]);
         break;
       }
     }
