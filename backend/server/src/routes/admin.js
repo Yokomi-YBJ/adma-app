@@ -7,22 +7,21 @@ import { body } from 'express-validator';
 import { authenticateAdmin } from '../middleware/auth.js';
 import { loginRateLimit } from '../middleware/rateLimit.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import * as notifCtrl from '../controllers/admin/adminNotificationsController.js';
-import * as monitCtrl from '../controllers/admin/adminMonitoringController.js';
-
 
 // Contrôleurs
-import * as authCtrl from '../controllers/admin/adminAuthController.js';
-import * as dashCtrl from '../controllers/admin/adminDashboardController.js';
+import * as authCtrl  from '../controllers/admin/adminAuthController.js';
+import * as dashCtrl  from '../controllers/admin/adminDashboardController.js';
 import * as usersCtrl from '../controllers/admin/adminUsersController.js';
-import * as provCtrl from '../controllers/admin/adminProvidersController.js';
+import * as provCtrl  from '../controllers/admin/adminProvidersController.js';
 import * as verifCtrl from '../controllers/admin/adminVerificationsController.js';
-import * as revCtrl from '../controllers/admin/adminReviewsController.js';
-import * as repCtrl from '../controllers/admin/adminReportsController.js';
-import * as subCtrl from '../controllers/admin/adminSubscriptionsController.js';
-import * as payCtrl from '../controllers/admin/adminPaymentsController.js';
-import * as catCtrl from '../controllers/admin/adminCategoriesController.js';
-import * as profCtrl from '../controllers/admin/adminProfileController.js';
+import * as revCtrl   from '../controllers/admin/adminReviewsController.js';
+import * as repCtrl   from '../controllers/admin/adminReportsController.js';
+import * as subCtrl   from '../controllers/admin/adminSubscriptionsController.js';
+import * as payCtrl   from '../controllers/admin/adminPaymentsController.js';
+import * as catCtrl   from '../controllers/admin/adminCategoriesController.js';
+import * as profCtrl  from '../controllers/admin/adminProfileController.js';
+import * as notifCtrl from '../controllers/admin/adminNotificationsController.js';
+import * as monitCtrl from '../controllers/admin/adminMonitoringController.js';
 
 const router = Router();
 
@@ -119,8 +118,10 @@ router.delete('/reviews/:id', authenticateAdmin, asyncHandler(revCtrl.deleteRevi
 router.get('/reports', authenticateAdmin, asyncHandler(repCtrl.getReports));
 router.patch('/reports/:id/resolve', authenticateAdmin, asyncHandler(repCtrl.resolveReport));
 router.patch('/reports/:id/dismiss', authenticateAdmin, asyncHandler(repCtrl.dismissReport));
+router.post('/reports/:id/action', authenticateAdmin, asyncHandler(repCtrl.applyReportAction));
 
 // ── 9. ABONNEMENTS ────────────────────────────────────────────────
+router.get('/subscriptions/upgradable', authenticateAdmin, asyncHandler(subCtrl.getUpgradableProviders));
 router.get('/subscriptions', authenticateAdmin, asyncHandler(subCtrl.getSubscriptions));
 router.post(
   '/subscriptions/activate',
@@ -128,7 +129,7 @@ router.post(
   [
     body('providerId').isInt().toInt().withMessage('ID prestataire requis'),
     body('plan').isIn(['free', 'premium', 'professional', 'enterprise']).withMessage('Plan invalide'),
-    body('days').optional().isInt({ min: 1, max: 365 }).withMessage('Nombre de jours invalide'),
+    body('days').optional().isInt({ min: 1, max: 90 }).withMessage('Durée maximale : 90 jours'),
   ],
   asyncHandler(subCtrl.manualActivateSubscription)
 );
@@ -167,23 +168,26 @@ router.patch('/admins/:id/toggle', authenticateAdmin, asyncHandler(profCtrl.togg
 router.get('/logs', authenticateAdmin, asyncHandler(profCtrl.getLogs));
 
 // ── 13. NOTIFICATIONS BROADCAST ───────────────────────────────────
-
 router.post(
   '/notifications/broadcast',
   authenticateAdmin,
   [
     body('titleFr').trim().notEmpty().withMessage('Titre FR requis'),
     body('bodyFr').trim().notEmpty().withMessage('Message FR requis'),
-    body('targetPlan').optional().isIn(['all','free','premium','professional','enterprise']),
+    body('type').optional().isIn(['ad','promo','announcement','info','important']),
+    body('targetType').optional().isIn(['all','providers','plan','category']),
+    body('targetValue').optional().trim(),
+    body('scheduledAt').optional().isISO8601(),
   ],
   asyncHandler(notifCtrl.broadcast)
 );
 
 router.get('/notifications/history', authenticateAdmin, asyncHandler(notifCtrl.getBroadcastHistory));
+router.get('/notifications/targets', authenticateAdmin, asyncHandler(notifCtrl.getAvailableTargets));
 
 // ── 14. MONITORING ────────────────────────────────────────────────
 router.get('/monitoring/health', authenticateAdmin, asyncHandler(monitCtrl.getSystemHealth));
+router.get('/monitoring/errors', authenticateAdmin, asyncHandler(monitCtrl.getRecentErrors));
+router.post('/monitoring/test-alert', authenticateAdmin, asyncHandler(monitCtrl.testAlert));
 
 export default router;
-
-

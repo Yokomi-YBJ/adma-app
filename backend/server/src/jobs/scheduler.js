@@ -1,11 +1,13 @@
 import cron from 'node-cron';
 import { query }        from '../config/database.js';
 import { deleteImages } from '../services/imgdbService.js';
+import { executeBroadcast } from '../controllers/admin/adminNotificationsController.js';
 import {
   notifySubscriptionExpiring,
   notifyInactiveProvider,
 } from '../services/notificationService.js';
 import { computePrice } from '../services/pricingService.js';
+import { runHealthCheckWithAlerts } from '../services/systemMonitorService.js';
 import { logger } from '../utils/logger.js';
 
 // ── Job CNI : purge après 24h post-traitement OU 30j si non traité ──
@@ -150,5 +152,33 @@ setTimeout(async () => {
     logger.error('Catch-up échoué', err.message);
   }
 }, 15 * 1000);
+
+// ── Broadcasts programmés : vérifie toutes les 5 minutes ────────
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const [rows] = await query(`
+      SELECT id FROM admin_broadcasts
+      WHERE status = 'scheduled' AND scheduled_at <= NOW()
+      LIMIT 10
+    `);
+
+    if (!rows.length) return;
+
+    logger.info(`Broadcasts programmés à envoyer : ${rows.length}`);
+    for (const row of rows) {
+      await executeBroadcast(row.id);
+    }
+  } catch (err) {
+    logger.error('Job broadcast scheduler', err.message);
+  }
+});
+
+cron.schedule('*/10 * * * *', async () => {
+  try {
+    await runHealthCheckWithAlerts();
+  } catch (err) {
+    logger.error('Job monitoring', err.message);
+  }
+});
 
 logger.info('Jobs planifiés démarrés');

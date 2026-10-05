@@ -6,10 +6,6 @@ import {
   ShieldCheck,
   Flag,
   CircleDollarSign,
-  MessageSquare,
-  TrendingUp,
-  ArrowRight,
-  Clock,
 } from 'lucide-react';
 import {
   LineChart,
@@ -67,7 +63,6 @@ export function DashboardPage() {
 
   return (
     <div className="fade-in">
-      {/* Title */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Tableau de bord</h1>
         <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
@@ -75,7 +70,7 @@ export function DashboardPage() {
         </p>
       </div>
 
-      {/* Primary KPI Grid */}
+      {/* KPI Grid */}
       <div className="grid-cards" style={{ marginBottom: 28 }}>
         <StatCard
           label="Utilisateurs"
@@ -117,19 +112,10 @@ export function DashboardPage() {
           icon={Flag}
           color={data.pendingReports > 0 ? '#EF4444' : '#10B981'}
         />
-
-        <StatCard
-          label="Avis & Recommandations"
-          value={data.reviews?.toLocaleString('fr-FR')}
-          sub="Évaluations vérifiées"
-          icon={MessageSquare}
-          color="#3B82F6"
-        />
       </div>
 
-      {/* Main Charts Row */}
+      {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, marginBottom: 24 }}>
-        {/* Daily Registrations */}
         <div
           style={{
             background: '#FFFFFF',
@@ -163,7 +149,6 @@ export function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Plan Distribution */}
         <div
           style={{
             background: '#FFFFFF',
@@ -206,9 +191,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Secondary Row: Cities and Activity */}
+      {/* Secondary Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-        {/* Providers by city */}
         <div
           style={{
             background: '#FFFFFF',
@@ -237,7 +221,6 @@ export function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Recent Admin Actions */}
         <div
           style={{
             background: '#FFFFFF',

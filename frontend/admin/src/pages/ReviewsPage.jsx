@@ -332,8 +332,9 @@ export function ReviewsPage() {
       </div>
 
       {/* Confirmation Modal */}
+      {confirmState.isOpen && (
       <ConfirmModal
-        isOpen={confirmState.isOpen}
+        isOpen={true}
         onClose={() => setConfirmState({ isOpen: false, type: '', review: null, loading: false })}
         onConfirm={handleAction}
         loading={confirmState.loading}
@@ -354,6 +355,7 @@ export function ReviewsPage() {
         variant={confirmState.type === 'restore' ? 'primary' : 'danger'}
         confirmText={confirmState.type === 'hide' ? 'Masquer' : confirmState.type === 'restore' ? 'Restaurer' : 'Supprimer'}
       />
+      )}
     </div>
   );
 }

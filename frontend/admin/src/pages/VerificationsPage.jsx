@@ -346,32 +346,33 @@ export function VerificationsPage() {
       )}
 
       {/* Zoom Image Modal */}
+      {zoomImage && (
       <Modal
-        isOpen={Boolean(zoomImage)}
+        isOpen={true}
         onClose={() => setZoomImage(null)}
-        title={zoomImage?.title || 'Visualisation du document'}
+        title={zoomImage.title || 'Visualisation du document'}
         maxWidth={760}
       >
-        {zoomImage && (
-          <div style={{ textAlign: 'center' }}>
-            <img
-              src={zoomImage.url}
-              alt="Document CNI"
-              style={{
-                width: '100%',
-                maxHeight: '70vh',
-                objectFit: 'contain',
-                borderRadius: 12,
-                boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
-              }}
-            />
-          </div>
-        )}
+        <div style={{ textAlign: 'center' }}>
+          <img
+            src={zoomImage.url}
+            alt="Document CNI"
+            style={{
+              width: '100%',
+              maxHeight: '70vh',
+              objectFit: 'contain',
+              borderRadius: 12,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
+            }}
+          />
+        </div>
       </Modal>
+      )}
 
       {/* Reject Modal */}
+      {rejectModal.isOpen && (
       <Modal
-        isOpen={rejectModal.isOpen}
+        isOpen={true}
         onClose={() => setRejectModal({ isOpen: false, requestId: null, reason: '' })}
         title="Rejeter la demande de vérification"
         maxWidth={460}
@@ -436,6 +437,7 @@ export function VerificationsPage() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }

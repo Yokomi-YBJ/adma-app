@@ -1,55 +1,36 @@
-/**
- * ADMA — Contrôleur Monitoring Admin
- */
 import { query } from '../../config/database.js';
-import { logger } from '../../utils/logger.js';
+import { sendAdminAlert } from '../../services/mailService.js';
+import { runFullHealthCheck } from '../../services/systemMonitorService.js';
 
-export async function getSystemHealth(req, res) {
-  const checks = {};
+export async function getSystemHealth(_req, res) {
+  const report = await runFullHealthCheck();
+  res.json({ success: true, data: report });
+}
 
-  // 1. Vérifier la connexion DB
-  try {
-    const start = Date.now();
-    await query('SELECT 1');
-    checks.database = { status: 'ok', latencyMs: Date.now() - start };
-  } catch (err) {
-    checks.database = { status: 'error', message: err.message };
-    logger.error('Monitoring DB check failed', { err: err.message });
-  }
+export async function getRecentErrors(req, res) {
+  const parsedLimit = Number.parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(parsedLimit, 100)) : 20;
+  const [errors] = await query(
+    `SELECT log.id, log.created_at,
+            JSON_UNQUOTE(JSON_EXTRACT(log.details, '$.path')) AS route,
+            JSON_UNQUOTE(JSON_EXTRACT(log.details, '$.code')) AS code,
+            JSON_UNQUOTE(JSON_EXTRACT(log.details, '$.message')) AS message,
+            admins.full_name AS admin_name
+     FROM admin_logs log
+     LEFT JOIN admins ON admins.id = log.admin_id
+     WHERE log.action IN ('error', 'exception')
+     ORDER BY log.created_at DESC
+     LIMIT ?`,
+    [limit]
+  );
 
-  // 2. Compter les erreurs récentes
-  try {
-    const [[errors24h]] = await query(
-      `SELECT COUNT(*) AS count FROM admin_logs
-       WHERE action IN ('error','exception') AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)`
-    );
-    checks.errors24h = errors24h?.count || 0;
-  } catch {
-    checks.errors24h = null;
-  }
+  res.json({ success: true, data: { errors } });
+}
 
-  // 3. Statistiques des tokens push
-  try {
-    const [[pushStats]] = await query(
-      `SELECT COUNT(*) AS total,
-              SUM(expo_push_token IS NOT NULL) AS with_token
-       FROM users WHERE status = 'active'`
-    );
-    checks.pushTokens = {
-      total: pushStats?.total || 0,
-      withToken: pushStats?.with_token || 0,
-      coverage: pushStats?.total ? Math.round((pushStats.with_token / pushStats.total) * 100) : 0,
-    };
-  } catch {
-    checks.pushTokens = null;
-  }
-
-  // 4. Uptime
-  checks.uptime = Math.floor(process.uptime());
-  checks.memory = {
-    rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
-    heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-  };
-
-  res.json({ success: true, data: checks });
+export async function testAlert(_req, res) {
+  await sendAdminAlert({
+    subject: "[ADMA] Test d'alerte monitoring",
+    body: `Test d'alerte monitoring envoyé le ${new Date().toISOString()}.`,
+  });
+  res.json({ success: true, message: 'Alerte de test envoyée à l’administrateur.' });
 }

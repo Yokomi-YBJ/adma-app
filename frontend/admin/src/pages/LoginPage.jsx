@@ -56,14 +56,23 @@ export function LoginPage() {
     <div
       style={{
         minHeight: '100vh',
+        width: '100%',
         background: 'linear-gradient(135deg, #0B162C 0%, #1C2942 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 20,
+        padding: '24px 20px',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 440 }}>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 440,
+          boxSizing: 'border-box',
+        }}
+      >
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div
@@ -82,17 +91,21 @@ export function LoginPage() {
             <span style={{ fontSize: 34, fontWeight: 900, color: '#FFFFFF' }}>A</span>
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 900, color: '#FFFFFF', letterSpacing: 4 }}>ADMA</h1>
-          <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 4 }}>Portail d'Administration Sécurisé</p>
+          <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 4 }}>
+            Portail d'Administration Sécurisé
+          </p>
         </div>
 
         {/* Card */}
         <div
           className="fade-in"
           style={{
+            width: '100%',
             background: '#FFFFFF',
             borderRadius: 24,
-            padding: 36,
+            padding: 'clamp(24px, 6vw, 36px)',
             boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            boxSizing: 'border-box',
           }}
         >
           {error && (
@@ -108,6 +121,7 @@ export function LoginPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
+                wordBreak: 'break-word',
               }}
             >
               <span>{error}</span>
@@ -124,11 +138,29 @@ export function LoginPage() {
               </p>
 
               <div style={{ marginBottom: 18 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0B162C', marginBottom: 6 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#0B162C',
+                    marginBottom: 6,
+                  }}
+                >
                   Email Administrateur
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Mail size={18} color="#94A3B8" style={{ position: 'absolute', left: 14, top: 15 }} />
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Mail
+                    size={18}
+                    color="#94A3B8"
+                    style={{
+                      position: 'absolute',
+                      left: 14,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                    }}
+                  />
                   <input
                     type="email"
                     required
@@ -150,11 +182,29 @@ export function LoginPage() {
               </div>
 
               <div style={{ marginBottom: 26 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0B162C', marginBottom: 6 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#0B162C',
+                    marginBottom: 6,
+                  }}
+                >
                   Mot de passe
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={18} color="#94A3B8" style={{ position: 'absolute', left: 14, top: 15 }} />
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Lock
+                    size={18}
+                    color="#94A3B8"
+                    style={{
+                      position: 'absolute',
+                      left: 14,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                    }}
+                  />
                   <input
                     type="password"
                     required
@@ -194,6 +244,7 @@ export function LoginPage() {
                   gap: 8,
                   opacity: loading ? 0.7 : 1,
                   boxShadow: '0 4px 14px rgba(95, 194, 186, 0.4)',
+                  boxSizing: 'border-box',
                 }}
               >
                 <span>{loading ? 'Vérification...' : 'Continuer avec OTP'}</span>
@@ -205,16 +256,34 @@ export function LoginPage() {
               <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0B162C', marginBottom: 6 }}>
                 Code de Vérification
               </h2>
-              <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24 }}>
+              <p style={{ fontSize: 13, color: '#64748B', marginBottom: 24, wordBreak: 'break-word' }}>
                 Un code à 6 chiffres a été envoyé à <strong>{email}</strong>
               </p>
 
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0B162C', marginBottom: 6 }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#0B162C',
+                    marginBottom: 6,
+                  }}
+                >
                   Code OTP (6 chiffres)
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <KeyRound size={18} color="#94A3B8" style={{ position: 'absolute', left: 14, top: 15 }} />
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <KeyRound
+                    size={18}
+                    color="#94A3B8"
+                    style={{
+                      position: 'absolute',
+                      left: 14,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                    }}
+                  />
                   <input
                     type="text"
                     required
@@ -222,6 +291,7 @@ export function LoginPage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                     placeholder="123456"
+                    inputMode="numeric"
                     style={{
                       width: '100%',
                       padding: '13px 14px 13px 44px',
@@ -257,6 +327,7 @@ export function LoginPage() {
                   gap: 8,
                   opacity: loading || code.length !== 6 ? 0.7 : 1,
                   boxShadow: '0 4px 14px rgba(95, 194, 186, 0.4)',
+                  boxSizing: 'border-box',
                 }}
               >
                 <span>{loading ? 'Validation...' : 'Valider et accéder'}</span>

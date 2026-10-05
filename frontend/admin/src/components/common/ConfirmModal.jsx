@@ -18,7 +18,13 @@ export function ConfirmModal({
   const iconBg = isDanger ? '#FEF2F2' : '#FFFBEB';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth={440}>
+    <Modal
+      isOpen={isOpen}
+      onClose={loading ? () => {} : onClose}
+      title={title}
+      maxWidth={440}
+      zIndex={10000}
+    >
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
         <div
           style={{
@@ -34,7 +40,7 @@ export function ConfirmModal({
         >
           <AlertTriangle size={22} color={iconColor} />
         </div>
-        <div style={{ flex: 1, fontSize: 14, color: '#475569', lineHeight: 1.5 }}>
+        <div style={{ flex: 1, fontSize: 14, color: '#475569', lineHeight: 1.5, paddingTop: 4 }}>
           {message}
         </div>
       </div>
@@ -45,6 +51,7 @@ export function ConfirmModal({
           justifyContent: 'flex-end',
           gap: 12,
           marginTop: 28,
+          flexWrap: 'wrap',
         }}
       >
         <button

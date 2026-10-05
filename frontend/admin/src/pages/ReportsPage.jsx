@@ -1,11 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Flag, CheckCircle, XCircle, AlertTriangle, User, Briefcase, MessageSquare } from 'lucide-react';
+import {
+  Flag, CheckCircle, XCircle, AlertTriangle, Briefcase, MessageSquare,
+  Ban, EyeOff, Trash2, RefreshCw, ShieldCheck,
+} from 'lucide-react';
 import api from '../services/api';
 import { Spinner } from '../components/common/Spinner';
 import { Badge } from '../components/common/Badge';
 import { Pagination } from '../components/common/Pagination';
 import { Modal } from '../components/common/Modal';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 import { useToast } from '../context/ToastContext';
+
+const REASON_LABELS = {
+  fake_provider:         'Fausse fiche / arnaque',
+  wrong_number:          'Mauvais numéro',
+  wrong_info:            'Informations incorrectes',
+  activity_not_exist:    'Activité inexistante',
+  problematic_behavior:  'Comportement problématique',
+  fake_review:           'Faux avis',
+  offensive:             'Contenu offensant',
+  defamation:            'Diffamation',
+  spam:                  'Spam',
+  other:                 'Autre',
+};
 
 export function ReportsPage() {
   const { showToast } = useToast();
@@ -14,13 +31,20 @@ export function ReportsPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [status, setStatus] = useState('pending');
   const [targetType, setTargetType] = useState('all');
 
-  // Resolution modal
-  const [actionModal, setActionModal] = useState({ isOpen: false, type: '', reportId: null, note: '' });
+  // Modal d'action détaillée
+  const [actionModal, setActionModal] = useState({
+    isOpen: false,
+    report: null,
+    selectedAction: '',
+    note: '',
+  });
   const [processing, setProcessing] = useState(false);
+
+  // Modal rapide pour "Classer sans suite"
+  const [quickDismiss, setQuickDismiss] = useState({ isOpen: false, report: null, loading: false });
 
   useEffect(() => {
     loadReports(1);
@@ -48,20 +72,32 @@ export function ReportsPage() {
     }
   }
 
-  async function handleResolveOrDismiss(e) {
-    e.preventDefault();
-    const { type, reportId, note } = actionModal;
-    setProcessing(true);
+  function openActionModal(report) {
+    // Action pré-sélectionnée selon le type de cible
+    const defaultAction = report.target_type === 'provider' ? 'suspend_provider' : 'hide_review';
+    setActionModal({
+      isOpen: true,
+      report,
+      selectedAction: defaultAction,
+      note: '',
+    });
+  }
 
+  async function handleApplyAction() {
+    const { report, selectedAction, note } = actionModal;
+    if (!selectedAction) {
+      showToast('Veuillez sélectionner une action', 'warning');
+      return;
+    }
+
+    setProcessing(true);
     try {
-      if (type === 'resolve') {
-        await api.patch(`/reports/${reportId}/resolve`, { note });
-        showToast('Signalement marqué comme résolu', 'success');
-      } else if (type === 'dismiss') {
-        await api.patch(`/reports/${reportId}/dismiss`, { note });
-        showToast('Signalement classé sans suite', 'info');
-      }
-      setActionModal({ isOpen: false, type: '', reportId: null, note: '' });
+      await api.post(`/reports/${report.id}/action`, {
+        action: selectedAction,
+        note:   note.trim() || null,
+      });
+      showToast('Action appliquée et signalement résolu', 'success');
+      setActionModal({ isOpen: false, report: null, selectedAction: '', note: '' });
       loadReports(pagination.page);
     } catch (err) {
       showToast(err.response?.data?.message || 'Erreur lors du traitement', 'error');
@@ -70,11 +106,87 @@ export function ReportsPage() {
     }
   }
 
-  const targetIcon = {
-    provider: Briefcase,
-    review: MessageSquare,
-    user: User,
-  };
+  async function handleQuickDismiss() {
+    const { report } = quickDismiss;
+    setQuickDismiss((prev) => ({ ...prev, loading: true }));
+
+    try {
+      await api.post(`/reports/${report.id}/action`, { action: 'dismiss' });
+      showToast('Signalement classé sans suite', 'info');
+      setQuickDismiss({ isOpen: false, report: null, loading: false });
+      loadReports(pagination.page);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Erreur lors du classement', 'error');
+      setQuickDismiss((prev) => ({ ...prev, loading: false }));
+    }
+  }
+
+  // Actions disponibles selon le type de cible
+  function getAvailableActions(report) {
+    if (report.target_type === 'provider') {
+      const providerActive = report.target_data?.is_active;
+      return [
+        {
+          id: 'suspend_provider',
+          label: 'Suspendre le prestataire signalé',
+          description: 'Retire immédiatement la fiche de l\'application et empêche sa visibilité.',
+          icon: Ban,
+          color: '#DC2626',
+          bg: '#FEF2F2',
+          disabled: !providerActive,
+        },
+        {
+          id: 'activate_provider',
+          label: 'Réactiver le prestataire',
+          description: 'Rétablit la fiche si le signalement s\'avère infondé.',
+          icon: ShieldCheck,
+          color: '#059669',
+          bg: '#ECFDF5',
+          disabled: providerActive,
+        },
+        {
+          id: 'resolve_only',
+          label: 'Marquer comme résolu sans action',
+          description: 'Clôture le signalement sans modifier la fiche du prestataire.',
+          icon: CheckCircle,
+          color: '#0B162C',
+          bg: '#F1F5F9',
+          disabled: false,
+        },
+      ];
+    }
+
+    // target_type === 'review'
+    return [
+      {
+        id: 'hide_review',
+        label: 'Masquer l\'avis signalé',
+        description: 'L\'avis ne sera plus visible par les utilisateurs, mais reste archivé.',
+        icon: EyeOff,
+        color: '#D97706',
+        bg: '#FFFBEB',
+        disabled: false,
+      },
+      {
+        id: 'delete_review',
+        label: 'Supprimer définitivement l\'avis',
+        description: 'Supprime l\'avis et recalcule le score de confiance du prestataire.',
+        icon: Trash2,
+        color: '#DC2626',
+        bg: '#FEF2F2',
+        disabled: false,
+      },
+      {
+        id: 'resolve_only',
+        label: 'Marquer comme résolu sans action',
+        description: 'Clôture le signalement sans modifier l\'avis.',
+        icon: CheckCircle,
+        color: '#0B162C',
+        bg: '#F1F5F9',
+        disabled: false,
+      },
+    ];
+  }
 
   return (
     <div className="fade-in">
@@ -83,17 +195,17 @@ export function ReportsPage() {
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Signalements</h1>
           <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
-            Litiges, comportements abusifs et signalements de contenus par les utilisateurs
+            Traitez les litiges et appliquez des actions concrètes sur les contenus signalés
           </p>
         </div>
 
-        {/* Status Filters */}
-        <div style={{ display: 'flex', gap: 6, background: '#FFFFFF', padding: 4, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+        {/* Filtres statut */}
+        <div style={{ display: 'flex', gap: 6, background: '#FFFFFF', padding: 4, borderRadius: 12, border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
           {[
-            { id: 'pending', label: 'En attente' },
-            { id: 'resolved', label: 'Résolus' },
-            { id: 'dismissed', label: 'Classés sans suite' },
-            { id: 'all', label: 'Tous' },
+            { id: 'pending',   label: 'En attente' },
+            { id: 'resolved',  label: 'Résolus' },
+            { id: 'dismissed', label: 'Classés' },
+            { id: 'all',       label: 'Tous' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -115,29 +227,33 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {/* Target Type Filter */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {['all', 'provider', 'review', 'user'].map((t) => (
+      {/* Filtre cible */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {[
+          { id: 'all',      label: 'Toutes cibles' },
+          { id: 'provider', label: 'Prestataires' },
+          { id: 'review',   label: 'Avis' },
+        ].map((t) => (
           <button
-            key={t}
-            onClick={() => setTargetType(t)}
+            key={t.id}
+            onClick={() => setTargetType(t.id)}
             style={{
               padding: '6px 12px',
               borderRadius: 8,
-              border: `1px solid ${targetType === t ? '#5FC2BA' : '#E2E8F0'}`,
-              background: targetType === t ? '#EBF7F7' : '#FFFFFF',
-              color: targetType === t ? '#0D9488' : '#64748B',
+              border: `1px solid ${targetType === t.id ? '#5FC2BA' : '#E2E8F0'}`,
+              background: targetType === t.id ? '#EBF7F7' : '#FFFFFF',
+              color: targetType === t.id ? '#0D9488' : '#64748B',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
-            {t === 'all' ? 'Toutes cibles' : t === 'provider' ? 'Prestataires' : t === 'review' ? 'Avis' : 'Utilisateurs'}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Reports List */}
+      {/* Liste */}
       {loading ? (
         <Spinner center size={36} text="Chargement des signalements..." />
       ) : reports.length === 0 ? (
@@ -151,10 +267,13 @@ export function ReportsPage() {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {reports.map((r) => {
             const isPending = r.status === 'pending';
-            const TargetIcon = targetIcon[r.target_type] || Flag;
+            const isProvider = r.target_type === 'provider';
+            const isReview   = r.target_type === 'review';
+            const TargetIcon = isProvider ? Briefcase : MessageSquare;
+            const reasonLabel = REASON_LABELS[r.reason] || r.reason;
 
             return (
               <div
@@ -162,111 +281,172 @@ export function ReportsPage() {
                 style={{
                   background: '#FFFFFF',
                   borderRadius: 16,
-                  padding: 20,
+                  padding: 22,
                   border: isPending ? '1.5px solid #FECACA' : '1px solid #E2E8F0',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  flexWrap: 'wrap',
-                  gap: 16,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 280 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                {/* En-tête */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div
                       style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
                         background: '#FEF2F2',
                         color: '#EF4444',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        flexShrink: 0,
                       }}
                     >
-                      <TargetIcon size={16} />
+                      <TargetIcon size={18} />
                     </div>
                     <div>
-                      <strong style={{ fontSize: 15, color: '#0B162C' }}>{r.reason}</strong>
-                      <span style={{ fontSize: 12, color: '#94A3B8', marginLeft: 8 }}>
-                        Cible : {r.target_type} #{r.target_id}
-                      </span>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#0B162C' }}>
+                        {reasonLabel}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>
+                        Cible : {r.target_type === 'provider' ? 'Prestataire' : 'Avis'} • Signalé le{' '}
+                        {new Date(r.created_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric', month: 'long', year: 'numeric',
+                        })}
+                      </div>
                     </div>
-                    <Badge
-                      label={r.status === 'pending' ? 'En attente' : r.status === 'resolved' ? 'Résolu' : 'Classé'}
-                      variant={r.status === 'pending' ? 'danger' : r.status === 'resolved' ? 'success' : 'default'}
-                      size="xs"
-                    />
                   </div>
 
-                  {r.description && (
-                    <div
-                      style={{
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        background: '#F8FAFC',
-                        border: '1px solid #E2E8F0',
-                        fontSize: 13,
-                        color: '#334155',
-                        lineHeight: 1.4,
-                        marginBottom: 10,
-                      }}
-                    >
-                      "{r.description}"
-                    </div>
-                  )}
+                  <Badge
+                    label={r.status === 'pending' ? 'En attente' : r.status === 'resolved' ? 'Résolu' : 'Classé'}
+                    variant={r.status === 'pending' ? 'danger' : r.status === 'resolved' ? 'success' : 'default'}
+                    size="xs"
+                  />
+                </div>
 
-                  {/* Target data summary if available */}
-                  {r.target_data && (
-                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>
-                      Détails cible :{' '}
-                      <strong>
-                        {r.target_data.name || r.target_data.first_name || `Avis #${r.target_data.id}`}
-                      </strong>{' '}
-                      {r.target_data.specialty && `(${r.target_data.specialty})`}
-                      {r.target_data.phone && ` - ${r.target_data.phone}`}
-                    </div>
-                  )}
-
-                  <div style={{ fontSize: 12, color: '#94A3B8' }}>
-                    Signalé par : <strong>{r.reporter_name || r.reporter_phone}</strong> • le{' '}
-                    {new Date(r.created_at).toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
+                {/* Description du signalement */}
+                {r.description && (
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      fontSize: 13,
+                      color: '#334155',
+                      lineHeight: 1.5,
+                      marginBottom: 14,
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    "{r.description}"
                   </div>
+                )}
+
+                {/* Cible */}
+                {r.target_data && (
+                  <div
+                    style={{
+                      padding: 14,
+                      borderRadius: 12,
+                      background: isProvider ? '#EBF7F7' : '#FFFBEB',
+                      border: `1px solid ${isProvider ? '#9FDEDA' : '#FDE68A'}`,
+                      marginBottom: 14,
+                    }}
+                  >
+                    {isProvider && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#0D9488', textTransform: 'uppercase', marginBottom: 6 }}>
+                          Prestataire signalé
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
+                          {r.target_data.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>
+                          {r.target_data.specialty} • {r.target_data.city_name || 'Ville non renseignée'}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                          <Badge
+                            label={r.target_data.is_active ? 'Actif' : 'Suspendu'}
+                            variant={r.target_data.is_active ? 'success' : 'danger'}
+                            size="xs"
+                          />
+                          <Badge label={`Plan : ${r.target_data.plan}`} variant="navy" size="xs" />
+                          <Badge
+                            label={`Confiance : ${r.target_data.trust_score}%`}
+                            variant="primary"
+                            size="xs"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {isReview && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#D97706', textTransform: 'uppercase', marginBottom: 6 }}>
+                          Avis signalé
+                        </div>
+                        <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.5, marginBottom: 8, fontStyle: 'italic' }}>
+                          "{r.target_data.comment || '(sans commentaire)'}"
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <Badge
+                            label={r.target_data.verdict === 'recommend' ? 'Recommandé' : r.target_data.verdict === 'discourage' ? 'Déconseillé' : 'Neutre'}
+                            variant={r.target_data.verdict === 'recommend' ? 'success' : r.target_data.verdict === 'discourage' ? 'danger' : 'warning'}
+                            size="xs"
+                          />
+                          <Badge
+                            label={r.target_data.status === 'hidden' ? 'Masqué' : 'Visible'}
+                            variant={r.target_data.status === 'hidden' ? 'default' : 'primary'}
+                            size="xs"
+                          />
+                          <Badge label={`Prestataire : ${r.target_data.provider_name || '—'}`} variant="default" size="xs" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Signalé par */}
+                <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>
+                  Signalé par : <strong style={{ color: '#475569' }}>{r.reporter_name || 'Utilisateur anonyme'}</strong>
                 </div>
 
                 {/* Actions */}
                 {isPending ? (
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => setActionModal({ isOpen: true, type: 'resolve', reportId: r.id, note: '' })}
+                      onClick={() => openActionModal(r)}
                       style={{
-                        padding: '8px 14px',
+                        flex: 1,
+                        minWidth: 180,
+                        padding: '10px 16px',
                         borderRadius: 10,
-                        background: '#ECFDF5',
-                        border: '1px solid #A7F3D0',
-                        color: '#059669',
-                        fontSize: 12,
+                        background: '#0B162C',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontSize: 13,
                         fontWeight: 700,
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
                       }}
                     >
-                      Résoudre
+                      <ShieldCheck size={14} />
+                      <span>Traiter le signalement</span>
                     </button>
+
                     <button
-                      onClick={() => setActionModal({ isOpen: true, type: 'dismiss', reportId: r.id, note: '' })}
+                      onClick={() => setQuickDismiss({ isOpen: true, report: r, loading: false })}
                       style={{
-                        padding: '8px 14px',
+                        padding: '10px 16px',
                         borderRadius: 10,
                         background: '#F1F5F9',
                         border: '1px solid #E2E8F0',
                         color: '#64748B',
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
@@ -275,8 +455,9 @@ export function ReportsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ fontSize: 12, color: '#94A3B8' }}>
-                    Traité par {r.resolver_name || 'Admin'}
+                  <div style={{ fontSize: 12, color: '#94A3B8', textAlign: 'right' }}>
+                    Traité par <strong>{r.resolver_name || 'Admin'}</strong> le{' '}
+                    {new Date(r.resolved_at).toLocaleDateString('fr-FR')}
                   </div>
                 )}
               </div>
@@ -285,74 +466,149 @@ export function ReportsPage() {
         </div>
       )}
 
-      {/* Resolution Modal */}
+      {/* Modal d'action détaillée */}
+      {actionModal.isOpen && (
       <Modal
-        isOpen={actionModal.isOpen}
-        onClose={() => setActionModal({ isOpen: false, type: '', reportId: null, note: '' })}
-        title={actionModal.type === 'resolve' ? 'Résoudre le signalement' : 'Classer sans suite'}
-        maxWidth={460}
+        isOpen={true}
+        onClose={() => setActionModal({ isOpen: false, report: null, selectedAction: '', note: '' })}
+        title="Traiter le signalement"
+        maxWidth={560}
       >
-        <form onSubmit={handleResolveOrDismiss}>
-          <p style={{ fontSize: 13, color: '#64748B', marginBottom: 14 }}>
-            {actionModal.type === 'resolve'
-              ? 'Ajoutez une note expliquant les mesures prises (ex: avertissement au prestataire, suppression d\'avis).'
-              : 'Ajoutez une note justifiant le classement sans suite.'}
-          </p>
+        <div>
+            <div style={{ fontSize: 13, color: '#64748B', marginBottom: 16 }}>
+              Choisissez l'action à appliquer. Le signalement sera automatiquement marqué comme résolu.
+            </div>
 
-          <div style={{ marginBottom: 20 }}>
-            <textarea
-              rows={3}
-              value={actionModal.note}
-              onChange={(e) => setActionModal({ ...actionModal, note: e.target.value })}
-              placeholder="Note interne d'administration (optionnel)..."
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1.5px solid #E2E8F0',
-                fontSize: 13,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+            {/* Liste des actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {getAvailableActions(actionModal.report).map((act) => {
+                const Icon = act.icon;
+                const isSelected = actionModal.selectedAction === act.id;
+                return (
+                  <button
+                    key={act.id}
+                    type="button"
+                    onClick={() => !act.disabled && setActionModal({ ...actionModal, selectedAction: act.id })}
+                    disabled={act.disabled}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      padding: 14,
+                      borderRadius: 12,
+                      border: `2px solid ${isSelected ? '#0B162C' : '#E2E8F0'}`,
+                      background: isSelected ? act.bg : '#FFFFFF',
+                      cursor: act.disabled ? 'not-allowed' : 'pointer',
+                      opacity: act.disabled ? 0.5 : 1,
+                      textAlign: 'left',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: act.bg,
+                        color: act.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0B162C', marginBottom: 2 }}>
+                        {act.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.4 }}>
+                        {act.description}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => setActionModal({ isOpen: false, type: '', reportId: null, note: '' })}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 8,
-                background: '#F1F5F9',
-                border: '1px solid #E2E8F0',
-                color: '#475569',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={processing}
-              style={{
-                padding: '8px 18px',
-                borderRadius: 8,
-                background: actionModal.type === 'resolve' ? '#10B981' : '#64748B',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: processing ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {processing ? 'Enregistrement...' : 'Confirmer'}
-            </button>
-          </div>
-        </form>
+            {/* Note */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
+                Note interne (optionnel)
+              </label>
+              <textarea
+                rows={3}
+                value={actionModal.note}
+                onChange={(e) => setActionModal({ ...actionModal, note: e.target.value })}
+                placeholder="Justifiez votre décision..."
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: 13,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            {/* Boutons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setActionModal({ isOpen: false, report: null, selectedAction: '', note: '' })}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: 10,
+                  background: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
+                  color: '#475569',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyAction}
+                disabled={processing || !actionModal.selectedAction}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 10,
+                  background: '#0B162C',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: processing || !actionModal.selectedAction ? 'not-allowed' : 'pointer',
+                  opacity: processing || !actionModal.selectedAction ? 0.7 : 1,
+                }}
+              >
+                {processing ? 'Traitement...' : 'Confirmer l\'action'}
+              </button>
+            </div>
+        </div>
       </Modal>
+      )}
+
+      {/* Confirm rapide pour dismiss */}
+      {quickDismiss.isOpen && (
+      <ConfirmModal
+        isOpen={true}
+        onClose={() => setQuickDismiss({ isOpen: false, report: null, loading: false })}
+        onConfirm={handleQuickDismiss}
+        loading={quickDismiss.loading}
+        title="Classer sans suite"
+        message="Ce signalement sera marqué comme classé sans suite. Aucune action ne sera appliquée sur la cible."
+        variant="primary"
+        confirmText="Classer"
+      />
+      )}
     </div>
   );
 }

@@ -6,18 +6,20 @@ import { Layout } from './components/layout/Layout';
 import { Spinner } from './components/common/Spinner';
 
 // Lazy loading all pages for fast bundle & initial load
-const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
-const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
-const ProvidersPage = lazy(() => import('./pages/ProvidersPage').then((m) => ({ default: m.ProvidersPage })));
-const VerificationsPage = lazy(() => import('./pages/VerificationsPage').then((m) => ({ default: m.VerificationsPage })));
-const ReviewsPage = lazy(() => import('./pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
-const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })));
-const SubscriptionsPage = lazy(() => import('./pages/SubscriptionsPage').then((m) => ({ default: m.SubscriptionsPage })));
-const PaymentsPage = lazy(() => import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })));
-const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then((m) => ({ default: m.CategoriesPage })));
-const AdminLogsPage = lazy(() => import('./pages/AdminLogsPage').then((m) => ({ default: m.AdminLogsPage })));
-const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const LoginPage           = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const DashboardPage       = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const UsersPage           = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
+const ProvidersPage       = lazy(() => import('./pages/ProvidersPage').then((m) => ({ default: m.ProvidersPage })));
+const VerificationsPage   = lazy(() => import('./pages/VerificationsPage').then((m) => ({ default: m.VerificationsPage })));
+const ReviewsPage         = lazy(() => import('./pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
+const ReportsPage         = lazy(() => import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const SubscriptionsPage   = lazy(() => import('./pages/SubscriptionsPage').then((m) => ({ default: m.SubscriptionsPage })));
+const PaymentsPage        = lazy(() => import('./pages/PaymentsPage').then((m) => ({ default: m.PaymentsPage })));
+const CategoriesPage      = lazy(() => import('./pages/CategoriesPage').then((m) => ({ default: m.CategoriesPage })));
+const AdminLogsPage       = lazy(() => import('./pages/AdminLogsPage').then((m) => ({ default: m.AdminLogsPage })));
+const ProfilePage         = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const NotificationsPage   = lazy(() => import('./pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
+const MonitoringPage      = lazy(() => import('./pages/MonitoringPage').then((m) => ({ default: m.MonitoringPage })));
 
 function ProtectedRoute({ children }) {
   const { admin, loading } = useAuth();
@@ -54,18 +56,20 @@ export default function App() {
                   <ProtectedRoute>
                     <Layout>
                       <Routes>
-                        <Route path="/" element={<DashboardPage />} />
-                        <Route path="/users" element={<UsersPage />} />
-                        <Route path="/providers" element={<ProvidersPage />} />
-                        <Route path="/verifications" element={<VerificationsPage />} />
-                        <Route path="/reviews" element={<ReviewsPage />} />
-                        <Route path="/reports" element={<ReportsPage />} />
-                        <Route path="/subscriptions" element={<SubscriptionsPage />} />
-                        <Route path="/payments" element={<PaymentsPage />} />
-                        <Route path="/categories" element={<CategoriesPage />} />
-                        <Route path="/logs" element={<AdminLogsPage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                        <Route path="/"               element={<DashboardPage />} />
+                        <Route path="/users"          element={<UsersPage />} />
+                        <Route path="/providers"      element={<ProvidersPage />} />
+                        <Route path="/verifications"  element={<VerificationsPage />} />
+                        <Route path="/reviews"        element={<ReviewsPage />} />
+                        <Route path="/reports"        element={<ReportsPage />} />
+                        <Route path="/subscriptions"  element={<SubscriptionsPage />} />
+                        <Route path="/payments"       element={<PaymentsPage />} />
+                        <Route path="/categories"     element={<CategoriesPage />} />
+                        <Route path="/notifications"  element={<NotificationsPage />} />
+                        <Route path="/logs"           element={<AdminLogsPage />} />
+                        <Route path="/monitoring"     element={<MonitoringPage />} />
+                        <Route path="/profile"        element={<ProfilePage />} />
+                        <Route path="*"               element={<Navigate to="/" replace />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

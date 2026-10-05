@@ -1,3 +1,6 @@
+import dns from 'node:dns';
+dns.setDefaultResultOrder('ipv4first');
+
 /**
  * ADMA API — Point d'entrée principal
  * Node.js 20+ / Express 4

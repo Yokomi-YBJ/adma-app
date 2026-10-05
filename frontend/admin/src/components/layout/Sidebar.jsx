@@ -7,9 +7,11 @@ import {
   MessageSquare,
   Flag,
   CreditCard,
-  Layers,
   CircleDollarSign,
+  Bell,
+  Layers,
   History,
+  Activity,
   User,
   LogOut,
   X,
@@ -17,17 +19,19 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 export const NAV_ITEMS = [
-  { path: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-  { path: '/users', label: 'Utilisateurs', icon: Users },
-  { path: '/providers', label: 'Prestataires', icon: Briefcase },
-  { path: '/verifications', label: 'Vérifications', icon: ShieldCheck },
-  { path: '/reviews', label: 'Avis', icon: MessageSquare },
-  { path: '/reports', label: 'Signalements', icon: Flag },
-  { path: '/subscriptions', label: 'Abonnements', icon: CreditCard },
-  { path: '/payments', label: 'Paiements', icon: CircleDollarSign },
-  { path: '/categories', label: 'Catégories', icon: Layers },
-  { path: '/logs', label: 'Journal d’audit', icon: History },
-  { path: '/profile', label: 'Mon Profil', icon: User },
+  { path: '/',              label: 'Tableau de bord', icon: LayoutDashboard },
+  { path: '/users',         label: 'Utilisateurs',    icon: Users },
+  { path: '/providers',     label: 'Prestataires',    icon: Briefcase },
+  { path: '/verifications', label: 'Vérifications',   icon: ShieldCheck },
+  { path: '/reviews',       label: 'Avis',            icon: MessageSquare },
+  { path: '/reports',       label: 'Signalements',    icon: Flag },
+  { path: '/subscriptions', label: 'Abonnements',     icon: CreditCard },
+  { path: '/payments',      label: 'Paiements',       icon: CircleDollarSign },
+  { path: '/notifications', label: 'Notifications',   icon: Bell },
+  { path: '/categories',    label: 'Catégories',      icon: Layers },
+  { path: '/logs',          label: 'Journal d’audit', icon: History },
+  { path: '/monitoring',    label: 'Monitoring',      icon: Activity },
+  { path: '/profile',       label: 'Mon Profil',      icon: User },
 ];
 
 export function Sidebar({ isOpen, onClose }) {

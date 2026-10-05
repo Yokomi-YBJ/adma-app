@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Plus, XCircle, Search, Calendar, CheckCircle2, User } from 'lucide-react';
+import { CreditCard, Plus, XCircle, Search, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 import { Spinner } from '../components/common/Spinner';
 import { Badge } from '../components/common/Badge';
@@ -8,6 +8,22 @@ import { Modal } from '../components/common/Modal';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { useToast } from '../context/ToastContext';
 
+const PLAN_LABELS = {
+  free:         'Gratuit',
+  premium:      'Premium',
+  professional: 'Professionnel',
+  enterprise:   'Entreprise',
+};
+
+const PLAN_RANK = {
+  free:         0,
+  premium:      1,
+  professional: 2,
+  enterprise:   3,
+};
+
+const MAX_DAYS = 90;
+
 export function SubscriptionsPage() {
   const { showToast } = useToast();
 
@@ -15,18 +31,22 @@ export function SubscriptionsPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [plan, setPlan] = useState('all');
   const [status, setStatus] = useState('all');
   const [q, setQ] = useState('');
 
-  // Manual activation modal
+  // Modal d'attribution
   const [activateModal, setActivateModal] = useState(false);
   const [providersList, setProvidersList] = useState([]);
-  const [form, setForm] = useState({ providerId: '', plan: 'premium', days: 30 });
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  const [form, setForm] = useState({
+    providerId: '',
+    plan: '',
+    days: 30,
+  });
   const [submitting, setSubmitting] = useState(false);
 
-  // Cancel modal
+  // Modal d'annulation
   const [confirmCancel, setConfirmCancel] = useState({ isOpen: false, sub: null, loading: false });
 
   useEffect(() => {
@@ -58,18 +78,41 @@ export function SubscriptionsPage() {
 
   async function openActivateModal() {
     setActivateModal(true);
+    setForm({ providerId: '', plan: '', days: 30 });
+    setLoadingProviders(true);
     try {
-      const res = await api.get('/providers?limit=100');
-      setProvidersList(res.data.data.providers || []);
+      // Nouveau endpoint qui exclut déjà les plans enterprise (non upgradables)
+      const res = await api.get('/subscriptions/upgradable');
+      setProvidersList(res.data.data || []);
     } catch {
       showToast('Impossible de charger la liste des prestataires', 'error');
+      setProvidersList([]);
+    } finally {
+      setLoadingProviders(false);
     }
   }
 
+  // Retourne le prestataire sélectionné
+  const selectedProvider = providersList.find((p) => String(p.id) === String(form.providerId));
+
+  // Retourne la liste des plans valides pour l'upgrade du prestataire sélectionné
+  const availablePlans = selectedProvider
+    ? selectedProvider.upgradablePlans || []
+    : [];
+
   async function handleManualActivate(e) {
     e.preventDefault();
+
     if (!form.providerId) {
       showToast('Sélectionnez un prestataire', 'warning');
+      return;
+    }
+    if (!form.plan) {
+      showToast('Sélectionnez un plan', 'warning');
+      return;
+    }
+    if (form.days < 1 || form.days > MAX_DAYS) {
+      showToast(`La durée doit être comprise entre 1 et ${MAX_DAYS} jours`, 'warning');
       return;
     }
 
@@ -77,15 +120,14 @@ export function SubscriptionsPage() {
     try {
       await api.post('/subscriptions/activate', {
         providerId: parseInt(form.providerId, 10),
-        plan: form.plan,
-        days: parseInt(form.days, 10),
+        plan:       form.plan,
+        days:       parseInt(form.days, 10),
       });
-      showToast('Abonnement activé avec succès !', 'success');
+      showToast('Abonnement attribué avec succès', 'success');
       setActivateModal(false);
-      setForm({ providerId: '', plan: 'premium', days: 30 });
       loadSubscriptions(1);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Erreur lors de l’activation', 'error');
+      showToast(err.response?.data?.message || 'Erreur lors de l’attribution', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -107,20 +149,19 @@ export function SubscriptionsPage() {
   }
 
   const planVariant = {
-    free: 'default',
-    premium: 'primary',
+    free:         'default',
+    premium:      'primary',
     professional: 'navy',
-    enterprise: 'purple',
+    enterprise:   'purple',
   };
 
   return (
     <div className="fade-in">
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Abonnements & Forfaits</h1>
           <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
-            Suivi des plans souscrits (Premium, Professionnel, Entreprise) et attributions manuelles
+            Suivi des plans souscrits et attribution manuelle (upgrades uniquement, max 90 jours)
           </p>
         </div>
 
@@ -146,7 +187,7 @@ export function SubscriptionsPage() {
         </button>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filtres */}
       <div
         style={{
           background: '#FFFFFF',
@@ -169,7 +210,7 @@ export function SubscriptionsPage() {
           style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260 }}
         >
           <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: 12, top: 12 }} />
+            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               value={q}
@@ -183,6 +224,7 @@ export function SubscriptionsPage() {
                 fontSize: 14,
                 color: '#0B162C',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
           </div>
@@ -242,13 +284,13 @@ export function SubscriptionsPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Tableau */}
       <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
         <div className="table-responsive">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 800 }}>
             <thead>
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                {['Prestataire', 'Plan', 'Montant', 'Début', 'Fin (Échéance)', 'Activé via', 'Statut', 'Actions'].map((h) => (
+                {['Prestataire', 'Plan', 'Montant', 'Début', 'Fin', 'Activé via', 'Statut', 'Actions'].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -289,11 +331,13 @@ export function SubscriptionsPage() {
                         <div style={{ fontWeight: 700, color: '#0B162C', fontSize: 14 }}>
                           {s.provider_name}
                         </div>
-                        <div style={{ fontSize: 12, color: '#64748B' }}>{s.phone}</div>
+                        <div style={{ fontSize: 12, color: '#64748B', fontFamily: 'monospace' }}>
+                          {String(s.user_phone || '').replace(/^\+?237/, '').replace(/^(\d{3})\d+(\d{2})$/, '$1*****$2')}
+                        </div>
                       </td>
 
                       <td style={{ padding: '14px 18px' }}>
-                        <Badge label={s.plan} variant={planVariant[s.plan] || 'default'} size="xs" />
+                        <Badge label={PLAN_LABELS[s.plan] || s.plan} variant={planVariant[s.plan] || 'default'} size="xs" />
                       </td>
 
                       <td style={{ padding: '14px 18px', fontSize: 13, fontWeight: 700, color: '#0B162C' }}>
@@ -351,133 +395,204 @@ export function SubscriptionsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
         <Pagination pagination={pagination} onPageChange={(p) => loadSubscriptions(p)} />
       </div>
 
-      {/* Manual Activation Modal */}
-      <Modal isOpen={activateModal} onClose={() => setActivateModal(false)} title="Attribuer un abonnement manuel" maxWidth={500}>
-        <form onSubmit={handleManualActivate}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
-              Sélectionner le prestataire
-            </label>
-            <select
-              required
-              value={form.providerId}
-              onChange={(e) => setForm({ ...form, providerId: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1.5px solid #E2E8F0',
-                fontSize: 13,
-                background: '#FFFFFF',
-              }}
-            >
-              <option value="">-- Choisir un professionnel --</option>
-              {providersList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.phone} - {p.city_name || 'Cameroun'})
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Modal d'attribution */}
+      {activateModal && (
+      <Modal
+        isOpen={true}
+        onClose={() => setActivateModal(false)}
+        title="Attribuer un abonnement"
+        maxWidth={520}
+      >
+        {loadingProviders ? (
+          <Spinner center size={28} text="Chargement des prestataires..." />
+        ) : (
+          <form onSubmit={handleManualActivate}>
+            {/* Prestataire */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
+                Prestataire *
+              </label>
+              <select
+                required
+                value={form.providerId}
+                onChange={(e) => {
+                  const providerId = e.target.value;
+                  const prov = providersList.find((p) => String(p.id) === String(providerId));
+                  setForm({
+                    ...form,
+                    providerId,
+                    plan: '',
+                    // Suggestion auto du premier plan upgradable
+                    plan: prov?.upgradablePlans?.[0] || '',
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: 13,
+                  background: '#FFFFFF',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="">-- Choisir un prestataire --</option>
+                {providersList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({PLAN_LABELS[p.plan] || p.plan})
+                  </option>
+                ))}
+              </select>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
-              Plan d'abonnement
-            </label>
-            <select
-              value={form.plan}
-              onChange={(e) => setForm({ ...form, plan: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1.5px solid #E2E8F0',
-                fontSize: 13,
-                background: '#FFFFFF',
-              }}
-            >
-              <option value="premium">Premium (visibilité accrue, galerie 3 photos)</option>
-              <option value="professional">Professionnel (galerie 6 photos, mise en avant top recherche)</option>
-              <option value="enterprise">Entreprise (badge officiel, portée maximale)</option>
-            </select>
-          </div>
+              {selectedProvider && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    background: '#EBF7F7',
+                    fontSize: 12,
+                    color: '#0D9488',
+                    fontWeight: 600,
+                  }}
+                >
+                  Plan actuel : {PLAN_LABELS[selectedProvider.plan] || selectedProvider.plan}
+                </div>
+              )}
+            </div>
 
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
-              Durée de validité
-            </label>
-            <select
-              value={form.days}
-              onChange={(e) => setForm({ ...form, days: parseInt(e.target.value, 10) })}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: '1.5px solid #E2E8F0',
-                fontSize: 13,
-                background: '#FFFFFF',
-              }}
-            >
-              <option value={7}>7 jours (Essai)</option>
-              <option value={30}>30 jours (1 mois)</option>
-              <option value={90}>90 jours (3 mois)</option>
-              <option value={180}>180 jours (6 mois)</option>
-              <option value={365}>365 jours (1 an)</option>
-            </select>
-          </div>
+            {/* Plan cible */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
+                Nouveau plan (upgrade uniquement) *
+              </label>
+              {!selectedProvider ? (
+                <div style={{ fontSize: 12, color: '#94A3B8', padding: '10px 0' }}>
+                  Sélectionnez d'abord un prestataire
+                </div>
+              ) : availablePlans.length === 0 ? (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    background: '#FFFBEB',
+                    border: '1px solid #FDE68A',
+                    fontSize: 12,
+                    color: '#92400E',
+                    fontWeight: 600,
+                  }}
+                >
+                  Ce prestataire est déjà en plan Entreprise. Aucun upgrade possible.
+                </div>
+              ) : (
+                <select
+                  required
+                  value={form.plan}
+                  onChange={(e) => setForm({ ...form, plan: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    border: '1.5px solid #E2E8F0',
+                    fontSize: 13,
+                    background: '#FFFFFF',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {availablePlans.map((p) => (
+                    <option key={p} value={p}>
+                      {PLAN_LABELS[p] || p}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => setActivateModal(false)}
-              style={{
-                padding: '9px 16px',
-                borderRadius: 10,
-                background: '#F1F5F9',
-                border: '1px solid #E2E8F0',
-                color: '#475569',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                padding: '9px 20px',
-                borderRadius: 10,
-                background: '#5FC2BA',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {submitting ? 'Activation...' : 'Confirmer l’activation'}
-            </button>
-          </div>
-        </form>
+            {/* Durée */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 6 }}>
+                Durée (jours) * — Max {MAX_DAYS}
+              </label>
+              <select
+                value={form.days}
+                onChange={(e) => setForm({ ...form, days: parseInt(e.target.value, 10) })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1.5px solid #E2E8F0',
+                  fontSize: 13,
+                  background: '#FFFFFF',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value={7}>7 jours (Essai)</option>
+                <option value={30}>30 jours (1 mois)</option>
+                <option value={60}>60 jours (2 mois)</option>
+                <option value={90}>90 jours (3 mois - max)</option>
+              </select>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 6, lineHeight: 1.4 }}>
+                La durée s'ajoute à la date d'expiration actuelle du prestataire si elle est encore valide.
+              </div>
+            </div>
+
+            {/* Boutons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setActivateModal(false)}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: 10,
+                  background: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
+                  color: '#475569',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || !selectedProvider || !form.plan || availablePlans.length === 0}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 10,
+                  background: '#5FC2BA',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting || !selectedProvider || !form.plan ? 0.6 : 1,
+                }}
+              >
+                {submitting ? 'Attribution...' : 'Confirmer'}
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
+      )}
 
-      {/* Cancel Confirmation Modal */}
+      {/* Confirm cancel */}
+      {confirmCancel.isOpen && (
       <ConfirmModal
-        isOpen={confirmCancel.isOpen}
+        isOpen={true}
         onClose={() => setConfirmCancel({ isOpen: false, sub: null, loading: false })}
         onConfirm={handleCancelSubscription}
         loading={confirmCancel.loading}
-        title="Annuler l’abonnement"
+        title="Annuler l'abonnement"
         message={`Voulez-vous annuler l'abonnement de ${confirmCancel.sub?.provider_name} ? Le prestataire repassera immédiatement au plan gratuit.`}
         variant="danger"
         confirmText="Annuler l'abonnement"
       />
+      )}
     </div>
   );
 }

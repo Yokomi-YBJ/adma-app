@@ -342,8 +342,9 @@ export function CategoriesPage() {
       )}
 
       {/* Add / Edit Category Modal */}
+      {modalOpen && (
       <Modal
-        isOpen={modalOpen}
+        isOpen={true}
         onClose={() => setModalOpen(false)}
         title={editingCategory ? 'Modifier la catégorie' : 'Créer une catégorie'}
         maxWidth={520}
@@ -515,10 +516,12 @@ export function CategoriesPage() {
           </div>
         </form>
       </Modal>
+      )}
 
       {/* Delete confirmation */}
+      {deleteState.isOpen && (
       <ConfirmModal
-        isOpen={deleteState.isOpen}
+        isOpen={true}
         onClose={() => setDeleteState({ isOpen: false, category: null, loading: false })}
         onConfirm={handleDeleteCategory}
         loading={deleteState.loading}
@@ -527,6 +530,7 @@ export function CategoriesPage() {
         variant="danger"
         confirmText="Supprimer"
       />
+      )}
     </div>
   );
 }

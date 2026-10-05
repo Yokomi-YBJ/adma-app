@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Eye, Edit2, ShieldAlert, ShieldCheck, CheckCircle2, XCircle, Star, Phone, MapPin } from 'lucide-react';
+import { Search, Edit2, XCircle, CheckCircle2, Star, MapPin } from 'lucide-react';
 import api from '../services/api';
 import { Pagination } from '../components/common/Pagination';
 import { Spinner } from '../components/common/Spinner';
@@ -7,6 +7,7 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { useToast } from '../context/ToastContext';
+import { anonymizePhone } from '../utils/anonymize';
 
 export function ProvidersPage() {
   const { showToast } = useToast();
@@ -15,13 +16,11 @@ export function ProvidersPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('all');
   const [plan, setPlan] = useState('all');
   const [verification, setVerification] = useState('all');
 
-  // Modals
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [editForm, setEditForm] = useState(null);
@@ -67,8 +66,6 @@ export function ProvidersPage() {
       const res = await api.get(`/providers/${id}`);
       setSelectedProvider(res.data.data);
       setEditForm({
-        name: res.data.data.name || '',
-        specialty: res.data.data.specialty || '',
         plan: res.data.data.plan || 'free',
         verification_status: res.data.data.verification_status || 'none',
         is_active: res.data.data.is_active ? 1 : 0,
@@ -137,7 +134,6 @@ export function ProvidersPage() {
 
   return (
     <div className="fade-in">
-      {/* Title */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Prestataires</h1>
@@ -147,7 +143,7 @@ export function ProvidersPage() {
         </div>
       </div>
 
-      {/* Filters Bar */}
+      {/* Filtres */}
       <div
         style={{
           background: '#FFFFFF',
@@ -164,7 +160,7 @@ export function ProvidersPage() {
       >
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, flex: 1, minWidth: 260 }}>
           <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: 12, top: 12 }} />
+            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               value={q}
@@ -178,6 +174,7 @@ export function ProvidersPage() {
                 fontSize: 14,
                 color: '#0B162C',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
           </div>
@@ -234,8 +231,8 @@ export function ProvidersPage() {
           >
             <option value="all">Toutes vérifications</option>
             <option value="none">Non vérifié</option>
-            <option value="verified_id">ID Vérifié</option>
-            <option value="verified">Vérifié Complet</option>
+            <option value="pending">En attente</option>
+            <option value="verified">Certifié</option>
           </select>
 
           <select
@@ -258,7 +255,7 @@ export function ProvidersPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Tableau */}
       <div style={{ background: '#FFFFFF', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
         <div className="table-responsive">
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 800 }}>
@@ -300,7 +297,6 @@ export function ProvidersPage() {
 
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      {/* Name & Specialty */}
                       <td style={{ padding: '14px 18px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div
@@ -322,32 +318,31 @@ export function ProvidersPage() {
                           </div>
                           <div>
                             <div style={{ fontWeight: 700, color: '#0B162C', fontSize: 14 }}>{p.name}</div>
-                            <div style={{ fontSize: 12, color: '#64748B' }}>
-                              {p.specialty || 'Spécialité non renseignée'} • <span style={{ color: '#0B162C' }}>{p.phone}</span>
+                            <div style={{ fontSize: 12, color: '#64748B', fontFamily: 'monospace' }}>
+                              {anonymizePhone(p.phone)}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* City / Category */}
                       <td style={{ padding: '14px 18px' }}>
                         <div style={{ fontSize: 13, color: '#0B162C', fontWeight: 600 }}>{p.city_name || '—'}</div>
                         <div style={{ fontSize: 11, color: '#94A3B8' }}>{p.category_name || 'Général'}</div>
                       </td>
 
-                      {/* Plan */}
                       <td style={{ padding: '14px 18px' }}>
                         <Badge label={p.plan} variant={planVariant[p.plan] || 'default'} size="xs" />
                       </td>
 
-                      {/* Verification Status */}
                       <td style={{ padding: '14px 18px' }}>
                         <Badge
                           label={
-                            p.verification_status === 'verified_id'
-                              ? 'ID Certifié'
-                              : p.verification_status === 'verified'
-                              ? 'Vérifié Pro'
+                            p.verification_status === 'verified'
+                              ? 'Certifié'
+                              : p.verification_status === 'pending'
+                              ? 'En attente'
+                              : p.verification_status === 'rejected'
+                              ? 'Rejeté'
                               : 'Non vérifié'
                           }
                           variant={verifVariant[p.verification_status] || 'default'}
@@ -355,21 +350,17 @@ export function ProvidersPage() {
                         />
                       </td>
 
-                      {/* Trust score */}
                       <td style={{ padding: '14px 18px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <Star size={14} color="#F59E0B" fill="#F59E0B" />
                           <strong style={{ color: '#0B162C', fontSize: 13 }}>{p.trust_score}%</strong>
-                          <span style={{ fontSize: 11, color: '#94A3B8' }}>({p.review_count} avis)</span>
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td style={{ padding: '14px 18px' }}>
                         <Badge label={isActive ? 'Actif' : 'Suspendu'} variant={isActive ? 'success' : 'danger'} size="xs" />
                       </td>
 
-                      {/* Actions */}
                       <td style={{ padding: '14px 18px' }}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
@@ -446,60 +437,45 @@ export function ProvidersPage() {
           </table>
         </div>
 
-        {/* Pagination */}
         <Pagination pagination={pagination} onPageChange={(p) => loadProviders(p)} />
       </div>
 
-      {/* Edit / Detail Modal */}
+      {/* Modal d'édition */}
+      {selectedProvider && (
       <Modal
-        isOpen={Boolean(selectedProvider)}
+        isOpen={true}
         onClose={() => setSelectedProvider(null)}
-        title={`Fiche : ${selectedProvider?.name || 'Prestataire'}`}
+        title={`Fiche : ${selectedProvider.name || 'Prestataire'}`}
         maxWidth={640}
       >
         {detailsLoading ? (
           <Spinner center size={32} text="Chargement des données..." />
         ) : editForm ? (
           <form onSubmit={handleSaveEdit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
-                  Nom commercial
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 10,
-                    border: '1.5px solid #E2E8F0',
-                    fontSize: 14,
-                    boxSizing: 'border-box',
-                  }}
-                />
+            {/* Infos en lecture seule */}
+            <div
+              style={{
+                background: '#F8FAFC',
+                borderRadius: 12,
+                padding: 16,
+                border: '1px solid #E2E8F0',
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>Téléphone du prestataire</span>
+                <span style={{ fontSize: 13, color: '#0B162C', fontWeight: 700, fontFamily: 'monospace' }}>
+                  {anonymizePhone(selectedProvider.user_phone)}
+                </span>
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
-                  Spécialité
-                </label>
-                <input
-                  type="text"
-                  value={editForm.specialty}
-                  onChange={(e) => setEditForm({ ...editForm, specialty: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 10,
-                    border: '1.5px solid #E2E8F0',
-                    fontSize: 14,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
+              {selectedProvider.city_name && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>Ville</span>
+                  <span style={{ fontSize: 13, color: '#0B162C', fontWeight: 700 }}>
+                    {selectedProvider.city_name}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
@@ -517,6 +493,7 @@ export function ProvidersPage() {
                     border: '1.5px solid #E2E8F0',
                     fontSize: 14,
                     background: '#FFFFFF',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <option value="free">Gratuit</option>
@@ -540,16 +517,16 @@ export function ProvidersPage() {
                     border: '1.5px solid #E2E8F0',
                     fontSize: 14,
                     background: '#FFFFFF',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <option value="none">Non vérifié</option>
-                  <option value="verified_id">ID Vérifié (badge bleu)</option>
-                  <option value="verified">Vérifié Complet (badge vert)</option>
+                  <option value="pending">En attente</option>
+                  <option value="verified">Certifié</option>
                 </select>
               </div>
             </div>
 
-            {/* Photos */}
             {selectedProvider.photos?.length > 0 && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 8 }}>
@@ -559,7 +536,7 @@ export function ProvidersPage() {
                   {selectedProvider.photos.map((ph) => (
                     <img
                       key={ph.id}
-                      src={ph.url}
+                      src={ph.photo_url}
                       alt="Photo prestataire"
                       style={{
                         width: 90,
@@ -567,6 +544,7 @@ export function ProvidersPage() {
                         objectFit: 'cover',
                         borderRadius: 8,
                         border: '1px solid #E2E8F0',
+                        flexShrink: 0,
                       }}
                     />
                   ))}
@@ -574,8 +552,7 @@ export function ProvidersPage() {
               </div>
             )}
 
-            {/* Footer Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setSelectedProvider(null)}
@@ -607,16 +584,17 @@ export function ProvidersPage() {
                   opacity: savingEdit ? 0.7 : 1,
                 }}
               >
-                {savingEdit ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                {savingEdit ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
           </form>
         ) : null}
       </Modal>
+      )}
 
-      {/* Confirmation modal */}
+      {confirmState.isOpen && (
       <ConfirmModal
-        isOpen={confirmState.isOpen}
+        isOpen={true}
         onClose={() => setConfirmState({ isOpen: false, type: '', provider: null, loading: false })}
         onConfirm={handleToggleStatus}
         loading={confirmState.loading}
@@ -637,6 +615,7 @@ export function ProvidersPage() {
         variant={confirmState.type === 'activate' ? 'primary' : 'danger'}
         confirmText={confirmState.type === 'suspend' ? 'Suspendre' : confirmState.type === 'activate' ? 'Réactiver' : 'Supprimer'}
       />
+      )}
     </div>
   );
 }

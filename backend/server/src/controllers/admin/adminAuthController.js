@@ -23,7 +23,7 @@ export const login = async (req, res, next) => {
   }
 
   const { email, password } = req.body;
-  
+
   try {
     const [rows] = await query('SELECT * FROM admins WHERE email=? AND is_active=TRUE', [email]);
     if (!rows.length) {
@@ -43,12 +43,22 @@ export const login = async (req, res, next) => {
 
     // Nettoyage et insertion OTP
     await query('DELETE FROM admin_otp_codes WHERE admin_id=?', [admin.id]);
-    await query('INSERT INTO admin_otp_codes (admin_id, code_hash, expires_at) VALUES (?,?,?)', [admin.id, hash, expires]);
+    await query(
+      'INSERT INTO admin_otp_codes (admin_id, code_hash, expires_at) VALUES (?,?,?)',
+      [admin.id, hash, expires]
+    );
 
     // Envoi de l'email
     if (process.env.NODE_ENV !== 'test') {
+      // En développement, on log toujours le code pour permettre le test sans email
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn(`[DEV] Admin OTP pour ${admin.email} : ${code}`);
+      }
+
       try {
-        await resend.emails.send({
+        logger.info(`Envoi OTP admin à ${admin.email}...`);
+
+        const result = await resend.emails.send({
           from: config.resend.fromEmail,
           to: admin.email,
           subject: `[Adma Admin] Code de connexion : ${code}`,
@@ -78,18 +88,40 @@ export const login = async (req, res, next) => {
             </div>
           `,
         });
+
+        // ── Vérification explicite de l'erreur Resend ──
+        // Le SDK Resend ne lève JAMAIS d'exception : il retourne { data, error }
+        if (result.error) {
+          logger.error(`Resend a refusé l'envoi : ${result.error.message}`, {
+            name:       result.error.name,
+            statusCode: result.error.statusCode,
+          });
+          throw new Error(result.error.message);
+        }
+
+        logger.info(`OTP admin envoyé avec succès (id Resend: ${result.data?.id})`);
       } catch (emailErr) {
-        logger.error(`Erreur envoi email admin OTP: ${emailErr.message}`);
-        // On continue quand même car on peut voir le code en log de dev si besoin
+        logger.error(`Erreur envoi OTP admin : ${emailErr.message}`);
+
+        // En développement, on renvoie le code directement pour ne pas bloquer
+        if (process.env.NODE_ENV === 'development') {
+          return res.json({
+            success: true,
+            message: 'Code généré (email échoué — code affiché en dev)',
+            data: { adminId: admin.id, devCode: code },
+          });
+        }
+
+        throw new AppError('Impossible d\'envoyer le code par email', 500, 'EMAIL_SEND_FAILED');
       }
     } else {
-      logger.warn(`[DEV] Admin OTP pour ${email}: ${code}`);
+      logger.warn(`[TEST] Admin OTP pour ${email}: ${code}`);
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Code de vérification envoyé par email', 
-      data: { adminId: admin.id } 
+    res.json({
+      success: true,
+      message: 'Code de vérification envoyé par email',
+      data: { adminId: admin.id },
     });
   } catch (err) {
     next(err);
@@ -112,7 +144,7 @@ export const verifyOTP = async (req, res, next) => {
       'SELECT * FROM admin_otp_codes WHERE admin_id=? AND used_at IS NULL AND expires_at>NOW() ORDER BY created_at DESC LIMIT 1',
       [adminId]
     );
-    
+
     if (!rows.length) {
       throw new AppError('Code expiré ou invalide', 400, 'OTP_EXPIRED');
     }
@@ -125,7 +157,10 @@ export const verifyOTP = async (req, res, next) => {
     // Marquer comme utilisé
     await query('UPDATE admin_otp_codes SET used_at=NOW() WHERE id=?', [rows[0].id]);
 
-    const [admins] = await query('SELECT id, email, full_name FROM admins WHERE id=? AND is_active=TRUE', [adminId]);
+    const [admins] = await query(
+      'SELECT id, email, full_name FROM admins WHERE id=? AND is_active=TRUE',
+      [adminId]
+    );
     if (!admins.length) {
       throw new AppError('Administrateur introuvable ou inactif', 404, 'ADMIN_NOT_FOUND');
     }
@@ -135,24 +170,24 @@ export const verifyOTP = async (req, res, next) => {
 
     // Génération du Token JWT
     const token = jwt.sign(
-      { adminId: admin.id, type: 'admin' }, 
-      config.jwt.adminSecret, 
+      { adminId: admin.id, type: 'admin' },
+      config.jwt.adminSecret,
       { expiresIn: config.jwt.adminExpires }
     );
 
     // Logging de l'action
     await query('INSERT INTO admin_logs (admin_id, action) VALUES (?,?)', [admin.id, 'login']);
 
-    res.json({ 
-      success: true, 
-      data: { 
-        token, 
-        admin: { 
-          id: admin.id, 
-          email: admin.email, 
-          fullName: admin.full_name 
-        } 
-      } 
+    res.json({
+      success: true,
+      data: {
+        token,
+        admin: {
+          id:       admin.id,
+          email:    admin.email,
+          fullName: admin.full_name,
+        },
+      },
     });
   } catch (err) {
     next(err);

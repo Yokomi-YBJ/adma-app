@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Lock, Shield, UserPlus, CheckCircle2, UserCheck, UserX } from 'lucide-react';
+import { User, Lock, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { Spinner } from '../components/common/Spinner';
 import { Badge } from '../components/common/Badge';
@@ -13,9 +13,10 @@ export function ProfilePage() {
 
   // Profile Form
   const [profileForm, setProfileForm] = useState({ fullName: '', email: '' });
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password Form
+  // Password Form — toujours vide au mount
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [savingPassword, setSavingPassword] = useState(false);
 
@@ -28,12 +29,32 @@ export function ProfilePage() {
   const [newAdmin, setNewAdmin] = useState({ email: '', fullName: '', password: '' });
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
+  // Charge le profil depuis la BDD au mount
   useEffect(() => {
-    if (admin) {
-      setProfileForm({ fullName: admin.fullName || '', email: admin.email || '' });
-    }
+    loadProfile();
     loadAdmins();
-  }, [admin]);
+  }, []);
+
+  async function loadProfile() {
+    setLoadingProfile(true);
+    try {
+      const res = await api.get('/profile');
+      const data = res.data.data;
+      setProfileForm({
+        fullName: data.full_name || '',
+        email:    data.email     || '',
+      });
+      updateAdmin({
+        id:       data.id,
+        email:    data.email,
+        fullName: data.full_name,
+      });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Impossible de charger le profil', 'error');
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
 
   async function loadAdmins() {
     setLoadingAdmins(true);
@@ -41,7 +62,7 @@ export function ProfilePage() {
       const res = await api.get('/admins');
       setAdminsList(res.data.data || []);
     } catch {
-      // Ignored if non-superadmin
+      // Ignoré si l'admin n'a pas les droits
     } finally {
       setLoadingAdmins(false);
     }
@@ -64,8 +85,20 @@ export function ProfilePage() {
 
   async function handleChangePassword(e) {
     e.preventDefault();
+
+    // Garde-fou : si les 3 champs sont vides, ne rien faire
+    if (!passwordForm.currentPassword && !passwordForm.newPassword && !passwordForm.confirmPassword) {
+      showToast('Aucun changement de mot de passe à effectuer', 'info');
+      return;
+    }
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       showToast('Les deux mots de passe ne correspondent pas', 'warning');
+      return;
+    }
+
+    if (!passwordForm.currentPassword) {
+      showToast('Le mot de passe actuel est requis', 'warning');
       return;
     }
 
@@ -73,7 +106,7 @@ export function ProfilePage() {
     try {
       await api.put('/profile/password', {
         currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
+        newPassword:     passwordForm.newPassword,
       });
       showToast('Mot de passe changé avec succès', 'success');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -113,7 +146,6 @@ export function ProfilePage() {
 
   return (
     <div className="fade-in">
-      {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Mon Profil & Équipe Admin</h1>
         <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
@@ -144,64 +176,68 @@ export function ProfilePage() {
             </h3>
           </div>
 
-          <form onSubmit={handleUpdateProfile}>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
-                Nom complet
-              </label>
-              <input
-                type="text"
-                required
-                value={profileForm.fullName}
-                onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: 10,
-                  border: '1.5px solid #E2E8F0',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
+          {loadingProfile ? (
+            <Spinner center size={28} text="Chargement..." />
+          ) : (
+            <form onSubmit={handleUpdateProfile}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
+                  Nom complet
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileForm.fullName}
+                  onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: 10,
+                    border: '1.5px solid #E2E8F0',
+                    fontSize: 14,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
-                Adresse Email
-              </label>
-              <input
-                type="email"
-                required
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: 10,
-                  border: '1.5px solid #E2E8F0',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
+                  Adresse Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: 10,
+                    border: '1.5px solid #E2E8F0',
+                    fontSize: 14,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={savingProfile}
-              style={{
-                padding: '9px 18px',
-                borderRadius: 10,
-                background: '#5FC2BA',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: savingProfile ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {savingProfile ? 'Enregistrement...' : 'Mettre à jour'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={savingProfile}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 10,
+                  background: '#5FC2BA',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: savingProfile ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {savingProfile ? 'Enregistrement...' : 'Mettre à jour'}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Change Password Card */}
@@ -233,9 +269,10 @@ export function ProfilePage() {
               </label>
               <input
                 type="password"
-                required
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                placeholder="Laisser vide pour ne pas modifier"
+                autoComplete="new-password"
                 style={{
                   width: '100%',
                   padding: '9px 12px',
@@ -253,10 +290,10 @@ export function ProfilePage() {
               </label>
               <input
                 type="password"
-                required
                 minLength={8}
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                autoComplete="new-password"
                 style={{
                   width: '100%',
                   padding: '9px 12px',
@@ -274,9 +311,9 @@ export function ProfilePage() {
               </label>
               <input
                 type="password"
-                required
                 value={passwordForm.confirmPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                autoComplete="new-password"
                 style={{
                   width: '100%',
                   padding: '9px 12px',
@@ -308,7 +345,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* Admin Team Management Card */}
+      {/* Admin Team Management */}
       <div style={{ background: '#FFFFFF', borderRadius: 18, padding: 24, border: '1px solid #E2E8F0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -402,8 +439,8 @@ export function ProfilePage() {
         )}
       </div>
 
-      {/* Create Admin Modal */}
-      <Modal isOpen={createModal} onClose={() => setCreateModal(false)} title="Créer un administrateur" maxWidth={460}>
+      {createModal && (
+      <Modal isOpen={true} onClose={() => setCreateModal(false)} title="Créer un administrateur" maxWidth={460}>
         <form onSubmit={handleCreateAdmin}>
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#0B162C', marginBottom: 4 }}>
@@ -458,6 +495,7 @@ export function ProfilePage() {
               value={newAdmin.password}
               onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })}
               placeholder="••••••••••••"
+              autoComplete="new-password"
               style={{
                 width: '100%',
                 padding: '9px 12px',
@@ -469,7 +507,7 @@ export function ProfilePage() {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setCreateModal(false)}
@@ -505,6 +543,7 @@ export function ProfilePage() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }
