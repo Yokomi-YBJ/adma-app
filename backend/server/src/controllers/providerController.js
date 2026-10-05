@@ -2,8 +2,8 @@
  * ADMA — Contrôleur Prestataires
  * 
  * Modifications :
- * - Exclusion du prestataire de l'utilisateur connecté dans les recherches (searchProviders et searchNearby)
- * - Gestion des vues avec cooldown côté serveur (dans le contrôleur d'événements, pas ici)
+ * - Exclusion du prestataire de l'utilisateur connecté dans les recherches
+ * - Ajout de la recherche cartographique (searchOnMap) avec bounding box
  */
 import multer from 'multer';
 import { query } from '../config/database.js';
@@ -14,6 +14,14 @@ import { invalidateCache } from '../services/cacheService.js';
 
 const PAGE_SIZE = 20;
 
+// ── Rayons par plan (km) ──────────────────────────────────────────
+const PLAN_RADIUS_KM = {
+  free:         5,
+  premium:      8,
+  professional: 12,
+  enterprise:   99999,
+};
+
 // ── Recherche ─────────────────────────────────────────────────────
 export const searchProviders = asyncHandler(async (req, res) => {
   const { q, categoryId, cityId, neighborhoodId, isVerified, availability, page = 1 } = req.query;
@@ -22,7 +30,6 @@ export const searchProviders = asyncHandler(async (req, res) => {
   const conds  = ['p.is_active=TRUE', 'p.deleted_at IS NULL'];
   const params = [];
 
-  // Exclusion du propre prestataire
   if (userId) {
     conds.push('p.user_id != ?');
     params.push(userId);
@@ -95,7 +102,6 @@ export const getProvider = asyncHandler(async (req, res) => {
 
   if (!rows.length) throw new AppError('Prestataire introuvable', 404, 'PROVIDER_NOT_FOUND');
 
-  // Synchronisation des avis en direct pour résilience
   const [[reviewStats]] = await query(`
     SELECT
       COUNT(*) AS total_reviews,
@@ -312,15 +318,15 @@ function formatProvider(row, withDetails = false) {
     description: row.description,
     categoryId: row.category_id,
     categoryName: row.category_name_fr,
-    cityId: row.city_id,               // ← ajout
+    cityId: row.city_id,
     cityName: row.city_name,
-    neighborhoodId: row.neighborhood_id, // ← ajout
+    neighborhoodId: row.neighborhood_id,
     neighborhoodName: row.neighborhood_name,
     photoUrl: row.photo_url,
     availability: row.availability,
     contactMethod: row.contact_method,
-    phoneNumber: row.phone_number,      // ← ajout
-    whatsappNumber: row.whatsapp_number, // ← ajout
+    phoneNumber: row.phone_number,
+    whatsappNumber: row.whatsapp_number,
     verificationStatus: row.verification_status,
     plan: row.plan,
     reviewCount: row.review_count || 0,
@@ -330,8 +336,8 @@ function formatProvider(row, withDetails = false) {
     isFavorite: !!row.is_favorite,
     viewsThisMonth: row.views_this_month || 0,
     createdAt: row.created_at,
-    latitude: row.latitude,   // ← ajout
-    longitude: row.longitude, // ← ajout
+    latitude: row.latitude,
+    longitude: row.longitude,
   };
   if (withDetails) {
     base.websiteUrl = row.website_url;
@@ -348,15 +354,20 @@ function getTrustBadge(score, count) {
   return 'caution';
 }
 
-// ── Rayons par plan (km) ──────────────────────────────────────────
-const PLAN_RADIUS = {
-  free:         3,
-  premium:      6,
-  professional: 9,
-  enterprise:   null, // illimité
-};
+// ── Formule de Haversine (distance à vol d'oiseau en km) ─────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 100) / 100;
+}
 
-// ── Recherche géographique "Autour de moi" ────────────────────────
+// ── Recherche géographique "Autour de moi" (liste) ───────────────
 export const searchNearby = asyncHandler(async (req, res) => {
   const { lat, lng, categoryId, page = 1 } = req.query;
 
@@ -377,7 +388,6 @@ export const searchNearby = asyncHandler(async (req, res) => {
   const catFilter = categoryId ? 'AND (p.category_id = ? OR c.parent_id = ?)' : '';
   const catParams = categoryId ? [parseInt(categoryId), parseInt(categoryId)] : [];
 
-  // Exclusion de son propre prestataire
   const userFilter = userId ? 'AND p.user_id != ?' : '';
   const userParams = userId ? [userId] : [];
 
@@ -385,7 +395,6 @@ export const searchNearby = asyncHandler(async (req, res) => {
     ? `(SELECT 1 FROM favorites f WHERE f.user_id=${parseInt(userId)} AND f.provider_id=p.id LIMIT 1) IS NOT NULL`
     : 'FALSE';
 
-  // Construction de la requête avec tous les filtres
   const sql = `
     SELECT
       p.id, p.category_id, p.name, p.specialty, p.photo_url, p.availability,
@@ -415,9 +424,9 @@ export const searchNearby = asyncHandler(async (req, res) => {
       ${catFilter}
       ${userFilter}
     HAVING distance_km <= CASE p.plan
-      WHEN 'free'         THEN 3
-      WHEN 'premium'      THEN 6
-      WHEN 'professional' THEN 9
+      WHEN 'free'         THEN 5
+      WHEN 'premium'      THEN 8
+      WHEN 'professional' THEN 12
       ELSE 99999
     END
     ORDER BY distance_km ASC
@@ -427,7 +436,6 @@ export const searchNearby = asyncHandler(async (req, res) => {
   const params = [clientLat, clientLng, clientLat, ...catParams, ...userParams];
   const [rows] = await query(sql, params);
 
-  // Compte total (sans LIMIT) avec les mêmes conditions
   const countSql = `
     SELECT COUNT(*) AS total FROM (
       SELECT p.id, p.plan,
@@ -447,8 +455,8 @@ export const searchNearby = asyncHandler(async (req, res) => {
         ${catFilter}
         ${userFilter}
       HAVING distance_km <= CASE p.plan
-        WHEN 'free' THEN 3 WHEN 'premium' THEN 6
-        WHEN 'professional' THEN 9 ELSE 99999 END
+        WHEN 'free' THEN 5 WHEN 'premium' THEN 8
+        WHEN 'professional' THEN 12 ELSE 99999 END
     ) sub
   `;
   const countParams = [clientLat, clientLng, clientLat, ...catParams, ...userParams];
@@ -463,6 +471,81 @@ export const searchNearby = asyncHandler(async (req, res) => {
   });
 });
 
+// ── Recherche cartographique (bounding box + règles de visibilité) ──
+export const searchOnMap = asyncHandler(async (req, res) => {
+  const { north, south, east, west, lat, lng, categoryId } = req.query;
+
+  const n = parseFloat(north);
+  const s = parseFloat(south);
+  const e = parseFloat(east);
+  const w = parseFloat(west);
+
+  if ([n, s, e, w].some((v) => isNaN(v))) {
+    throw new AppError('Limites de carte invalides', 400, 'INVALID_BOUNDS');
+  }
+  if (n < s || e < w) {
+    throw new AppError('Limites incohérentes', 400, 'INVALID_BOUNDS');
+  }
+
+  const userId = req.user?.id || null;
+  const conds = [
+    'p.is_active = TRUE',
+    'p.deleted_at IS NULL',
+    'p.latitude IS NOT NULL',
+    'p.longitude IS NOT NULL',
+    'p.latitude BETWEEN ? AND ?',
+    'p.longitude BETWEEN ? AND ?',
+  ];
+  const params = [s, n, w, e];
+
+  if (userId) {
+    conds.push('p.user_id != ?');
+    params.push(userId);
+  }
+  if (categoryId) {
+    conds.push('(p.category_id = ? OR c.parent_id = ?)');
+    params.push(parseInt(categoryId), parseInt(categoryId));
+  }
+
+  const where = conds.join(' AND ');
+
+  const [rows] = await query(`
+    SELECT p.id, p.name, p.specialty, p.photo_url, p.latitude, p.longitude,
+           p.plan, p.verification_status, p.availability,
+           p.trust_score, p.review_count,
+           c.name_fr AS category_name_fr,
+           ci.name AS city_name,
+           n.name AS neighborhood_name
+    FROM providers p
+    JOIN categories c    ON c.id  = p.category_id
+    JOIN cities ci       ON ci.id = p.city_id
+    JOIN neighborhoods n ON n.id  = p.neighborhood_id
+    WHERE ${where}
+    LIMIT 300
+  `, params);
+
+  // Appliquer les règles de visibilité par plan si la position client est fournie
+  const clientLat = lat ? parseFloat(lat) : null;
+  const clientLng = lng ? parseFloat(lng) : null;
+
+  const filtered = rows.filter((p) => {
+    if (!clientLat || !clientLng || isNaN(clientLat) || isNaN(clientLng)) return true;
+    const dist = haversine(clientLat, clientLng, p.latitude, p.longitude);
+    const maxDist = PLAN_RADIUS_KM[p.plan] || 5;
+    return dist <= maxDist;
+  });
+
+  const providers = filtered.map((p) => ({
+    ...formatProvider(p),
+    distanceKm: (clientLat && clientLng) ? haversine(clientLat, clientLng, p.latitude, p.longitude) : null,
+  }));
+
+  res.json({
+    success: true,
+    data: { providers, total: providers.length },
+  });
+});
+
 // ── Définir / mettre à jour la zone de service (GPS) ─────────────
 export const updateGeoLocation = asyncHandler(async (req, res) => {
   const { latitude, longitude } = req.body;
@@ -474,7 +557,6 @@ export const updateGeoLocation = asyncHandler(async (req, res) => {
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
 
-  // Validation : Ngaoundéré est approximativement dans ces bornes
   if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     throw new AppError('Coordonnées GPS invalides', 400, 'INVALID_COORDS');
   }

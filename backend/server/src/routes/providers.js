@@ -17,9 +17,11 @@ const router = Router();
 // ── Recherche standard ────────────────────────────────────────────
 router.get('/',    optionalAuth, ctrl.searchProviders);
 
-// ── Recherche géographique "Autour de moi" ────────────────────────
-// GET /api/v1/providers/nearby?lat=7.3&lng=13.5&categoryId=1&page=1
+// ── Recherche géographique "Autour de moi" (liste) ────────────────
 router.get('/nearby', optionalAuth, ctrl.searchNearby);
+
+// ── Recherche cartographique (bounding box) ──────────────────────
+router.get('/map', optionalAuth, ctrl.searchOnMap);
 
 // ── Ma fiche ──────────────────────────────────────────────────────
 router.get('/me',  authenticate, ctrl.getMyProvider);
@@ -47,13 +49,11 @@ router.put(
 router.delete('/:id', authenticate, ctrl.deleteProvider);
 
 // ── Géolocalisation zone de service ──────────────────────────────
-// POST /api/v1/providers/geo  — définir/mettre à jour la position
 router.post('/geo', authenticate, [
   body('latitude').isFloat({ min: -90,  max: 90  }).withMessage('Latitude invalide'),
   body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Longitude invalide'),
 ], ctrl.updateGeoLocation);
 
-// DELETE /api/v1/providers/geo — supprimer la position
 router.delete('/geo', authenticate, ctrl.removeGeoLocation);
 
 // ── Vérification CNI ──────────────────────────────────────────────

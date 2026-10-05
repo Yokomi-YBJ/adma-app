@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Search, SlidersHorizontal, X, Check, Navigation, MapPin, AlertCircle } from 'lucide-react-native';
+import {
+  Search, SlidersHorizontal, X, Check, Navigation, MapPin, AlertCircle, Map as MapIcon,
+} from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors }             from '../../constants/colors';
 import { CACHE_TTL, PLAN_RADIUS } from '../../constants/config';
@@ -27,10 +29,8 @@ function LocationPermissionBanner({ onDismiss }) {
     <View style={banner.wrap}>
       <AlertCircle size={18} color={colors.warning} />
       <View style={{ flex: 1 }}>
-        <Text style={banner.title}>Localisation désactivée</Text>
-        <Text style={banner.body}>
-          Activez la localisation dans les paramètres de votre téléphone pour voir les prestataires autour de vous.
-        </Text>
+        <Text style={banner.title}>{t('search.locationDisabled')}</Text>
+        <Text style={banner.body}>{t('search.locationDisabledBody')}</Text>
       </View>
       <TouchableOpacity
         style={banner.btn}
@@ -39,7 +39,7 @@ function LocationPermissionBanner({ onDismiss }) {
           onDismiss();
         }}
       >
-        <Text style={banner.btnText}>Activer</Text>
+        <Text style={banner.btnText}>{t('search.activate')}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onDismiss} style={{ padding: 4 }}>
         <X size={16} color={colors.textMuted} />
@@ -56,18 +56,15 @@ const banner = StyleSheet.create({
   btnText: { fontSize:12, fontWeight:'700', color:colors.white },
 });
 
-// ── Modal Filtres (avec Select) ─────────────────────────────────
+// ── Modal Filtres ─────────────────────────────────────────────────
 function FilterModal({ visible, onClose, filters, setFilters, categories, cities, neighborhoods }) {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language || 'fr';
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(filters);
 
-  // Sécurisation des props (au cas où elles seraient undefined)
   const safeCategories = categories || [];
   const safeCities = cities || [];
   const safeNeighborhoods = neighborhoods || [];
 
-  // Sync quand filters change de l'extérieur
   useEffect(() => { if (visible) setDraft(filters); }, [visible]);
 
   function apply() { setFilters(draft); onClose(); }
@@ -76,69 +73,63 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
     setDraft(clear); setFilters(clear); onClose();
   }
 
-  // Préparer les options pour le Select Catégorie
-  const categoryOptions = safeCategories.map(c => ({
-    id: c.id,
-    label: c.name_fr || c.name,
-    subtitle: c.parent_name || null,
-    group: null,
-  }));
-  const categoryOptionsWithAll = [{ id: null, label: 'Toutes', subtitle: null, group: null }, ...categoryOptions];
+  const categoryOptionsWithAll = [
+    { id: null, label: t('search.all'), subtitle: null, group: null },
+    ...safeCategories.map(c => ({
+      id: c.id,
+      label: c.name_fr || c.name,
+      subtitle: c.parent_name || null,
+      group: null,
+    })),
+  ];
 
-  // Préparer les options pour le Select Ville
-  const cityOptions = safeCities.map(c => ({
-    id: c.id,
-    label: c.name,
-    subtitle: c.region || 'Cameroun',
-    group: c.region || null,
-  }));
-  const cityOptionsWithAll = [{ id: null, label: 'Toutes', subtitle: null, group: null }, ...cityOptions];
-
-  // Options pour le quartier (dépend de la ville sélectionnée)
-  const neighborhoodOptions = (draft.cityId) 
-    ? safeNeighborhoods.filter(n => n.city_id === draft.cityId).map(n => ({ id: n.id, label: n.name }))
-    : [];
+  const cityOptionsWithAll = [
+    { id: null, label: t('search.all'), subtitle: null, group: null },
+    ...safeCities.map(c => ({
+      id: c.id,
+      label: c.name,
+      subtitle: c.region || 'Cameroun',
+      group: c.region || null,
+    })),
+  ];
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={fm.container}>
         <View style={fm.handle} />
         <View style={fm.header}>
-          <Text style={fm.title}>Filtres</Text>
+          <Text style={fm.title}>{t('search.filters')}</Text>
           <TouchableOpacity onPress={onClose}><X size={22} color={colors.text} /></TouchableOpacity>
         </View>
         <ScrollView style={fm.body} showsVerticalScrollIndicator={false}>
 
-          {/* Catégorie avec Select */}
           <Select
-            label="Catégorie"
+            label={t('search.category')}
             value={draft.categoryId}
             options={categoryOptionsWithAll}
             onSelect={(id) => setDraft(d => ({ ...d, categoryId: id }))}
-            placeholder="Choisir une catégorie"
-            searchPlaceholder="Rechercher une catégorie..."
-            modalTitle="Sélectionner une catégorie"
+            placeholder={t('search.chooseCategory')}
+            searchPlaceholder={t('search.searchCategory')}
+            modalTitle={t('search.selectCategory')}
             icon={null}
           />
 
-          {/* Ville avec Select */}
           <Select
-            label="Ville"
+            label={t('search.city')}
             value={draft.cityId}
             options={cityOptionsWithAll}
             onSelect={(id) => setDraft(d => ({ ...d, cityId: id, neighborhoodId: null }))}
-            placeholder="Choisir une ville"
-            searchPlaceholder="Rechercher une ville..."
-            modalTitle="Sélectionner une ville"
+            placeholder={t('search.chooseCity')}
+            searchPlaceholder={t('search.searchCity')}
+            modalTitle={t('search.selectCity')}
             icon={null}
           />
 
-          {/* Quartier (conditionnel et en chips) */}
           {draft.cityId && (
             <>
-              <Text style={fm.label}>Quartier</Text>
+              <Text style={fm.label}>{t('search.neighborhood')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fm.chips}>
-                {[{ id: null, name: 'Tous' }, ...safeNeighborhoods.filter(n => n.city_id === draft.cityId)].map(n => (
+                {[{ id: null, name: t('search.all') }, ...safeNeighborhoods.filter(n => n.city_id === draft.cityId)].map(n => (
                   <TouchableOpacity
                     key={n.id ?? 'all'}
                     style={[fm.chip, draft.neighborhoodId === n.id && fm.chipActive]}
@@ -151,10 +142,9 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
             </>
           )}
 
-          {/* Toggles */}
           {[
-            { key:'verified', label:'Vérifiés uniquement' },
-            { key:'available', label:'Disponibles maintenant' },
+            { key:'verified', label: t('search.verifiedOnly') },
+            { key:'available', label: t('search.availableNow') },
           ].map(({ key, label }) => (
             <TouchableOpacity
               key={key}
@@ -171,10 +161,10 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
 
         <View style={fm.actions}>
           <TouchableOpacity style={fm.resetBtn} onPress={reset}>
-            <Text style={fm.resetText}>Effacer</Text>
+            <Text style={fm.resetText}>{t('search.clear')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={fm.applyBtn} onPress={apply}>
-            <Text style={fm.applyText}>Appliquer</Text>
+            <Text style={fm.applyText}>{t('search.apply')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -213,7 +203,7 @@ export default function SearchScreen() {
   const params   = useLocalSearchParams();
   const provider = useAuthStore(s => s.provider);
 
-  const { requestLocation, loading: geoLoading, error: geoError } = useLocation();
+  const { requestLocation, loading: geoLoading } = useLocation();
 
   const [query,       setQuery]       = useState('');
   const [nearbyMode,  setNearbyMode]  = useState(false);
@@ -278,15 +268,11 @@ export default function SearchScreen() {
       setCities(meta.cities);
       setNeighborhoods(meta.neighborhoods);
       setCache('search_meta', meta, CACHE_TTL.categories);
-    } catch {
-      // On garde les valeurs existantes en cas d'erreur
-    }
+    } catch {}
   }
 
-  // ── Activer le mode "Autour de moi" ────────────────────────────
   async function enableNearbyMode() {
     if (nearbyMode) {
-      // Désactiver
       setNearbyMode(false);
       setUserCoords(null);
       setShowPermBanner(false);
@@ -296,7 +282,6 @@ export default function SearchScreen() {
     const coords = await requestLocation();
 
     if (!coords) {
-      // Permission refusée
       setShowPermBanner(true);
       return;
     }
@@ -306,7 +291,6 @@ export default function SearchScreen() {
     setShowPermBanner(false);
   }
 
-  // ── Recherche standard ──────────────────────────────────────────
   const search = useCallback(async (reset = true) => {
     if (loading && !reset) return;
     setLoading(true);
@@ -336,7 +320,6 @@ export default function SearchScreen() {
     setInitLoading(false);
   }, [query, filters, page, loading]);
 
-  // ── Recherche géographique ──────────────────────────────────────
   const searchNearby = useCallback(async (reset = true) => {
     if (!userCoords || (loading && !reset)) return;
     setLoading(true);
@@ -368,16 +351,16 @@ export default function SearchScreen() {
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
 
-  // Rayon du prestataire connecté (pour affichage informatif dans son profil)
   const myRadius = provider?.plan ? PLAN_RADIUS[provider.plan] : null;
+
+  // Afficher le bouton flottant uniquement en mode "Autour de moi" avec résultats
+  const showMapFab = nearbyMode && userCoords && providers.length > 0;
 
   return (
     <View style={styles.flex}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.title}>Rechercher</Text>
+        <Text style={styles.title}>{t('search.title')}</Text>
 
-        {/* Barre recherche + boutons */}
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
             <Search size={17} color={colors.textMuted} />
@@ -385,7 +368,7 @@ export default function SearchScreen() {
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Nom, métier, spécialité..."
+              placeholder={t('search.placeholder')}
               placeholderTextColor={colors.textDisabled}
               returnKeyType="search"
               clearButtonMode="while-editing"
@@ -399,7 +382,6 @@ export default function SearchScreen() {
             )}
           </View>
 
-          {/* Bouton Autour de moi */}
           <TouchableOpacity
             style={[styles.geoBtn, nearbyMode && styles.geoBtnActive]}
             onPress={enableNearbyMode}
@@ -412,7 +394,6 @@ export default function SearchScreen() {
             }
           </TouchableOpacity>
 
-          {/* Bouton Filtres */}
           <TouchableOpacity
             style={[styles.filterBtn, hasActiveFilters && styles.filterBtnActive]}
             onPress={() => setShowFilters(true)}
@@ -421,29 +402,27 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Indicateur mode Autour de moi */}
         {nearbyMode && userCoords && (
           <View style={styles.nearbyBadge}>
             <MapPin size={12} color={colors.primary} />
-            <Text style={styles.nearbyText}>Autour de moi — prestataires dans leur rayon de service</Text>
+            <Text style={styles.nearbyText}>{t('search.nearbyBadge')}</Text>
             <TouchableOpacity onPress={enableNearbyMode}>
               <X size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Compteur résultats */}
         {!initLoading && total > 0 && (
-          <Text style={styles.resultsCount}>{total} résultat{total > 1 ? 's' : ''}</Text>
+          <Text style={styles.resultsCount}>
+            {'${total} résultats'}
+          </Text>
         )}
       </View>
 
-      {/* Bannière permission refusée */}
       {showPermBanner && (
         <LocationPermissionBanner onDismiss={() => setShowPermBanner(false)} />
       )}
 
-      {/* Liste */}
       {initLoading ? (
         <FlatList
           data={[1,2,3,4,5]}
@@ -461,7 +440,7 @@ export default function SearchScreen() {
               showDistance={nearbyMode && item.distanceKm !== undefined}
             />
           )}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, showMapFab && { paddingBottom: 100 }]}
           onEndReached={() => {
             if (hasMore && !loading) {
               if (nearbyMode && userCoords) searchNearby(false);
@@ -473,14 +452,10 @@ export default function SearchScreen() {
             !loading ? (
               <EmptyState
                 icon={nearbyMode ? Navigation : Search}
-                title={nearbyMode ? 'Aucun prestataire autour de vous' : 'Aucun résultat'}
-                message={
-                  nearbyMode
-                    ? 'Il n\'y a pas encore de prestataires avec une zone de service définie dans votre secteur.'
-                    : 'Essayez d\'autres mots-clés ou filtres.'
-                }
+                title={nearbyMode ? t('search.emptyNearbyTitle') : t('search.emptyTitle')}
+                message={nearbyMode ? t('search.emptyNearbyMessage') : t('search.emptyMessage')}
                 action={nearbyMode ? enableNearbyMode : () => setFilters({ categoryId:null, cityId:null, neighborhoodId:null, verified:false, available:false })}
-                actionLabel={nearbyMode ? 'Recherche classique' : 'Effacer les filtres'}
+                actionLabel={nearbyMode ? t('search.switchToClassic') : t('search.clearFilters')}
               />
             ) : null
           }
@@ -490,6 +465,21 @@ export default function SearchScreen() {
               : null
           }
         />
+      )}
+
+      {/* Bouton flottant : Voir sur la carte */}
+      {showMapFab && (
+        <TouchableOpacity
+          style={[styles.mapFab, { bottom: insets.bottom + 20 }]}
+          onPress={() => router.push({
+            pathname: '/map',
+            params: { lat: userCoords.latitude, lng: userCoords.longitude },
+          })}
+          activeOpacity={0.9}
+        >
+          <MapIcon size={18} color={colors.white} strokeWidth={2.5} />
+          <Text style={styles.mapFabText}>{t('search.viewOnMap')}</Text>
+        </TouchableOpacity>
       )}
 
       <FilterModal
@@ -520,4 +510,21 @@ const styles = StyleSheet.create({
   nearbyText:    { flex:1, fontSize:11, color:colors.primary, fontWeight:'600' },
   resultsCount:  { fontSize:12, color:colors.textMuted, marginTop:8, fontWeight:'500' },
   list:          { paddingTop:10, paddingBottom:24, flexGrow:1 },
+  mapFab: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.navy,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  mapFabText: { fontSize: 15, fontWeight: '700', color: colors.white },
 });

@@ -101,6 +101,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/legal"            options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="settings/support"          options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="report"                    options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="map"                       options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           </Stack>
         </AuthGuard>
       </SafeAreaProvider>

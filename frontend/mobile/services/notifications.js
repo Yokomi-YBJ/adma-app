@@ -1,7 +1,7 @@
 /**
  * ADMA — Service Notifications Push (Expo EAS)
  */
-import * as Notifications from 'expo-notifications'; // ✅ ajout
+import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -23,6 +23,7 @@ Notifications.setNotificationHandler({
 
 async function setupAndroidChannels() {
   if (Platform.OS !== 'android') return;
+
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Adma',
     importance: Notifications.AndroidImportance.HIGH,
@@ -30,21 +31,31 @@ async function setupAndroidChannels() {
     lightColor: '#5FC2BA',
     sound: 'default',
   });
+
   await Notifications.setNotificationChannelAsync('reviews', {
     name: 'Avis',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250],
     lightColor: '#5FC2BA',
   });
+
   await Notifications.setNotificationChannelAsync('payments', {
     name: 'Paiements',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 500, 200, 500],
     lightColor: '#5FC2BA',
   });
+
   await Notifications.setNotificationChannelAsync('verifications', {
     name: 'Verification',
     importance: Notifications.AndroidImportance.HIGH,
+    lightColor: '#5FC2BA',
+  });
+
+  // ✅ Canal Promotions — À L'INTÉRIEUR de la fonction
+  await Notifications.setNotificationChannelAsync('promotions', {
+    name: 'Promotions',
+    importance: Notifications.AndroidImportance.DEFAULT,
     lightColor: '#5FC2BA',
   });
 }
@@ -91,7 +102,6 @@ export function setupNotificationListeners(navigation) {
 
   const fgSub = Notifications.addNotificationReceivedListener((notif) => {
     const { title, body, data } = notif.request.content;
-    // Ajout d'une garde pour data
     addStore({
       id: Date.now(),
       title_fr: title,
@@ -109,11 +119,11 @@ export function setupNotificationListeners(navigation) {
     switch (data.type) {
       case 'new_review':
       case 'review_response':
-        if (data.providerId) navigation?.navigate('Provider', { id: data.providerId }); // ✅ correction
+        if (data.providerId) navigation?.navigate('Provider', { id: data.providerId });
         break;
       case 'verification_approved':
       case 'verification_rejected':
-        navigation?.navigate('Verification'); // ✅ correction (nom d'écran)
+        navigation?.navigate('Verification');
         break;
       case 'subscription_expiring':
         navigation?.navigate('SubscriptionPlans');

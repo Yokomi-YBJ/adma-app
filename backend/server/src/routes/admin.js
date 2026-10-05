@@ -7,6 +7,9 @@ import { body } from 'express-validator';
 import { authenticateAdmin } from '../middleware/auth.js';
 import { loginRateLimit } from '../middleware/rateLimit.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import * as notifCtrl from '../controllers/admin/adminNotificationsController.js';
+import * as monitCtrl from '../controllers/admin/adminMonitoringController.js';
+
 
 // Contrôleurs
 import * as authCtrl from '../controllers/admin/adminAuthController.js';
@@ -163,4 +166,24 @@ router.post(
 router.patch('/admins/:id/toggle', authenticateAdmin, asyncHandler(profCtrl.toggleAdminStatus));
 router.get('/logs', authenticateAdmin, asyncHandler(profCtrl.getLogs));
 
+// ── 13. NOTIFICATIONS BROADCAST ───────────────────────────────────
+
+router.post(
+  '/notifications/broadcast',
+  authenticateAdmin,
+  [
+    body('titleFr').trim().notEmpty().withMessage('Titre FR requis'),
+    body('bodyFr').trim().notEmpty().withMessage('Message FR requis'),
+    body('targetPlan').optional().isIn(['all','free','premium','professional','enterprise']),
+  ],
+  asyncHandler(notifCtrl.broadcast)
+);
+
+router.get('/notifications/history', authenticateAdmin, asyncHandler(notifCtrl.getBroadcastHistory));
+
+// ── 14. MONITORING ────────────────────────────────────────────────
+router.get('/monitoring/health', authenticateAdmin, asyncHandler(monitCtrl.getSystemHealth));
+
 export default router;
+
+

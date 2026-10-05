@@ -36,7 +36,6 @@ async function sendPushNotification(tokens, title, body, data = {}) {
       receipts.push(...ticketChunk);
     }
 
-    // Invalider les tokens expirés
     receipts.forEach((ticket, i) => {
       if (ticket.status === 'error') {
         logger.warn(`Push error [${validTokens[i]}]: ${ticket.message}`);
@@ -53,10 +52,9 @@ async function sendPushNotification(tokens, title, body, data = {}) {
 
 // ── Créer & envoyer une notification ────────────────────────────
 export async function createNotification(userId, {
-  type, titleFr, titleEn, bodyFr, bodyEn, data = {}, channelId = 'default',
+  type, titleFr, titleEn, titleFul, bodyFr, bodyEn, bodyFul, data = {}, channelId = 'default',
 }) {
   try {
-    // Vérifier préférences utilisateur
     const [prefs] = await query(
       'SELECT * FROM notification_preferences WHERE user_id = ?', [userId]
     );
@@ -69,7 +67,8 @@ export async function createNotification(userId, {
       subscription_activated: 'subscription_reminder',
       new_favorite:           'favorite_update',
       contact_reminder:       'contact_reminder',
-      review_updated:         'review_response', // ← on utilise le même canal
+      review_updated:         'review_response',
+      broadcast:              null, // jamais bloqué par préférences
     };
     const prefKey = prefKeyMap[type];
     if (prefs[0] && prefKey && prefs[0][prefKey] === 0) {
@@ -77,7 +76,6 @@ export async function createNotification(userId, {
       return null;
     }
 
-    // Sauvegarder en BDD
     const [result] = await query(
       `INSERT INTO notifications
          (user_id, type, title_fr, title_en, body_fr, body_en, data_json, sent_at)
@@ -85,7 +83,6 @@ export async function createNotification(userId, {
       [userId, type, titleFr, titleEn || titleFr, bodyFr, bodyEn || bodyFr, JSON.stringify(data)]
     );
 
-    // Récupérer token push
     const [rows] = await query(
       'SELECT expo_push_token FROM users WHERE id = ? AND status = "active"', [userId]
     );
@@ -101,6 +98,38 @@ export async function createNotification(userId, {
     logger.error('createNotification error', err.message);
     return null;
   }
+}
+
+// ── Broadcast admin (bulk) ──────────────────────────────────────
+export async function broadcastToUsers(userIds, { titleFr, titleEn, titleFul, bodyFr, bodyEn, bodyFul, channelId = 'default' }) {
+  if (!userIds?.length) return { sent: 0, failed: 0 };
+
+  // Récupérer tous les tokens en une fois
+  const placeholders = userIds.map(() => '?').join(',');
+  const [rows] = await query(
+    `SELECT id, expo_push_token FROM users WHERE id IN (${placeholders}) AND status = 'active' AND expo_push_token IS NOT NULL`,
+    userIds
+  );
+
+  const tokens = rows.map(r => r.expo_push_token).filter(Boolean);
+
+  // Insérer en BDD pour historique
+  const values = userIds.map(() => '(?, ?, ?, ?, ?, ?, NOW())').join(',');
+  const insertParams = [];
+  for (const userId of userIds) {
+    insertParams.push(userId, 'broadcast', titleFr, titleEn || titleFr, bodyFr, bodyEn || bodyFr);
+  }
+  await query(
+    `INSERT INTO notifications (user_id, type, title_fr, title_en, body_fr, body_en, sent_at) VALUES ${values}`,
+    insertParams
+  ).catch((err) => logger.error('broadcast insert error', err.message));
+
+  // Envoyer via Expo (chunk de 100 gérés par le SDK)
+  if (tokens.length) {
+    await sendPushNotification(tokens, titleFr, bodyFr, { type: 'broadcast', channelId });
+  }
+
+  return { sent: rows.length, failed: userIds.length - rows.length };
 }
 
 // ── Helpers métier ───────────────────────────────────────────────
@@ -126,7 +155,6 @@ export async function notifyReviewResponse(reviewerId, providerName) {
   });
 }
 
-// ✅ NOUVEAU : Notification de modification d'avis
 export async function notifyReviewUpdated(providerId, reviewerName, oldVerdict, newVerdict) {
   const [rows] = await query('SELECT user_id FROM providers WHERE id = ?', [providerId]);
   if (!rows.length) return;

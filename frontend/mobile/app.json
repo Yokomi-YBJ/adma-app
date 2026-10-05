@@ -77,7 +77,8 @@
           "locationAlwaysAndWhenInUsePermission": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous.",
           "locationWhenInUsePermission": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true
