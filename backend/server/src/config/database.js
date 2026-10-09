@@ -8,12 +8,10 @@ export function getPool() {
   if (!pool) {
     const sslConfig = config.db.ssl
       ? {
-          ssl: {
-            rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-            minVersion: 'TLSv1.2',
-          },
+          rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+          minVersion: 'TLSv1.2',
         }
-      : {};
+      : undefined;
 
     pool = mysql.createPool({
       host:                  config.db.host,
@@ -21,6 +19,7 @@ export function getPool() {
       database:              config.db.name,
       user:                  config.db.user,
       password:              config.db.password,
+      ssl:                   sslConfig,
       waitForConnections:    true,
       connectionLimit:       10,
       queueLimit:            0,
@@ -29,7 +28,6 @@ export function getPool() {
       charset:               'utf8mb4',
       timezone:              '+01:00',
       decimalNumbers:        true,
-      ...sslConfig,
     });
 
     pool.on('error', (err) => {
@@ -37,34 +35,4 @@ export function getPool() {
     });
   }
   return pool;
-}
-
-// Wrapper sécurisé utilisant les requêtes préparées (prepared statements de mysql2)
-export async function query(sql, params = []) {
-  // nosemgrep: javascript.lang.security.audit.sqli.node-mysql-sqli.node-mysql-sqli
-  return getPool().execute(sql, params);
-}
-
-export async function transaction(callback) {
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    const result = await callback(conn);
-    await conn.commit();
-    return result;
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
-}
-
-export async function testConnection() {
-  const conn = await getPool().getConnection();
-  try {
-    await conn.ping();
-  } finally {
-    conn.release();
-  }
 }
