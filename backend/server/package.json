@@ -8,8 +8,7 @@
   "engines": { "node": ">=20.0.0" },
   "scripts": {
     "dev":       "nodemon --watch src --ext js src/server.js",
-    "start":     "node src/server.js",
-    "db:import": "node src/database/runMigrations.js"
+    "start":     "node src/server.js"
   },
   "dependencies": {
     "bcryptjs":           "^2.4.3",
