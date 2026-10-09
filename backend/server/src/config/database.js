@@ -36,3 +36,35 @@ export function getPool() {
   }
   return pool;
 }
+
+// ── Wrapper sécurisé (prepared statements) ────────────────────────
+export async function query(sql, params = []) {
+  // nosemgrep: javascript.lang.security.audit.sqli.node-mysql-sqli.node-mysql-sqli
+  return getPool().execute(sql, params);
+}
+
+// ── Transaction ───────────────────────────────────────────────────
+export async function transaction(callback) {
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await callback(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// ── Test de connexion (utilisé au démarrage) ──────────────────────
+export async function testConnection() {
+  const conn = await getPool().getConnection();
+  try {
+    await conn.ping();
+  } finally {
+    conn.release();
+  }
+}
