@@ -18,7 +18,11 @@ function getClient() {
   return client;
 }
 
-const FROM_ADDRESS = process.env.MAIL_FROM || 'Adma <alerts@adma.cm>';
+const FROM_ADDRESS = process.env.MAIL_FROM
+  || process.env.RESEND_FROM_EMAIL
+  || 'Adma <onboarding@resend.dev>';
+
+let warnedMissingTo = false;
 
 /**
  * Alerte système à l'admin (erreurs serveur, exceptions)
@@ -29,7 +33,10 @@ export async function sendAdminAlert({ subject, body }) {
 
   const to = process.env.ADMIN_ALERT_EMAIL;
   if (!to) {
-    logger.warn('ADMIN_ALERT_EMAIL non défini');
+    if (!warnedMissingTo) {
+      logger.warn('ADMIN_ALERT_EMAIL non défini — alertes admin désactivées');
+      warnedMissingTo = true;
+    }
     return;
   }
 

@@ -37,10 +37,55 @@ export function getPool() {
   return pool;
 }
 
-// ── Wrapper sécurisé (prepared statements) ────────────────────────
+/**
+ * TiDB ne supporte pas les placeholders ? dans LIMIT/OFFSET avec execute().
+ * On les inline en entiers sûrs avant l'exécution.
+ *
+ * Ex: 'SELECT ... LIMIT ? OFFSET ?' + [20, 0] → 'SELECT ... LIMIT 20 OFFSET 0'
+ */
+function inlineLimitOffset(sql, params) {
+  const limitRegex  = /\bLIMIT\s+\?/gi;
+  const offsetRegex = /\bOFFSET\s+\?/gi;
+
+  const limitMatches  = (sql.match(limitRegex)  || []).length;
+  const offsetMatches = (sql.match(offsetRegex) || []).length;
+
+  if (limitMatches === 0 && offsetMatches === 0) {
+    return { sql, params };
+  }
+
+  const newParams = [...params];
+  const consumed  = [];
+
+  // OFFSET est toujours après LIMIT dans la requête → on dépile en sens inverse
+  for (let i = 0; i < offsetMatches; i++) {
+    consumed.unshift(safeInt(newParams.pop()));
+  }
+  for (let i = 0; i < limitMatches; i++) {
+    consumed.unshift(safeInt(newParams.pop()));
+  }
+
+  let i = 0;
+  const newSql = sql
+    .replace(limitRegex,  () => `LIMIT ${consumed[i++]}`)
+    .replace(offsetRegex, () => `OFFSET ${consumed[i++]}`);
+
+  return { sql: newSql, params: newParams };
+}
+
+function safeInt(value) {
+  const n = Number.parseInt(value, 10);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`Valeur LIMIT/OFFSET invalide : ${value}`);
+  }
+  return n;
+}
+
+// ── Wrapper sécurisé (prepared statements mysql2) ─────────────────
 export async function query(sql, params = []) {
+  const { sql: finalSql, params: finalParams } = inlineLimitOffset(sql, params);
   // nosemgrep: javascript.lang.security.audit.sqli.node-mysql-sqli.node-mysql-sqli
-  return getPool().execute(sql, params);
+  return getPool().execute(finalSql, finalParams);
 }
 
 // ── Transaction ───────────────────────────────────────────────────
@@ -59,7 +104,7 @@ export async function transaction(callback) {
   }
 }
 
-// ── Test de connexion (utilisé au démarrage) ──────────────────────
+// ── Test de connexion ─────────────────────────────────────────────
 export async function testConnection() {
   const conn = await getPool().getConnection();
   try {
