@@ -1,6 +1,7 @@
 /**
  * ADMA — Contrôleur Authentification
  */
+import crypto   from 'crypto';
 import bcrypt   from 'bcryptjs';
 import jwt      from 'jsonwebtoken';
 import { v4 as uuid } from 'uuid';
@@ -16,13 +17,17 @@ function normalizePhone(phone) {
   const cleaned = phone.replace(/\s/g, '').replace(/[^+\d]/g, '');
   if (cleaned.startsWith('+237') && cleaned.length === 13) return cleaned;
   if (cleaned.startsWith('237')  && cleaned.length === 12)  return `+${cleaned}`;
-  if (/^6[5-9]\d{7}$/.test(cleaned))                        return `+237${cleaned}`;
-  const e = new Error('Numéro camerounais invalide (format : 6XXXXXXXX)');
+  if (/^6[4-9]\d{7}$/.test(cleaned))                        return `+237${cleaned}`;
+  const e = new Error('Numéro camerounais invalide. Plages mobiles acceptées : 64X, 65X, 66X, 67X, 68X, 69X');
   e.statusCode = 400; e.code = 'INVALID_PHONE'; throw e;
 }
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function hashRefreshToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 function generateAccessToken(userId) {
@@ -31,7 +36,7 @@ function generateAccessToken(userId) {
 
 async function generateRefreshToken(userId, deviceInfo = null) {
   const raw   = uuid();
-  const hash  = await bcrypt.hash(raw, 8);
+  const hash  = hashRefreshToken(raw);
   const exp   = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   await query(
     'INSERT INTO refresh_tokens (user_id, token_hash, device_info, expires_at) VALUES (?,?,?,?)',
@@ -243,21 +248,36 @@ export const refreshToken = asyncHandler(async (req, res) => {
   const raw = req.headers['x-refresh-token'] || req.body?.refreshToken;
   if (!raw) throw new AppError('Refresh token manquant', 400, 'MISSING_REFRESH_TOKEN');
 
+  const shaHash = hashRefreshToken(raw);
+
+  // Recherche directe indexée O(1) < 1ms
   const [rows] = await query(
-    'SELECT * FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() ORDER BY created_at DESC LIMIT 50'
+    'SELECT * FROM refresh_tokens WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1',
+    [shaHash]
   );
 
-  let found = null;
-  for (const row of rows) {
-    if (await bcrypt.compare(raw, row.token_hash)) { found = row; break; }
+  let found = rows[0] || null;
+
+  // Fallback rétrocompatible pour les tokens legacy créés avant la migration SHA-256
+  if (!found) {
+    const [legacyRows] = await query(
+      'SELECT * FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() AND token_hash LIKE "$2%" LIMIT 20'
+    );
+    for (const row of legacyRows) {
+      if (await bcrypt.compare(raw, row.token_hash)) {
+        found = row;
+        break;
+      }
+    }
   }
-  if (!found) throw new AppError('Refresh token invalide ou expiré', 401, 'INVALID_REFRESH_TOKEN');
+
+  if (!found) throw new AppError('Session expirée ou invalide. Veuillez vous reconnecter.', 401, 'INVALID_REFRESH_TOKEN');
 
   const [users] = await query(
     'SELECT id, status FROM users WHERE id = ? AND status = "active"',
     [found.user_id]
   );
-  if (!users.length) throw new AppError('Compte introuvable', 401, 'USER_NOT_FOUND');
+  if (!users.length) throw new AppError('Compte introuvable ou suspendu', 401, 'USER_NOT_FOUND');
 
   await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?', [found.id]);
 
@@ -271,17 +291,26 @@ export const refreshToken = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   const raw = req.headers['x-refresh-token'] || req.body?.refreshToken;
   if (raw) {
-    const [rows] = await query(
-      'SELECT id, token_hash FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() LIMIT 50'
+    const shaHash = hashRefreshToken(raw);
+    const [result] = await query(
+      'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = ?',
+      [shaHash]
     );
-    for (const row of rows) {
-      if (await bcrypt.compare(raw, row.token_hash)) {
-        await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?', [row.id]);
-        break;
+
+    if (result.affectedRows === 0) {
+      // Fallback legacy bcrypt
+      const [legacyRows] = await query(
+        'SELECT id, token_hash FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() AND token_hash LIKE "$2%" LIMIT 20'
+      );
+      for (const row of legacyRows) {
+        if (await bcrypt.compare(raw, row.token_hash)) {
+          await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?', [row.id]);
+          break;
+        }
       }
     }
   }
-  res.json({ success: true, message: 'Déconnecté' });
+  res.json({ success: true, message: 'Déconnecté avec succès' });
 });
 
 // ── GET /api/v1/auth/me ──────────────────────────────────────────

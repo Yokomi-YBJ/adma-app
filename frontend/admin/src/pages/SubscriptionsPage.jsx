@@ -159,7 +159,7 @@ export function SubscriptionsPage() {
     <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Abonnements & Forfaits</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0B162C' }}>Abonnements &amp; Forfaits</h1>
           <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
             Suivi des plans souscrits et attribution manuelle (upgrades uniquement, max 90 jours)
           </p>
@@ -424,7 +424,6 @@ export function SubscriptionsPage() {
                   setForm({
                     ...form,
                     providerId,
-                    plan: '',
                     // Suggestion auto du premier plan upgradable
                     plan: prov?.upgradablePlans?.[0] || '',
                   });

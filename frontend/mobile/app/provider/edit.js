@@ -283,7 +283,7 @@ export default function EditProviderScreen() {
     } catch (err) {
       showAppModal({
         title: t('common.error', 'Erreur'),
-        message: err.response?.data?.message || t('common.saveError', 'Échec de la mise à jour.'),
+        message: err.response?.data?.message || err.userMessage || t('common.saveError', 'Échec de la mise à jour.'),
         confirmText: 'OK',
         variant: 'danger',
       });

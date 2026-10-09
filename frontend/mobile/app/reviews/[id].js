@@ -52,7 +52,7 @@ export default function ReviewScreen() {
     } catch (err) {
       showAppModal({
         title: t('common.error'),
-        message: err.response?.data?.message || t('common.error'),
+        message: err.response?.data?.message || err.userMessage || t('review.error', "Impossible d'enregistrer votre avis. Veuillez réessayer."),
         confirmText: t('common.ok'),
         variant: 'danger',
       });

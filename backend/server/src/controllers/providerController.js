@@ -11,7 +11,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { uploadProviderPhoto, uploadGalleryPhoto, uploadCNIDocument, deleteImage } from '../services/imgdbService.js';
 import { notifyNewFavorite } from '../services/notificationService.js';
 import { computePrice, getPlansGrid } from '../services/pricingService.js';
-import { invalidateCache } from '../services/cacheService.js';
+import { invalidateCache, getCache, setCache } from '../services/cacheService.js';
 
 const PAGE_SIZE = 20;
 
@@ -26,8 +26,19 @@ const PLAN_RADIUS_KM = {
 // ── Recherche ─────────────────────────────────────────────────────
 export const searchProviders = asyncHandler(async (req, res) => {
   const { q, categoryId, cityId, neighborhoodId, isVerified, availability, page = 1 } = req.query;
-  const userId = req.user?.id || null;
-  const offset = (Math.max(1, parseInt(page)) - 1) * PAGE_SIZE;
+  const userId = req.user?.id ? parseInt(req.user.id, 10) : null;
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const offset = (pageNum - 1) * PAGE_SIZE;
+
+  // Caching du premier chargement standard (ex: accueil)
+  const isDefaultSearch = !q && !categoryId && !cityId && !neighborhoodId && !availability && !isVerified && pageNum === 1 && !userId;
+  if (isDefaultSearch) {
+    const cached = getCache('home_providers_default');
+    if (cached) {
+      return res.json({ success: true, data: cached });
+    }
+  }
+
   const conds  = ['p.is_active=TRUE', 'p.deleted_at IS NULL'];
   const params = [];
 
@@ -36,20 +47,23 @@ export const searchProviders = asyncHandler(async (req, res) => {
     params.push(userId);
   }
 
-  if (categoryId)     { conds.push('(p.category_id=? OR c.parent_id=?)'); params.push(parseInt(categoryId), parseInt(categoryId)); }
-  if (cityId)         { conds.push('p.city_id=?');        params.push(parseInt(cityId)); }
-  if (neighborhoodId) { conds.push('p.neighborhood_id=?');params.push(parseInt(neighborhoodId)); }
+  if (categoryId)     { conds.push('(p.category_id=? OR c.parent_id=?)'); params.push(parseInt(categoryId, 10), parseInt(categoryId, 10)); }
+  if (cityId)         { conds.push('p.city_id=?');        params.push(parseInt(cityId, 10)); }
+  if (neighborhoodId) { conds.push('p.neighborhood_id=?');params.push(parseInt(neighborhoodId, 10)); }
   if (availability)   { conds.push('p.availability=?');   params.push(availability); }
   if (isVerified === 'true') conds.push("p.verification_status IN ('verified_id','verified')");
   if (q?.trim().length >= 2) {
-    conds.push('(MATCH(p.name,p.specialty,p.description) AGAINST (? IN BOOLEAN MODE) OR p.name LIKE ?)');
-    params.push(`${q.trim()}*`, `%${q.trim()}%`);
+    // Compatible MySQL standard et TiDB Cloud (qui ne supporte pas MATCH...AGAINST)
+    const term = `%${q.trim()}%`;
+    conds.push('(p.name LIKE ? OR p.specialty LIKE ? OR p.description LIKE ?)');
+    params.push(term, term, term);
   }
 
   const where = conds.join(' AND ');
   const favSub = userId
-    ? `(SELECT 1 FROM favorites f WHERE f.user_id=${parseInt(userId)} AND f.provider_id=p.id LIMIT 1) IS NOT NULL`
+    ? 'EXISTS (SELECT 1 FROM favorites f WHERE f.user_id=? AND f.provider_id=p.id)'
     : 'FALSE';
+  const queryParams = userId ? [userId, ...params] : params;
 
   const [rows] = await query(`
     SELECT p.id, p.category_id, p.name, p.specialty, p.photo_url, p.availability,
@@ -65,26 +79,33 @@ export const searchProviders = asyncHandler(async (req, res) => {
     WHERE ${where}
     ORDER BY p.ranking_score DESC, p.created_at DESC
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
-  `, params);
+  `, queryParams);
 
   const [[{ total }]] = await query(
     `SELECT COUNT(*) AS total FROM providers p
      JOIN categories c ON c.id=p.category_id WHERE ${where}`, params
   );
 
-  res.json({ success: true, data: {
+  const responseData = {
     providers:  rows.map(formatProvider),
-    pagination: { page: parseInt(page), limit: PAGE_SIZE, total, pages: Math.ceil(total / PAGE_SIZE) },
-  }});
+    pagination: { page: pageNum, limit: PAGE_SIZE, total, pages: Math.ceil(total / PAGE_SIZE) },
+  };
+
+  if (isDefaultSearch) {
+    setCache('home_providers_default', responseData, 2 * 60 * 1000);
+  }
+
+  res.json({ success: true, data: responseData });
 });
 
 // ── Détail ────────────────────────────────────────────────────────
 export const getProvider = asyncHandler(async (req, res) => {
-  const providerId = parseInt(req.params.id);
-  const userId     = req.user?.id || null;
+  const providerId = parseInt(req.params.id, 10);
+  const userId     = req.user?.id ? parseInt(req.user.id, 10) : null;
   const favSub     = userId
-    ? `(SELECT 1 FROM favorites f WHERE f.user_id=${userId} AND f.provider_id=p.id LIMIT 1) IS NOT NULL`
+    ? 'EXISTS (SELECT 1 FROM favorites f WHERE f.user_id=? AND f.provider_id=p.id)'
     : 'FALSE';
+  const queryParams = userId ? [userId, providerId] : [providerId];
 
   const [rows] = await query(`
     SELECT p.*, c.name_fr AS category_name_fr, c.name_en AS category_name_en,
@@ -99,7 +120,7 @@ export const getProvider = asyncHandler(async (req, res) => {
     JOIN cities ci     ON ci.id=p.city_id
     JOIN neighborhoods n ON n.id=p.neighborhood_id
     WHERE p.id=? AND p.is_active=TRUE AND p.deleted_at IS NULL
-  `, [providerId]);
+  `, queryParams);
 
   if (!rows.length) throw new AppError('Prestataire introuvable', 404, 'PROVIDER_NOT_FOUND');
 
@@ -410,17 +431,17 @@ export const searchNearby = asyncHandler(async (req, res) => {
     throw new AppError('Coordonnées invalides', 400, 'INVALID_COORDS');
   }
 
-  const offset    = (Math.max(1, parseInt(page)) - 1) * PAGE_SIZE;
-  const userId    = req.user?.id || null;
+  const offset    = (Math.max(1, parseInt(page, 10) || 1) - 1) * PAGE_SIZE;
+  const userId    = req.user?.id ? parseInt(req.user.id, 10) : null;
 
   const catFilter = categoryId ? 'AND (p.category_id = ? OR c.parent_id = ?)' : '';
-  const catParams = categoryId ? [parseInt(categoryId), parseInt(categoryId)] : [];
+  const catParams = categoryId ? [parseInt(categoryId, 10), parseInt(categoryId, 10)] : [];
 
   const userFilter = userId ? 'AND p.user_id != ?' : '';
   const userParams = userId ? [userId] : [];
 
   const favSub = userId
-    ? `(SELECT 1 FROM favorites f WHERE f.user_id=${parseInt(userId)} AND f.provider_id=p.id LIMIT 1) IS NOT NULL`
+    ? 'EXISTS (SELECT 1 FROM favorites f WHERE f.user_id = ? AND f.provider_id = p.id)'
     : 'FALSE';
 
   const sql = `
@@ -461,7 +482,8 @@ export const searchNearby = asyncHandler(async (req, res) => {
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
   `;
 
-  const params = [clientLat, clientLng, clientLat, ...catParams, ...userParams,
+  const favParams = userId ? [userId] : [];
+  const params = [...favParams, clientLat, clientLng, clientLat, ...catParams, ...userParams,
     PLAN_RADIUS_KM.free, PLAN_RADIUS_KM.premium, PLAN_RADIUS_KM.professional];
   const [rows] = await query(sql, params);
 

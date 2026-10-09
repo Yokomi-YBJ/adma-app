@@ -430,65 +430,64 @@ CREATE TABLE notification_preferences (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
--- TRIGGERS — Mise à jour automatique trust_score + ranking
+-- NOTE COMPATIBILITÉ TIDB CLOUD :
+-- TiDB ne supporte pas les triggers SQL. Le recalcul des scores
+-- (review_count, recommend_count, trust_score, ranking_score)
+-- est intégralement assuré au niveau applicatif par updateProviderReviewStats()
+-- dans backend/server/src/controllers/reviewController.js.
+-- Les triggers ci-dessous sont fournis pour MySQL traditionnel si nécessaire.
 -- ============================================================
 
-DELIMITER $$
-
--- Après insertion d'un avis
-CREATE TRIGGER trg_review_after_insert
-AFTER INSERT ON reviews
-FOR EACH ROW
-BEGIN
-  IF NEW.status = 'active' THEN
-    UPDATE providers SET
-      review_count    = review_count + 1,
-      recommend_count = recommend_count + IF(NEW.verdict = 'recommend', 1, 0),
-      trust_score     = ROUND(
-        (recommend_count + IF(NEW.verdict = 'recommend', 1, 0)) /
-        (review_count + 1) * 100
-      ),
-      ranking_score   = (
-        (trust_score / 100) * 40 +
-        LEAST(review_count + 1, 100) / 100 * 20 +
-        IF(verification_status = 'verified', 15, IF(verification_status = 'verified_id', 8, 0)) +
-        IF(photo_url IS NOT NULL AND description IS NOT NULL AND specialty IS NOT NULL, 10, 5) +
-        IF(plan IN ('premium','professional','enterprise'), 10, 0) +
-        5
-      )
-    WHERE id = NEW.provider_id;
-  END IF;
-END$$
-
--- Après mise à jour d'un avis
-CREATE TRIGGER trg_review_after_update
-AFTER UPDATE ON reviews
-FOR EACH ROW
-BEGIN
-  -- Recalcul complet depuis les données réelles
-  UPDATE providers p
-  SET
-    review_count    = (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active'),
-    recommend_count = (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active' AND r.verdict = 'recommend'),
-    trust_score     = ROUND(
-      IFNULL(
-        (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active' AND r.verdict = 'recommend') /
-        NULLIF((SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active'), 0) * 100,
-        0
-      )
-    )
-  WHERE id = NEW.provider_id;
-END$$
-
-DELIMITER ;
+-- DELIMITER $$
+-- CREATE TRIGGER trg_review_after_insert
+-- AFTER INSERT ON reviews
+-- FOR EACH ROW
+-- BEGIN
+--   IF NEW.status = 'active' THEN
+--     UPDATE providers SET
+--       review_count    = review_count + 1,
+--       recommend_count = recommend_count + IF(NEW.verdict = 'recommend', 1, 0),
+--       trust_score     = ROUND(
+--         (recommend_count + IF(NEW.verdict = 'recommend', 1, 0)) /
+--         (review_count + 1) * 100
+--       ),
+--       ranking_score   = (
+--         (trust_score / 100) * 40 +
+--         LEAST(review_count + 1, 100) / 100 * 20 +
+--         IF(verification_status = 'verified', 15, IF(verification_status = 'verified_id', 8, 0)) +
+--         IF(photo_url IS NOT NULL AND description IS NOT NULL AND specialty IS NOT NULL, 10, 5) +
+--         IF(plan IN ('premium','professional','enterprise'), 10, 0) +
+--         5
+--       )
+--     WHERE id = NEW.provider_id;
+--   END IF;
+-- END$$
+-- 
+-- CREATE TRIGGER trg_review_after_update
+-- AFTER UPDATE ON reviews
+-- FOR EACH ROW
+-- BEGIN
+--   UPDATE providers p
+--   SET
+--     review_count    = (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active'),
+--     recommend_count = (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active' AND r.verdict = 'recommend'),
+--     trust_score     = ROUND(
+--       IFNULL(
+--         (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active' AND r.verdict = 'recommend') /
+--         NULLIF((SELECT COUNT(*) FROM reviews r WHERE r.provider_id = p.id AND r.status = 'active'), 0) * 100,
+--         0
+--       )
+--     )
+--   WHERE id = NEW.provider_id;
+-- END$$
+-- DELIMITER ;
 
 -- ============================================================
--- INDEX FULL-TEXT pour la recherche
+-- INDEX DE RECHERCHE (MySQL / TiDB)
 -- ============================================================
-ALTER TABLE providers
-  ADD FULLTEXT KEY ft_prov_search (name, specialty, description);
-
-ALTER TABLE categories
-  ADD FULLTEXT KEY ft_cat_search (name_fr, name_en);
+-- Sur MySQL traditionnel, activez les index fulltext si besoin.
+-- Sur TiDB Serverless, la recherche textuelle utilise LIKE / B-Tree.
+-- ALTER TABLE providers ADD FULLTEXT KEY ft_prov_search (name, specialty, description);
+-- ALTER TABLE categories ADD FULLTEXT KEY ft_cat_search (name_fr, name_en);
 
 SET FOREIGN_KEY_CHECKS = 1;

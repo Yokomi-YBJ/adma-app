@@ -135,7 +135,7 @@ export default function VerificationScreen() {
     } catch (err) {
       showAppModal({
         title: 'Erreur',
-        message: err.response?.data?.message || 'Échec de l\'envoi. Réessayez.',
+        message: err.response?.data?.message || err.userMessage || 'Échec de l\'envoi de vos documents. Veuillez réessayer.',
         confirmText: 'OK',
         variant: 'danger',
       });

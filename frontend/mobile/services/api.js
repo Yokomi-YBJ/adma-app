@@ -10,10 +10,9 @@ const ACCESS_KEY  = 'adma_access_token';
 const REFRESH_KEY = 'adma_refresh_token';
 
 const api = axios.create({
-  baseURL:        API_URL,
-  timeout:        20000,
-  headers:        { 'Content-Type': 'application/json' },
-  validateStatus: (status) => status < 500,
+  baseURL: API_URL,
+  timeout: 20000,
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // ── Requête : injecter le token ───────────────────────────────────
@@ -37,6 +36,17 @@ function processQueue(error, token = null) {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
+    // Normalisation message utilisateur
+    if (!err.response) {
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        err.userMessage = 'Le délai d’attente a expiré. Veuillez vérifier votre connexion.';
+      } else {
+        err.userMessage = 'Impossible de joindre le serveur. Vérifiez votre connexion internet.';
+      }
+    } else {
+      err.userMessage = err.response.data?.message || 'Une erreur est survenue.';
+    }
+
     const original = err.config;
     const code     = err.response?.data?.code;
 

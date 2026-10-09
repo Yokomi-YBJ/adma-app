@@ -78,8 +78,8 @@ export default function LoginScreen() {
     });
   };
 
-  function validatePhone(p) {
-    return /^6[5-9]\d{7}$/.test(p.replace(/\s/g, ''));
+    function validatePhone(p) {
+    return /^6[4-9]\d{7}$/.test(p.replace(/\s/g, ''));
   }
 
   const formatPhone = (val) => {

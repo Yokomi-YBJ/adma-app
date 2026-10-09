@@ -251,7 +251,7 @@ export default function CreateProviderScreen() {
     } catch (err) {
       showAppModal({
         title: t('common.error', 'Erreur'),
-        message: err.response?.data?.message || t('create.error', 'Échec de la création.'),
+        message: err.response?.data?.message || err.userMessage || t('create.error', 'Échec de la création.'),
         confirmText: 'OK',
         variant: 'danger',
       });

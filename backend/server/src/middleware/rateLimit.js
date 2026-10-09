@@ -8,11 +8,23 @@ export const globalRateLimit = rateLimit({
   skip: () => process.env.NODE_ENV === 'test',
 });
 
-export const otpRateLimit = rateLimit({
+// Protection anti-bombing SMS : limite par IP (max 10 requêtes par 15 min)
+export const otpIpRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10, standardHeaders: 'draft-7', legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  message: hit('Trop de demandes de code depuis cette connexion. Veuillez patienter 15 minutes.'),
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
+// Limite par numéro de téléphone (max 3 requêtes par 10 min)
+export const otpPhoneRateLimit = rateLimit({
   windowMs: 10 * 60 * 1000, max: 3, standardHeaders: 'draft-7', legacyHeaders: false,
   keyGenerator: (req) => req.body?.phone || req.ip,
-  message: hit('Trop de tentatives OTP. Attendez 10 minutes.'),
+  message: hit('Trop de tentatives pour ce numéro. Attendez 10 minutes avant de redemander un code.'),
+  skip: () => process.env.NODE_ENV === 'test',
 });
+
+export const otpRateLimit = [otpIpRateLimit, otpPhoneRateLimit];
 
 export const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, max: 10, standardHeaders: 'draft-7', legacyHeaders: false,

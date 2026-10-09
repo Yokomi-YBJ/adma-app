@@ -6,8 +6,10 @@ import { otpRateLimit, loginRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 
+// Plages mobiles Cameroun valides : 64X, 65X, 66X, 67X, 68X, 69X
 const phoneRule = body('phone').trim().notEmpty()
-  .matches(/^(\+237|237)?6[5-9]\d{7}$/).withMessage('Numéro camerounais invalide (ex: 6XXXXXXXX)');
+  .matches(/^(\+237|237)?6[4-9]\d{7}$/)
+  .withMessage('Numéro camerounais invalide (plages mobiles : 64X à 69X)');
 
 router.post('/send-otp',   otpRateLimit,   [phoneRule],                  ctrl.sendOTP);
 router.post('/verify-otp', loginRateLimit, [
