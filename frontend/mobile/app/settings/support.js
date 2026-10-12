@@ -104,33 +104,30 @@ export default function SupportScreen() {
             </View>
 
             <View style={styles.contactList}>
-              <TouchableOpacity style={styles.contactCard} onPress={() => openLink('mailto:support@adma.cm')} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.contactCard} onPress={() => openLink('mailto:beyeayokomi@gmail.com')} activeOpacity={0.8}>
                 <View style={[styles.contactIconWrap, { backgroundColor: colors.primaryBg }]}>
                   <Mail size={22} color={colors.primary} strokeWidth={2} />
                 </View>
                 <View style={styles.contactText}>
                   <Text style={styles.contactTitle}>{t('support.emailBtn')}</Text>
-                  <Text style={styles.contactMeta}>support@adma.cm</Text>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.contactCard} onPress={() => openLink('tel:+237690000000')} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.contactCard} onPress={() => openLink('tel:+237691094048')} activeOpacity={0.8}>
                 <View style={[styles.contactIconWrap, { backgroundColor: colors.surface }]}>
                   <Headphones size={22} color={colors.navy} strokeWidth={2} />
                 </View>
                 <View style={styles.contactText}>
                   <Text style={styles.contactTitle}>{t('support.callBtn')}</Text>
-                  <Text style={styles.contactMeta}>+237 6 90 00 00 00</Text>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.contactCard} onPress={() => openLink('https://wa.me/237690000000')} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.contactCard} onPress={() => openLink('https://wa.me/237691094048')} activeOpacity={0.8}>
                 <View style={[styles.contactIconWrap, { backgroundColor: colors.primaryBg }]}>
                   <MessageSquareText size={22} color={colors.primary} strokeWidth={2} />
                 </View>
                 <View style={styles.contactText}>
                   <Text style={styles.contactTitle}>{t('support.whatsappBtn')}</Text>
-                  <Text style={styles.contactMeta}>+237 6 90 00 00 00</Text>
                 </View>
               </TouchableOpacity>
             </View>
