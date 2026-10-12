@@ -12,9 +12,9 @@ async function geniusPayRequest(method, path, body = null) {
   const payload = body ? JSON.stringify(body) : '';
 
   logger.info('🔍 URL GENIUSPAY', {
-    baseUrl:       config.geniusPay.baseUrl,
+    baseUrl: config.geniusPay.baseUrl,
     path,
-    fullUrl:       url,
+    fullUrl: url,
     method,
   });
 
@@ -50,7 +50,6 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  // Détection redirection
   if (res.status >= 300 && res.status < 400) {
     const location = res.headers.get('location');
     logger.error('🚨 GeniusPay a REDIRIGÉ', { status: res.status, location, url });
@@ -141,8 +140,6 @@ export async function initiatePayment({
     ? cleanedPhone
     : `+237${cleanedPhone.replace(/^237/, '')}`;
 
-  // ✅ PAYLOAD MODE DIRECT USSD
-  // payment_method + mmo_provider → GeniusPay envoie le USSD directement
   const payload = {
     amount,
     currency:       'XOF',
@@ -187,17 +184,20 @@ export async function initiatePayment({
     amount:      d.amount,
     currency:    d.currency,
     gateway:     d.gateway,
-    paymentUrl:  d.payment_url || null,
+    paymentUrl:  d.payment_url  || null,
     checkoutUrl: d.checkout_url || null,
+    expiresAt:   d.expires_at   || null,
   });
 
+  // ✅ #15 : Retourner les DEUX URLs séparément + expiresAt
   return {
-    paymentId:  d.id,
-    reference:  d.reference || reference,
-    status:     mapStatus(d.status),
-    // En mode direct, on retourne payment_url (USSD), pas checkout_url
-    paymentUrl: d.payment_url || null,
-    rawStatus:  d.status,
+    paymentId:   d.id,
+    reference:   d.reference || reference,
+    status:      mapStatus(d.status),
+    paymentUrl:  d.payment_url  || null,   // USSD direct (prod)
+    checkoutUrl: d.checkout_url || null,   // Page web (sandbox)
+    expiresAt:   d.expires_at   || null,   // #13 : date d'expiration
+    rawStatus:   d.status,
   };
 }
 

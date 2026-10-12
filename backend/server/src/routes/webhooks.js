@@ -1,22 +1,22 @@
 /**
  * ADMA — Webhooks GeniusPay
- * ⚠️  Zéro migration : utilise kpay_external_id et kpay_payment_id
+ * ✅ Annule toute programmation de downgrade en cas de renouvellement
+ * ⚠️  Zéro migration sur payments : utilise kpay_external_id et kpay_payment_id
  */
 import { Router } from 'express';
-import { query, transaction } from '../config/database.js';
+import { transaction } from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { verifyWebhookSignature } from '../services/geniusPayService.js';
 import { notifySubscriptionActivated } from '../services/notificationService.js';
-import { computePrice, computeNewLoyaltyMonths } from '../services/pricingService.js';
+import { computePrice, computeNewLoyaltyMonths, PLAN_DAYS } from '../services/pricingService.js';
 import { logger } from '../utils/logger.js';
 
-const router    = Router();
-const PLAN_DAYS = { premium: 30, professional: 30, enterprise: 30 };
+const router = Router();
 
 router.post('/geniuspay', asyncHandler(async (req, res) => {
   const signature = req.headers['x-webhook-signature'] || '';
   const timestamp = req.headers['x-webhook-timestamp'] || '';
-  const rawBody   = req.body; // Buffer
+  const rawBody   = req.body;
 
   // 1. Vérifier la signature
   if (!verifyWebhookSignature(rawBody, signature, timestamp)) {
@@ -61,7 +61,6 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
     return res.json({ received: true });
   }
 
-  // 3. Transaction avec verrou
   let shouldNotify = null;
 
   await transaction(async (conn) => {
@@ -82,7 +81,6 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
       return;
     }
 
-    // Vérif montant
     if (amount !== undefined && Number(amount) !== Number(payment.amount)) {
       logger.error('Webhook GeniusPay: montant mismatch', {
         paymentId:      payment.id,
@@ -114,15 +112,27 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
       );
 
       const [[prov]] = await conn.execute(
-        'SELECT id, user_id, loyalty_months, plan_expires_at FROM providers WHERE id=?',
+        `SELECT id, user_id, loyalty_months, plan_expires_at
+           FROM providers
+          WHERE id=?`,
         [payment.provider_id]
       );
+
       if (!prov) {
         logger.error('Webhook GeniusPay: provider introuvable', {
           providerId: payment.provider_id,
         });
         return;
       }
+
+      // 🆕 ANNULER toute programmation de downgrade en cours
+      await conn.execute(
+        `UPDATE providers
+            SET pending_plan_change = NULL,
+                pending_plan_effective_at = NULL
+          WHERE id = ?`,
+        [payment.provider_id]
+      );
 
       const newLoyaltyMonths = computeNewLoyaltyMonths(prov);
       const pricing          = computePrice(planKey, prov.loyalty_months || 0);

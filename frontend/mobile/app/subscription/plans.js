@@ -1,9 +1,10 @@
 /**
- * ADMA — Écran Forfaits (fidélité tarifaire)
+ * ADMA — Écran Forfaits (avec gestion downgrade programmé)
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, Platform, Dimensions, ActivityIndicator,
+  View, Text, StyleSheet, Pressable, Platform, Dimensions,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
@@ -11,20 +12,22 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Calendar } from 'lucide-react-native';
 import api from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
 const COLORS = {
-  bg:     '#FAFBFC',
-  dark:   '#0B162C',
-  medium: '#1C2942',
-  muted:  '#3B556D',
-  accent: '#5FC2BA',
-  white:  '#FFFFFF',
-  border: '#EAEAEA',
-  track:  '#F0F2F5',
+  bg:        '#FAFBFC',
+  dark:      '#0B162C',
+  medium:    '#1C2942',
+  muted:     '#3B556D',
+  accent:    '#5FC2BA',
+  white:     '#FFFFFF',
+  border:    '#EAEAEA',
+  track:     '#F0F2F5',
+  warning:   '#F59E0B',
+  warningBg: '#FEF3C7',
 };
 
 const PLAN_KEYS = ['premium', 'professional', 'enterprise'];
@@ -37,31 +40,43 @@ export default function PlansScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const [loading, setLoading]       = useState(true);
-  const [data, setData]             = useState(null);
-  const [selectedPlan, setSelected] = useState('premium');
+  const [loading, setLoading]             = useState(true);
+  const [data, setData]                   = useState(null);
+  const [selectedPlan, setSelected]       = useState('premium');
+  const [pendingChange, setPendingChange] = useState(null);
+  const [cancelling, setCancelling]       = useState(false);
 
   const indicatorPosition = useSharedValue(0);
   const radiusScale       = useSharedValue(1);
   const planIndex         = useSharedValue(0);
 
+  const loadData = async () => {
+    try {
+      const res = await api.get('/providers/me/pricing');
+      const d = res.data.data;
+      setData(d);
+      const initial = d?.plan === 'free' || !d?.plan ? 'premium' : d.plan;
+      setSelected(initial);
+      const idx = PLAN_KEYS.indexOf(initial);
+      indicatorPosition.value = idx;
+      planIndex.value = idx;
+      radiusScale.value = RADIUS_SCALES[initial];
+    } catch {
+      setData(null);
+    }
+
+    try {
+      const res = await api.get('/payments/pending-plan');
+      setPendingChange(res.data.data);
+    } catch {
+      setPendingChange(null);
+    }
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get('/providers/me/pricing');
-        const d = res.data.data;
-        setData(d);
-        const initial = d?.plan === 'free' || !d?.plan ? 'premium' : d.plan;
-        setSelected(initial);
-        const idx = PLAN_KEYS.indexOf(initial);
-        indicatorPosition.value = idx;
-        planIndex.value = idx;
-        radiusScale.value = RADIUS_SCALES[initial];
-      } catch {
-        setData(null);
-      }
-      setLoading(false);
-    })();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -86,6 +101,31 @@ export default function PlansScreen() {
       ),
     };
   });
+
+  const handleCancelPending = async () => {
+    Alert.alert(
+      'Annuler le changement',
+      `Voulez-vous annuler le passage au plan ${pendingChange?.newPlan} ?`,
+      [
+        { text: 'Non', style: 'cancel' },
+        {
+          text: 'Oui, annuler',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              await api.delete('/payments/pending-plan');
+              setPendingChange(null);
+            } catch (err) {
+              Alert.alert('Erreur', "Impossible d'annuler le changement.");
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (loading) {
     return (
@@ -132,6 +172,34 @@ export default function PlansScreen() {
         <Text style={styles.headerTitle}>{t('plans.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      {/* 🆕 Bandeau programmation */}
+      {pendingChange && (
+        <View style={styles.scheduledBanner}>
+          <View style={styles.scheduledHeader}>
+            <Calendar size={18} color={COLORS.warning} strokeWidth={2.5} />
+            <Text style={styles.scheduledTitle}>Changement programmé</Text>
+          </View>
+          <Text style={styles.scheduledText}>
+            Passage au plan <Text style={styles.scheduledPlan}>
+              {pendingChange.newPlan}
+            </Text>{' '}le{' '}
+            {new Date(pendingChange.effectiveAt).toLocaleDateString('fr-FR', {
+              day: '2-digit', month: 'long', year: 'numeric',
+            })}
+          </Text>
+          <Pressable
+            style={[styles.cancelBtn, cancelling && { opacity: 0.5 }]}
+            onPress={handleCancelPending}
+            disabled={cancelling}
+          >
+            {cancelling
+              ? <ActivityIndicator size="small" color={COLORS.white} />
+              : <Text style={styles.cancelBtnText}>Annuler le changement</Text>
+            }
+          </Pressable>
+        </View>
+      )}
 
       <View style={styles.segmentedControl}>
         <Animated.View style={[styles.activeIndicator, indicatorStyle]} />
@@ -236,6 +304,25 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '600', color: COLORS.dark, letterSpacing: 0.2 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginBottom: 8, textAlign: 'center' },
   emptyBody:  { fontSize: 14, color: COLORS.muted, textAlign: 'center', lineHeight: 20 },
+
+  scheduledBanner: {
+    marginHorizontal: 24, marginTop: 8, marginBottom: 4,
+    padding: 14, borderRadius: 14,
+    backgroundColor: COLORS.warningBg,
+    borderWidth: 1, borderColor: COLORS.warning,
+  },
+  scheduledHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8,
+  },
+  scheduledTitle: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+  scheduledText:  { fontSize: 13, color: '#78350F', lineHeight: 19, marginBottom: 12 },
+  scheduledPlan:  { fontWeight: '700', color: COLORS.warning },
+  cancelBtn: {
+    alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14,
+    backgroundColor: COLORS.warning, borderRadius: 8, minWidth: 80,
+    alignItems: 'center',
+  },
+  cancelBtnText: { color: COLORS.white, fontSize: 12, fontWeight: '600' },
 
   segmentedControl: {
     flexDirection: 'row', marginHorizontal: 24, marginTop: 8,

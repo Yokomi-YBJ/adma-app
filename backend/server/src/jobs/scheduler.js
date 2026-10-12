@@ -7,6 +7,7 @@ import {
   notifyInactiveProvider,
 } from '../services/notificationService.js';
 import { computePrice } from '../services/pricingService.js';
+import { applyDueDowngrades } from '../services/subscriptionService.js';
 import { runHealthCheckWithAlerts } from '../services/systemMonitorService.js';
 import { logger } from '../utils/logger.js';
 
@@ -71,15 +72,27 @@ async function cleanupCNI() {
 async function remindersSubscription() {
   try {
     const [rows] = await query(`
-      SELECT p.user_id, p.plan, p.loyalty_months, p.plan_expires_at
+      SELECT p.user_id, p.plan, p.loyalty_months, p.plan_expires_at,
+             p.pending_plan_change, p.pending_plan_effective_at
       FROM providers p
       WHERE p.plan != 'free'
         AND p.plan_expires_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)
         AND p.is_active = TRUE
     `);
+
     for (const r of rows) {
       const days = Math.ceil((new Date(r.plan_expires_at) - Date.now()) / 86400000);
       const nextPricing = computePrice(r.plan, (r.loyalty_months || 0) + 1);
+
+      if (r.pending_plan_change) {
+        logger.info('Rappel avec downgrade programmé', {
+          userId:      r.user_id,
+          currentPlan: r.plan,
+          pendingPlan: r.pending_plan_change,
+          effectiveAt: r.pending_plan_effective_at,
+        });
+      }
+
       await notifySubscriptionExpiring(
         r.user_id, r.plan, days,
         nextPricing.finalPrice, nextPricing.discountPercent
@@ -89,15 +102,26 @@ async function remindersSubscription() {
   } catch (err) { logger.error('Job abo reminder', err.message); }
 }
 
-// ── Job expiration plans ──
+// ── Job expiration plans + downgrades programmés ────────────────
 async function expirePlans() {
   try {
+    // 1. Appliquer les downgrades programmés dus
+    const { applied } = await applyDueDowngrades();
+    if (applied > 0) {
+      logger.info(`Downgrades programmés appliqués: ${applied}`);
+    }
+
+    // 2. Passer à 'free' les plans expirés SANS suite
     const [res] = await query(`
       UPDATE providers SET plan='free', plan_expires_at=NULL
       WHERE plan != 'free' AND plan_expires_at < NOW()
+        AND pending_plan_change IS NULL
     `);
-    if (res.affectedRows > 0) logger.info(`Plans expirés désactivés: ${res.affectedRows}`);
+    if (res.affectedRows > 0) {
+      logger.info(`Plans expirés désactivés: ${res.affectedRows}`);
+    }
 
+    // 3. Reset compteur fidélité
     const [reset] = await query(`
       UPDATE providers
       SET loyalty_months = 0
@@ -106,8 +130,12 @@ async function expirePlans() {
         AND last_renewal_at IS NOT NULL
         AND last_renewal_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
     `);
-    if (reset.affectedRows > 0) logger.info(`Compteurs fidélité reset: ${reset.affectedRows}`);
-  } catch (err) { logger.error('Job plan expiry', err.message); }
+    if (reset.affectedRows > 0) {
+      logger.info(`Compteurs fidélité reset: ${reset.affectedRows}`);
+    }
+  } catch (err) {
+    logger.error('Job plan expiry', err.message);
+  }
 }
 
 // ── Job nettoyage tokens ──
@@ -141,19 +169,31 @@ cron.schedule('5 0 * * *',    expirePlans);
 cron.schedule('0 2 * * *',    cleanupTokens);
 cron.schedule('0 10 * * 0',   reminderInactive);
 
-// ── Catch-up au démarrage (15 secondes après le boot) ──────────
-// Rattrape les jobs manqués si le serveur a été redémarré avant l'heure pile
+// ── Vérifier les downgrades programmés (toutes les 6h) ──────────
+cron.schedule('0 */6 * * *', async () => {
+  try {
+    const { applied } = await applyDueDowngrades();
+    if (applied > 0) {
+      logger.info(`Downgrades appliqués (cron 6h): ${applied}`);
+    }
+  } catch (err) {
+    logger.error('Job downgrade 6h', err.message);
+  }
+});
+
+// ── Catch-up au démarrage ───────────────────────────────────────
 setTimeout(async () => {
   try {
     logger.info('Catch-up: exécution des jobs au démarrage');
     await cleanupCNI();
+    await expirePlans();
     logger.info('Catch-up terminé');
   } catch (err) {
     logger.error('Catch-up échoué', err.message);
   }
 }, 15 * 1000);
 
-// ── Broadcasts programmés : vérifie toutes les 5 minutes ────────
+// ── Broadcasts programmés ───────────────────────────────────────
 cron.schedule('*/5 * * * *', async () => {
   try {
     const [rows] = await query(`

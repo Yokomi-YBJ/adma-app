@@ -1,83 +1,76 @@
 /**
- * ADMA — Service de tarification fidélité
- *
- * Mois 1  : prix plein
- * Mois 2  : remise intermédiaire
- * Mois 3+ : prix plancher
- * Reset après 30 jours sans renouvellement.
+ * ADMA — Service de tarification (fidélité progressive)
  */
 
-const BASE_PRICES = {
-  premium:      1300,
-  professional: 3900,
-  enterprise:   7500,
+// ── Hiérarchie des plans (0 = plus bas) ─────────────────────────
+export const PLAN_LEVELS = {
+  free:         0,
+  premium:      1,
+  professional: 2,
+  enterprise:   3,
 };
 
-const FLOOR_PRICES = {
-  premium:      850,
-  professional: 2500,
-  enterprise:   4900,
+// ── Durée en jours par plan ─────────────────────────────────────
+export const PLAN_DAYS = {
+  premium:      30,
+  professional: 30,
+  enterprise:   30,
 };
 
-const PLAN_RADIUS_KM = {
-  free:         3,
-  premium:      5,
-  professional: 8,
-  enterprise:   Infinity,
-};
-
-const PLANS_GRID = {
-  premium:      { prices: [1300, 1100,  850], radius: 5 },
-  professional: { prices: [3900, 3200, 2500], radius: 8 },
-  enterprise:   { prices: [7500, 6200, 4900], radius: Infinity },
-};
-
-function roundToNearest100(value) {
-  return Math.round(value / 100) * 100;
+// ── Vérifier si c'est un downgrade ──────────────────────────────
+export function isDowngrade(currentPlan, newPlan) {
+  return (PLAN_LEVELS[newPlan] ?? 0) < (PLAN_LEVELS[currentPlan] ?? 0);
 }
+
+// ── Vérifier si c'est un upgrade ────────────────────────────────
+export function isUpgrade(currentPlan, newPlan) {
+  return (PLAN_LEVELS[newPlan] ?? 0) > (PLAN_LEVELS[currentPlan] ?? 0);
+}
+
+// ── Calcul du prix avec fidélité ────────────────────────────────
+// (Garde ta logique existante — exemple ci-dessous)
+const BASE_PRICES = {
+  premium:      { base: 5000,  prices: [5000,  4500,  4000] },
+  professional: { base: 10000, prices: [10000, 9000,  8000] },
+  enterprise:   { base: 20000, prices: [20000, 18000, 16000] },
+};
 
 export function computePrice(plan, loyaltyMonths = 0) {
-  const base  = BASE_PRICES[plan];
-  const floor = FLOOR_PRICES[plan];
-  if (!base || !floor) throw new Error(`Plan inconnu : ${plan}`);
-
-  let finalPrice;
-  let tier;
-
-  if (loyaltyMonths <= 0) {
-    finalPrice = base;
-    tier = 'standard';
-  } else if (loyaltyMonths === 1) {
-    finalPrice = roundToNearest100((base + floor) / 2);
-    tier = 'intermediate';
-  } else {
-    finalPrice = floor;
-    tier = 'floor';
+  const config = BASE_PRICES[plan];
+  if (!config) {
+    throw new Error(`Plan inconnu: ${plan}`);
   }
 
-  const discountPercent = Math.round((1 - finalPrice / base) * 100);
-  const savings = base - finalPrice;
+  const step = Math.min(loyaltyMonths, 2); // 0, 1, 2
+  const finalPrice = config.prices[step];
+  const basePrice  = config.base;
+  const discountPercent = Math.round(
+    ((basePrice - finalPrice) / basePrice) * 100
+  );
 
-  return { basePrice: base, finalPrice, discountPercent, savings, tier };
+  return {
+    basePrice,
+    finalPrice,
+    discountPercent,
+    step,
+  };
 }
 
+// ── Calcul des mois de fidélité ─────────────────────────────────
 export function computeNewLoyaltyMonths(provider) {
   const current = provider.loyalty_months || 0;
-  if (!provider.plan_expires_at) return 1;
 
-  const now       = Date.now();
-  const expiresAt = new Date(provider.plan_expires_at).getTime();
+  // Si le dernier renouvellement était il y a moins de 60 jours
+  // → on incrémente, sinon on repart de 0
+  if (!provider.last_renewal_at) {
+    return 1;
+  }
 
-  if (now <= expiresAt) return current + 1;
+  const lastRenewal = new Date(provider.last_renewal_at);
+  const daysSince = Math.floor((Date.now() - lastRenewal) / 86400000);
 
-  const daysSinceExpiry = (now - expiresAt) / (1000 * 60 * 60 * 24);
-  if (daysSinceExpiry <= 30) return current + 1;
-
-  return 1;
+  if (daysSince <= 60) {
+    return Math.min(current + 1, 3);
+  }
+  return 1; // reset
 }
-
-export function getPlansGrid() {
-  return PLANS_GRID;
-}
-
-export { BASE_PRICES, FLOOR_PRICES, PLAN_RADIUS_KM, PLANS_GRID };
