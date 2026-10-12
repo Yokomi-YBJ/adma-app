@@ -142,7 +142,7 @@ export async function initiatePayment({
 
   const payload = {
     amount,
-    currency:       'XOF',
+    currency:       'XAF',
     payment_method: 'pawapay',
     mmo_provider:   mmoProvider,
     description:    `Adma Abonnement ${plan}`,

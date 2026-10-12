@@ -117,7 +117,7 @@ export const initPayment = asyncHandler(async (req, res) => {
     [
       providerId,
       amount,
-      'XOF',
+      'XAF',
       'pending',
       planId,
       externalRef,
@@ -167,7 +167,7 @@ export const initPayment = asyncHandler(async (req, res) => {
       paymentId:   gp.reference,
       reference:   gp.reference,
       amount,
-      currency:    'XOF',
+      currency:    'XAF',
       status:      gp.status,
       // ✅ #15 : Les 2 URLs séparées
       paymentUrl:  gp.paymentUrl,
@@ -277,7 +277,7 @@ export const getStatus = asyncHandler(async (req, res) => {
         id:       payment.kpay_external_id,
         status:   payment.status,
         amount:   payment.amount,
-        currency: 'XOF',
+        currency: 'XAF',
         paidAt:   payment.updated_at,
       },
     });
@@ -296,7 +296,7 @@ export const getStatus = asyncHandler(async (req, res) => {
         id:       gp.reference,
         status:   gp.status,
         amount:   gp.amount,
-        currency: 'XOF',
+        currency: 'XAF',
         paidAt:   gp.paidAt,
       },
     });
@@ -311,7 +311,7 @@ export const getStatus = asyncHandler(async (req, res) => {
         id:       payment.kpay_external_id,
         status:   payment.status,
         amount:   payment.amount,
-        currency: 'XOF',
+        currency: 'XAF',
         paidAt:   null,
       },
     });
