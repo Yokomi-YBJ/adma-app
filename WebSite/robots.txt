@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Après avoir lancé scripts/configure.py avec votre domaine, la ligne suivante est mise à jour :
+Sitemap: https://votre-domaine.example/sitemap.xml
