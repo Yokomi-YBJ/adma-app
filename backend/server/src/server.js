@@ -64,8 +64,8 @@ app.use(cors({
 app.use(compression());
 app.use(morgan('combined', { stream: { write: m => logger.http(m.trim()) } }));
 
-// Webhook KPay — raw body AVANT le parser JSON global
-app.use(`${API}/webhooks/kpay`, express.raw({ type: 'application/json' }));
+// APRÈS — Webhook GeniusPay : raw body AVANT le parser JSON global
+app.use(`${API}/webhooks/geniuspay`, express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

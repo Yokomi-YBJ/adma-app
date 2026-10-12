@@ -1,168 +1,172 @@
 /**
- * ADMA — Contrôleur Paiements
- *
- * Sécurité :
- * - Idempotence : un paiement pending < 5 min n'est pas dupliqué
- * - Rate limiting via middleware sur /initiate
- * - Vérification du montant côté webhook
- * - Anti-polling KPay excessif
+ * ADMA — Contrôleur paiement (GeniusPay)
+ * ⚠️  Zéro migration : on réutilise kpay_external_id et kpay_payment_id
  */
-import { v4 as uuid } from 'uuid';
+import crypto from 'crypto';
 import { query } from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { initiatePayment, verifyPayment } from '../services/kpayService.js';
-import { computePrice } from '../services/pricingService.js';
 import { logger } from '../utils/logger.js';
+import {
+  initiatePayment as gpInitiate,
+  verifyPayment   as gpVerify,
+} from '../services/geniusPayService.js';
+import { computePrice } from '../services/pricingService.js';
 
-const PLANS = ['premium', 'professional', 'enterprise'];
-
-// Délai pendant lequel un paiement pending bloquer une nouvelle tentative (5 min)
-const IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
-
-// Délai avant de vérifier manuellement auprès de KPay (30s après création)
-const MANUAL_VERIFY_AFTER_MS = 30 * 1000;
-
-// ── POST /api/v1/payments/initiate ─────────────────────────────
+// ── POST /payments/initiate ─────────────────────────────────────
 export const initPayment = asyncHandler(async (req, res) => {
   const { planId, operator, phoneNumber } = req.body;
 
-  if (!PLANS.includes(planId)) {
-    throw new AppError('Plan invalide', 400, 'INVALID_PLAN');
-  }
-
-  const [provs] = await query(
-    'SELECT id, loyalty_months FROM providers WHERE user_id=? AND is_active=TRUE AND deleted_at IS NULL',
+  // 1. Récupérer le prestataire
+  const [provRows] = await query(
+    'SELECT id, loyalty_months FROM providers WHERE user_id=? AND is_active=TRUE LIMIT 1',
     [req.user.id]
   );
-  if (!provs.length) throw new AppError('Aucune fiche prestataire', 404, 'NO_PROVIDER');
+  if (!provRows.length) {
+    throw new AppError('Aucune fiche prestataire active', 404, 'NO_PROVIDER');
+  }
+  const providerId    = provRows[0].id;
+  const loyaltyMonths = provRows[0].loyalty_months || 0;
 
-  const provider = provs[0];
+  // 2. Prix côté serveur (source de vérité)
+  const pricing = computePrice(planId, loyaltyMonths);
+  const amount  = pricing.finalPrice;
 
-  // ── Idempotence : chercher un paiement pending récent pour le même plan ──
-  const idempotencyCutoff = new Date(Date.now() - IDEMPOTENCY_WINDOW_MS);
-  const [existing] = await query(
-    `SELECT id, kpay_payment_id, status, amount, kpay_external_id
-     FROM payments
-     WHERE provider_id = ?
-       AND plan_intent = ?
-       AND status IN ('pending', 'processing')
-       AND created_at > ?
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [provider.id, planId, idempotencyCutoff]
-  );
-
-  if (existing.length) {
-    logger.info('initPayment: paiement pending existant réutilisé', {
-      userId: req.user.id,
-      planId,
-      existingPaymentId: existing[0].id,
-    });
-
-    return res.json({
-      success: true,
-      data: {
-        paymentId:     existing[0].id,
-        kpayPaymentId: existing[0].kpay_payment_id,
-        status:        existing[0].status,
-        amount:        existing[0].amount,
-        pricing:       computePrice(planId, provider.loyalty_months || 0),
-        reused:        true,
-      },
-    });
+  if (!Number.isInteger(amount) || amount < 200) {
+    throw new AppError('Montant invalide', 400, 'INVALID_AMOUNT');
   }
 
-  // ── Nouveau paiement ──────────────────────────────────────────
-  const pricing   = computePrice(planId, provider.loyalty_months || 0);
-  const amount    = pricing.finalPrice;
-  const reference = `ADMA-${uuid().slice(0, 12).toUpperCase()}`;
+  // 3. Référence externe unique
+  const externalRef = `PAY-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
-  const [pay] = await query(
+  // 4. Enregistrer le paiement en base — on utilise kpay_external_id
+  const [insert] = await query(
     `INSERT INTO payments
-       (provider_id, plan_intent, kpay_external_id, amount, mobile_operator, phone_number, status)
-     VALUES (?,?,?,?,?,?,'pending')`,
-    [provider.id, planId, reference, amount, operator, phoneNumber]
+       (provider_id, amount, status, plan_intent, kpay_external_id)
+     VALUES (?,?,?,?,?)`,
+    [providerId, amount, 'pending', planId, externalRef]
   );
+  const paymentDbId = insert.insertId;
 
+  // 5. Appeler GeniusPay
+  let gp;
   try {
-    const kres = await initiatePayment({
+    gp = await gpInitiate({
       amount,
-      phone: phoneNumber,
-      plan: planId,
-      reference,
-    });
-
-    await query(
-      'UPDATE payments SET kpay_payment_id=?, status=? WHERE id=?',
-      [kres.paymentId, kres.status, pay.insertId]
-    );
-
-    res.json({
-      success: true,
-      data: {
-        paymentId:     pay.insertId,
-        kpayPaymentId: kres.paymentId,
-        status:        kres.status,
-        amount,
-        pricing,
-        reused:        false,
-      },
+      phone:     phoneNumber,
+      operator,
+      plan:      planId,
+      reference: externalRef,
     });
   } catch (err) {
-    await query('UPDATE payments SET status="failed" WHERE id=?', [pay.insertId]);
+    await query(
+      'UPDATE payments SET status="failed", failure_reason=? WHERE id=?',
+      [err.message, paymentDbId]
+    );
     throw err;
   }
-});
 
-// ── GET /api/v1/payments/:id/status ────────────────────────────
-export const getStatus = asyncHandler(async (req, res) => {
-  const [rows] = await query(
-    `SELECT pay.*, prov.user_id
-     FROM payments pay
-     JOIN providers prov ON prov.id = pay.provider_id
-     WHERE pay.id = ?`,
-    [req.params.id]
+  // 6. Sauvegarder la référence GeniusPay dans kpay_external_id
+  //    et l'id interne dans kpay_payment_id
+  await query(
+    'UPDATE payments SET kpay_external_id=?, kpay_payment_id=? WHERE id=?',
+    [gp.reference, String(gp.paymentId || ''), paymentDbId]
   );
 
-  if (!rows.length || rows[0].user_id !== req.user.id) {
-    throw new AppError('Paiement introuvable', 404, 'NOT_FOUND');
+  logger.info('Paiement initié', {
+    paymentId: paymentDbId,
+    reference: gp.reference,
+    amount,
+    plan:      planId,
+    operator,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: {
+      paymentId:  gp.reference,       // référence MTX-... (pour le polling)
+      reference:  gp.reference,
+      amount,
+      currency:   'XAF',
+      status:     gp.status,
+      paymentUrl: gp.paymentUrl,
+    },
+  });
+});
+
+// ── GET /payments/:id/status ────────────────────────────────────
+export const getStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // On cherche par référence GeniusPay OU par référence externe
+  const [rows] = await query(
+    `SELECT p.*, pr.user_id
+       FROM payments p
+       JOIN providers pr ON pr.id = p.provider_id
+      WHERE p.kpay_external_id = ?
+         OR p.kpay_payment_id  = ?
+      LIMIT 1`,
+    [id, id]
+  );
+
+  if (!rows.length) {
+    throw new AppError('Paiement introuvable', 404, 'PAYMENT_NOT_FOUND');
   }
 
   const payment = rows[0];
 
-  // 1. Statut définitif → retour immédiat, jamais d'appel KPay
+  if (payment.user_id !== req.user.id) {
+    throw new AppError('Accès refusé', 403, 'FORBIDDEN');
+  }
+
+  // Déjà finalisé → on renvoie direct
   if (['completed', 'failed', 'cancelled'].includes(payment.status)) {
-    return res.json({ success: true, data: { status: payment.status } });
+    return res.json({
+      success: true,
+      data: {
+        id:       payment.kpay_external_id,
+        status:   payment.status,
+        amount:   payment.amount,
+        currency: 'XAF',
+        paidAt:   payment.updated_at,
+      },
+    });
   }
 
-  // 2. Webhook déjà reçu → on fait confiance à la BDD (source de vérité)
-  if (payment.webhook_received_at) {
-    return res.json({ success: true, data: { status: payment.status } });
-  }
+  // Sinon interroger GeniusPay
+  try {
+    const gp = await gpVerify(payment.kpay_external_id);
 
-  // 3. Fallback : après 30s sans webhook, on interroge KPay UNE fois
-  const ageMs = Date.now() - new Date(payment.created_at).getTime();
-  if (ageMs > MANUAL_VERIFY_AFTER_MS && payment.kpay_payment_id) {
-    try {
-      const kres = await verifyPayment(payment.kpay_payment_id);
-      if (kres.status !== payment.status) {
-        await query('UPDATE payments SET status=? WHERE id=?', [kres.status, req.params.id]);
-        logger.info('getStatus: statut mis à jour via KPay direct', {
-          paymentId: req.params.id,
-          from: payment.status,
-          to: kres.status,
-        });
-      }
-      return res.json({ success: true, data: { status: kres.status } });
-    } catch (err) {
-      logger.warn('getStatus: verifyPayment échoué, fallback sur BDD', {
-        paymentId: req.params.id,
-        err: err.message,
-      });
-      // On ne bloque pas : on renvoie le statut actuel (pending)
+    if (gp.status !== payment.status) {
+      await query(
+        'UPDATE payments SET status=? WHERE id=?',
+        [gp.status, payment.id]
+      );
     }
-  }
 
-  // 4. Statut actuel (pending)
-  res.json({ success: true, data: { status: payment.status } });
+    return res.json({
+      success: true,
+      data: {
+        id:       gp.reference,
+        status:   gp.status,
+        amount:   gp.amount,
+        currency: 'XAF',
+        paidAt:   gp.paidAt,
+      },
+    });
+  } catch (err) {
+    logger.warn('Vérif GeniusPay échouée', {
+      reference: payment.kpay_external_id,
+      error:     err.message,
+    });
+    return res.json({
+      success: true,
+      data: {
+        id:       payment.kpay_external_id,
+        status:   payment.status,
+        amount:   payment.amount,
+        currency: 'XAF',
+        paidAt:   null,
+      },
+    });
+  }
 });

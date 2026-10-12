@@ -41,7 +41,6 @@ export const config = {
   orange: {
     clientId:     requireEnv('ORANGE_CLIENT_ID',     ''),
     clientSecret: requireEnv('ORANGE_CLIENT_SECRET', ''),
-    // Numéro Orange depuis lequel les SMS sont envoyés (votre numéro enregistré)
     senderNumber: process.env.ORANGE_SENDER_NUMBER || '',
   },
 
@@ -51,11 +50,12 @@ export const config = {
     apiSecret: requireEnv('CLOUDINARY_API_SECRET', ''),
   },
 
-  kpay: {
-    apiKey:        requireEnv('KPAY_API_KEY',        ''),
-    secretKey:     requireEnv('KPAY_SECRET_KEY',     ''),
-    baseUrl:       process.env.KPAY_BASE_URL || 'https://admin.kpay.site/api/v1',
-    webhookSecret: requireEnv('KPAY_WEBHOOK_SECRET', ''),
+  // ── GeniusPay (Mobile Money Afrique — XAF Cameroun) ─────────────
+  geniusPay: {
+    apiKey:        requireEnv('GENIUSPAY_API_KEY',        ''), // pk_live_... ou pk_sandbox_...
+    secretKey:     requireEnv('GENIUSPAY_SECRET_KEY',     ''), // sk_live_... ou sk_sandbox_...
+    baseUrl:       process.env.GENIUSPAY_BASE_URL || 'https://geniuspay.ci/api/v1/merchant',
+    webhookSecret: requireEnv('GENIUSPAY_WEBHOOK_SECRET', ''), // whsec_...
   },
 
   expo: {

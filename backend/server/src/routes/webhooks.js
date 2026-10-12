@@ -1,151 +1,182 @@
+/**
+ * ADMA — Webhooks GeniusPay
+ * ⚠️  Zéro migration : utilise kpay_external_id et kpay_payment_id
+ */
 import { Router } from 'express';
 import { query, transaction } from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { verifyWebhookSignature } from '../services/kpayService.js';
+import { verifyWebhookSignature } from '../services/geniusPayService.js';
 import { notifySubscriptionActivated } from '../services/notificationService.js';
 import { computePrice, computeNewLoyaltyMonths } from '../services/pricingService.js';
 import { logger } from '../utils/logger.js';
 
-const router = Router();
+const router    = Router();
 const PLAN_DAYS = { premium: 30, professional: 30, enterprise: 30 };
 
-router.post('/kpay', asyncHandler(async (req, res) => {
-  const signature = req.headers['x-kpay-signature'] || '';
-  const rawBody   = req.body;
+router.post('/geniuspay', asyncHandler(async (req, res) => {
+  const signature = req.headers['x-webhook-signature'] || '';
+  const timestamp = req.headers['x-webhook-timestamp'] || '';
+  const rawBody   = req.body; // Buffer
 
-  // 1. Signature HMAC
-  if (!verifyWebhookSignature(rawBody, signature)) {
-    logger.warn('Webhook KPay: signature invalide');
-    return res.status(401).json({ error: 'Signature invalide' });
+  // 1. Vérifier la signature
+  if (!verifyWebhookSignature(rawBody, signature, timestamp)) {
+    logger.warn('Webhook GeniusPay: signature invalide');
+    return res.status(401).json({ success: false, error: 'Signature invalide' });
   }
 
-  // 2. Parse
-  let event;
+  // 2. Parser
+  let payload;
   try {
-    event = JSON.parse(rawBody.toString());
-  } catch {
-    return res.status(400).json({ error: 'Payload invalide' });
+    payload = JSON.parse(rawBody.toString('utf8'));
+  } catch (e) {
+    logger.error('Webhook GeniusPay: JSON invalide', e.message);
+    return res.status(400).json({ success: false, error: 'Payload invalide' });
   }
 
-  logger.info('KPay webhook reçu', { type: event.type });
+  logger.info('GeniusPay webhook reçu', {
+    event:  payload.event,
+    ref:    payload.data?.reference,
+    status: payload.data?.status,
+  });
 
-  // 3. Type d'événement
-  if (!['collection.successful', 'payment.completed'].includes(event.type)) {
+  const handledEvents = [
+    'payment.success',
+    'payment.failed',
+    'payment.cancelled',
+    'payment.expired',
+  ];
+  if (!handledEvents.includes(payload.event)) {
+    return res.json({ received: true, ignored: true });
+  }
+
+  const d           = payload.data || {};
+  const reference   = d.reference;
+  const amount      = d.amount;
+  const metadata    = d.metadata || {};
+  const plan        = metadata.plan;
+  const externalRef = metadata.reference;
+
+  if (!reference && !externalRef) {
+    logger.warn('Webhook GeniusPay: identifiants manquants');
     return res.json({ received: true });
   }
 
-  const externalId = event.data?.external_id;
-  const kpayId     = event.data?.id;
-  const eventAmount = event.data?.amount;
-
-  if (!externalId && !kpayId) {
-    logger.warn('Webhook KPay: identifiants manquants');
-    return res.json({ received: true });
-  }
-
-  // 4. Traitement dans une transaction avec FOR UPDATE (anti-race)
+  // 3. Transaction avec verrou
   let shouldNotify = null;
 
   await transaction(async (conn) => {
-    // ── SELECT FOR UPDATE : verrouille la ligne, le 2e webhook attendra ──
     const [[payment]] = await conn.execute(
       `SELECT * FROM payments
-       WHERE (kpay_external_id = ? OR kpay_payment_id = ?)
-       FOR UPDATE`,
-      [externalId, kpayId]
+        WHERE (kpay_external_id = ? OR kpay_payment_id = ?)
+        FOR UPDATE`,
+      [reference, externalRef || reference]
     );
 
     if (!payment) {
-      logger.info('Webhook KPay: paiement inconnu', { externalId, kpayId });
+      logger.info('Webhook GeniusPay: paiement inconnu', { reference, externalRef });
       return;
     }
 
-    // ── Idempotence : si déjà traité, on sort ──
-    if (payment.status === 'completed') {
-      logger.info('Webhook KPay: paiement déjà traité, ignoré', { paymentId: payment.id });
+    if (['completed', 'failed', 'cancelled'].includes(payment.status)) {
+      logger.info('Webhook GeniusPay: déjà traité', { paymentId: payment.id });
       return;
     }
 
-    // ── Vérification du montant (sécurité) ──
-    if (eventAmount !== undefined && Number(eventAmount) !== Number(payment.amount)) {
-      logger.error('Webhook KPay: montant mismatch', {
-        paymentId:       payment.id,
-        expectedAmount:  payment.amount,
-        receivedAmount:  eventAmount,
+    // Vérif montant
+    if (amount !== undefined && Number(amount) !== Number(payment.amount)) {
+      logger.error('Webhook GeniusPay: montant mismatch', {
+        paymentId:      payment.id,
+        expectedAmount: payment.amount,
+        receivedAmount: amount,
       });
-      // On marque comme failed pour éviter toute exploitation
       await conn.execute(
         'UPDATE payments SET status="failed", failure_reason=? WHERE id=?',
-        ['Montant différent de celui attendu', payment.id]
+        ['Montant différent', payment.id]
       );
       return;
     }
 
-    // ── Plan ──
-    const plan = payment.plan_intent;
-    if (!plan) {
-      logger.error('Webhook KPay: plan_intent manquant', { paymentId: payment.id });
-      return;
+    // ── SUCCESS ────────────────────────────────────────────────
+    if (payload.event === 'payment.success') {
+      const planKey = plan || payment.plan_intent;
+      if (!planKey) {
+        logger.error('Webhook GeniusPay: plan_intent manquant', { paymentId: payment.id });
+        return;
+      }
+
+      await conn.execute(
+        `UPDATE payments
+            SET status="completed",
+                webhook_received_at=NOW(),
+                kpay_external_id = COALESCE(kpay_external_id, ?)
+          WHERE id=?`,
+        [reference, payment.id]
+      );
+
+      const [[prov]] = await conn.execute(
+        'SELECT id, user_id, loyalty_months, plan_expires_at FROM providers WHERE id=?',
+        [payment.provider_id]
+      );
+      if (!prov) {
+        logger.error('Webhook GeniusPay: provider introuvable', {
+          providerId: payment.provider_id,
+        });
+        return;
+      }
+
+      const newLoyaltyMonths = computeNewLoyaltyMonths(prov);
+      const pricing          = computePrice(planKey, prov.loyalty_months || 0);
+
+      const days       = PLAN_DAYS[planKey] || 30;
+      const endDate    = new Date();
+      endDate.setDate(endDate.getDate() + days);
+      const endDateStr = endDate.toISOString().slice(0, 10);
+
+      const [sub] = await conn.execute(
+        `INSERT INTO subscriptions
+           (provider_id, plan, amount, base_amount, discount_percent, start_date, end_date)
+         VALUES (?,?,?,?,?,CURDATE(),?)`,
+        [
+          payment.provider_id,
+          planKey,
+          payment.amount,
+          pricing.basePrice,
+          pricing.discountPercent,
+          endDateStr,
+        ]
+      );
+
+      await conn.execute(
+        `UPDATE providers
+            SET plan=?, plan_expires_at=?, loyalty_months=?, last_renewal_at=NOW()
+          WHERE id=?`,
+        [planKey, endDate, newLoyaltyMonths, payment.provider_id]
+      );
+
+      await conn.execute(
+        'UPDATE payments SET subscription_id=? WHERE id=?',
+        [sub.insertId, payment.id]
+      );
+
+      shouldNotify = { userId: prov.user_id, plan: planKey };
     }
 
-    // ── Marquer comme complété ──
-    await conn.execute(
-      'UPDATE payments SET status="completed", webhook_received_at=NOW() WHERE id=?',
-      [payment.id]
-    );
-
-    // ── Récupérer le prestataire ──
-    const [[prov]] = await conn.execute(
-      'SELECT id, user_id, loyalty_months, plan_expires_at FROM providers WHERE id=?',
-      [payment.provider_id]
-    );
-    if (!prov) {
-      logger.error('Webhook KPay: provider introuvable', { providerId: payment.provider_id });
-      return;
+    // ── FAILED / CANCELLED / EXPIRED ───────────────────────────
+    if (['payment.failed', 'payment.cancelled', 'payment.expired'].includes(payload.event)) {
+      const newStatus = payload.event === 'payment.cancelled' ? 'cancelled' : 'failed';
+      await conn.execute(
+        `UPDATE payments
+            SET status=?,
+                failure_reason=?,
+                webhook_received_at=NOW(),
+                kpay_external_id = COALESCE(kpay_external_id, ?)
+          WHERE id=?`,
+        [newStatus, `GeniusPay: ${payload.event}`, reference, payment.id]
+      );
+      logger.info('GeniusPay: paiement ' + newStatus, { paymentId: payment.id });
     }
-
-    // ── Fidélité ──
-    const newLoyaltyMonths = computeNewLoyaltyMonths(prov);
-    const pricing          = computePrice(plan, prov.loyalty_months || 0);
-
-    // ── Souscription ──
-    const days    = PLAN_DAYS[plan] || 30;
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + days);
-    const endDateStr = endDate.toISOString().slice(0, 10);
-
-    const [sub] = await conn.execute(
-      `INSERT INTO subscriptions
-         (provider_id, plan, amount, base_amount, discount_percent, start_date, end_date)
-       VALUES (?,?,?,?,?,CURDATE(),?)`,
-      [
-        payment.provider_id,
-        plan,
-        payment.amount,
-        pricing.basePrice,
-        pricing.discountPercent,
-        endDateStr,
-      ]
-    );
-
-    // ── Mise à jour du prestataire ──
-    await conn.execute(
-      `UPDATE providers
-         SET plan=?, plan_expires_at=?, loyalty_months=?, last_renewal_at=NOW()
-       WHERE id=?`,
-      [plan, endDate, newLoyaltyMonths, payment.provider_id]
-    );
-
-    // ── Lien payment → subscription ──
-    await conn.execute(
-      'UPDATE payments SET subscription_id=? WHERE id=?',
-      [sub.insertId, payment.id]
-    );
-
-    shouldNotify = { userId: prov.user_id, plan };
   });
 
-  // 5. Notification hors transaction (non bloquante)
   if (shouldNotify) {
     notifySubscriptionActivated(shouldNotify.userId, shouldNotify.plan).catch(() => {});
   }
