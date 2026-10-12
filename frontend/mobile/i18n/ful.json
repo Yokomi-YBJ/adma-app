@@ -460,6 +460,9 @@
     "fr": "Français",
     "en": "English",
     "ful": "Fulfulde",
+    "frDescription": "Jaaɓnirde e menuyaji e Français",
+    "enDescription": "Jaaɓnirde e menuyaji e English",
+    "fulDescription": "Jaaɓnirde e menuyaji e Fulfulde",
     "autoDetect": "Yiytu bee hoore mum"
   },
   "common": {
@@ -560,7 +563,7 @@
     "subtitle": "A woodi ƴamol? Heɓ jaabawol ɗo bee yaawugo",
     "searchPlaceholder": "Ɗaɓɓu nder ballal...",
     "faqTitle": "Yamɗe heewɗe",
-    "contactTitle": "A sokli ballal kine?",
+    "contactTitle": "Besoin d'aide ?",
     "contactSubtitle": "Yimɓe amen haa Ngaoundere ɗon ngam maa",
     "whatsappBtn": "Winndu haa WhatsApp",
     "callBtn": "Noddu ballal",

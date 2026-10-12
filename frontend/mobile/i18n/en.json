@@ -460,6 +460,9 @@
     "fr": "French",
     "en": "English",
     "ful": "Fulfulde",
+    "frDescription": "Interface and menus in French",
+    "enDescription": "Interface and menus in English",
+    "fulDescription": "Interface and menus in Fulfulde",
     "autoDetect": "Auto detect"
   },
   "common": {
@@ -559,8 +562,8 @@
     "title": "Help Center & FAQ",
     "subtitle": "Have a question? Find your answer easily",
     "searchPlaceholder": "Search in help...",
-    "faqTitle": "Frequently Asked Questions",
-    "contactTitle": "Need additional help?",
+    "faqTitle": "FAQ",
+    "contactTitle": "Need help?",
     "contactSubtitle": "Our Ngaoundéré support team is here to help you",
     "whatsappBtn": "Chat on WhatsApp",
     "callBtn": "Call Support",

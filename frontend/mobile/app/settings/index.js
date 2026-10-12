@@ -24,9 +24,9 @@ import api from '../../services/api';
 import { showAppModal } from '../../components/ui/AppModal';
 
 const LANGUAGES = [
-  { code: 'fr', label: 'Français', sublabel: 'Langue par défaut' },
-  { code: 'en', label: 'English',  sublabel: 'English translation' },
-  { code: 'ful', label: 'Fulfulde', sublabel: 'Fulfulde Adamaoua' },
+  { code: 'fr', labelKey: 'language.fr', sublabelKey: 'language.frDescription' },
+  { code: 'en', labelKey: 'language.en', sublabelKey: 'language.enDescription' },
+  { code: 'ful', labelKey: 'language.ful', sublabelKey: 'language.fulDescription' },
 ];
 
 export default function SettingsScreen() {
@@ -378,8 +378,8 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.langLabel, active && styles.langLabelActive]}>{item.label}</Text>
-                    <Text style={styles.langSublabel}>{item.sublabel}</Text>
+                    <Text style={[styles.langLabel, active && styles.langLabelActive]}>{t(item.labelKey)}</Text>
+                    <Text style={styles.langSublabel}>{t(item.sublabelKey)}</Text>
                   </View>
                   {active && <CheckCircle2 size={20} color={colors.primary} strokeWidth={2.5} />}
                 </TouchableOpacity>

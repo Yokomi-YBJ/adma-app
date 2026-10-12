@@ -460,6 +460,9 @@
     "fr": "Français",
     "en": "English",
     "ful": "Fulfulde",
+    "frDescription": "Interface et menus en français",
+    "enDescription": "Interface et menus en anglais",
+    "fulDescription": "Interface et menus en fulfulde",
     "autoDetect": "Détection automatique"
   },
   "common": {
@@ -559,8 +562,8 @@
     "title": "Centre d'aide & FAQ",
     "subtitle": "Une question ? Trouvez facilement votre réponse",
     "searchPlaceholder": "Rechercher dans l'aide...",
-    "faqTitle": "Questions fréquentes",
-    "contactTitle": "Besoin d'aide supplémentaire ?",
+    "faqTitle": "FAQ",
+    "contactTitle": "Besoin d'aide ?",
     "contactSubtitle": "Notre équipe basée à Ngaoundéré est à votre disposition",
     "whatsappBtn": "Écrire sur WhatsApp",
     "callBtn": "Appeler le support",
