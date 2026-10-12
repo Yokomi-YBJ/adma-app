@@ -17,6 +17,7 @@ import { colors } from '../../constants/colors';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import VerifiedBadge from '../../components/ui/VerifiedBadge';
+import { SkeletonBox } from '../../components/ui/Skeleton';
 import api from '../../services/api';
 
 // ── Couleurs de plan ─────────────────────────────────────────────
@@ -27,7 +28,6 @@ const PLAN_COLORS = {
   enterprise:   colors.navy,
 };
 
-// ── Icônes de statut de vérification (les labels viennent de t()) ─
 const VERIFICATION_COLORS = {
   none:        colors.textMuted,
   pending:     colors.warning,
@@ -41,6 +41,72 @@ const AVAILABILITY_COLORS = {
   unavailable: colors.danger,
 };
 
+// ── Skeleton de chargement (identique à l'esprit d'index.js) ─────
+function SkeletonContent({ insets }) {
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Header skeleton */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <SkeletonBox style={{ width: 120, height: 28, borderRadius: 8 }} />
+        <SkeletonBox style={{ width: 42, height: 42, borderRadius: 13 }} />
+      </View>
+
+      {/* Carte identité skeleton */}
+      <View style={styles.identityCard}>
+        <SkeletonBox style={{ width: 88, height: 88, borderRadius: 28, marginBottom: 14 }} />
+        <SkeletonBox style={{ width: 160, height: 20, borderRadius: 6, marginBottom: 8 }} />
+        <SkeletonBox style={{ width: 110, height: 14, borderRadius: 6 }} />
+      </View>
+
+      {/* Section espace pro skeleton */}
+      <View style={styles.section}>
+        <SkeletonBox style={{ width: 100, height: 12, borderRadius: 4, marginBottom: 16 }} />
+
+        {/* Carte prestataire skeleton */}
+        <View style={styles.previewCard}>
+          <View style={styles.previewTop}>
+            <SkeletonBox style={{ width: 64, height: 64, borderRadius: 16 }} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <SkeletonBox style={{ width: '70%', height: 16, borderRadius: 6 }} />
+              <SkeletonBox style={{ width: '50%', height: 13, borderRadius: 6 }} />
+              <SkeletonBox style={{ width: 90, height: 20, borderRadius: 12 }} />
+            </View>
+          </View>
+          <SkeletonBox style={{ width: '100%', height: 13, borderRadius: 6, marginBottom: 8 }} />
+          <SkeletonBox style={{ width: '85%', height: 13, borderRadius: 6, marginBottom: 14 }} />
+
+          <View style={styles.metricsRow}>
+            <View style={styles.metric}>
+              <SkeletonBox style={{ width: 36, height: 18, borderRadius: 6, marginBottom: 4 }} />
+              <SkeletonBox style={{ width: 50, height: 11, borderRadius: 4 }} />
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metric}>
+              <SkeletonBox style={{ width: 36, height: 18, borderRadius: 6, marginBottom: 4 }} />
+              <SkeletonBox style={{ width: 50, height: 11, borderRadius: 4 }} />
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metric}>
+              <SkeletonBox style={{ width: 36, height: 18, borderRadius: 6, marginBottom: 4 }} />
+              <SkeletonBox style={{ width: 50, height: 11, borderRadius: 4 }} />
+            </View>
+          </View>
+          <SkeletonBox style={{ width: '60%', height: 12, borderRadius: 4 }} />
+        </View>
+
+        {/* Bouton edit skeleton */}
+        <SkeletonBox style={{ width: '100%', height: 48, borderRadius: 14, marginBottom: 14 }} />
+
+        {/* Liens pro skeleton */}
+        <View style={styles.proLinks}>
+          <SkeletonBox style={{ width: '100%', height: 72, borderRadius: 14, marginBottom: 10 }} />
+          <SkeletonBox style={{ width: '100%', height: 72, borderRadius: 14 }} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // ── Écran principal ───────────────────────────────────────────────
 export default function ProfileScreen() {
   const { t }     = useTranslation();
@@ -49,11 +115,16 @@ export default function ProfileScreen() {
   const user      = useAuthStore((s) => s.user);
   const setProvider = useAuthStore((s) => s.setProvider);
 
-  const [provider,    setLocalProvider] = useState(null);
-  const [loadingProv, setLoadingProv]   = useState(true);
+  const [provider,       setLocalProvider] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingProv,    setLoadingProv]    = useState(true);
 
   const loadMyProvider = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setInitialLoading(false);
+      setLoadingProv(false);
+      return;
+    }
     setLoadingProv(true);
     try {
       const res = await api.get('/providers/me');
@@ -64,13 +135,24 @@ export default function ProfileScreen() {
       setLocalProvider(null);
     } finally {
       setLoadingProv(false);
+      setInitialLoading(false);
     }
   }, [user]);
 
   useEffect(() => { loadMyProvider(); }, [loadMyProvider]);
 
+  // ── Vue invité (pas de loading car pas de fetch) ────────────────
   if (!user) {
     return <GuestView insets={insets} router={router} t={t} />;
+  }
+
+  // ── Skeleton pendant le premier chargement ──────────────────────
+  if (initialLoading) {
+    return (
+      <View style={styles.flex}>
+        <SkeletonContent insets={insets} />
+      </View>
+    );
   }
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || t('provider.you');
