@@ -24,16 +24,15 @@ privacy-policy/
 
 **Vercel** : créer un projet lié au dépôt et définir *Root Directory* sur `WebSite`. Aucun build n'est nécessaire. `vercel.json` active les URL sans extension pour que les pages HTML restent accessibles directement.
 
-## Quand le nom de domaine est connu
+## Domaine de production
 
-Le site n'est pas encore sous un domaine définitif. Tant que ce n'est pas fait, les URL absolues (sitemap, canonical, image de partage) restent relatives ou factices. Une fois le domaine choisi :
+Le site est hébergé sur Vercel : https://adma-app-website.vercel.app. Les URL canoniques, Open Graph, Twitter Cards, JSON-LD, sitemap et robots.txt sont configurés pour ce domaine. Pour le changer, relancez le script avec le nouveau domaine :
 
 ```
-python3 scripts/configure.py --domain https://www.mon-domaine.cm \
-  --contact contact@mon-domaine.cm --privacy privacy@mon-domaine.cm
+python3 scripts/configure.py --domain https://votre-nouveau-domaine.cm
 ```
 
-Le script met à jour `sitemap.xml`, `robots.txt`, les balises canonical, Open Graph, Twitter Cards, le JSON-LD, et remplace les adresses e-mail `contact@adma.cm` et `privacy@adma.cm` dans toutes les pages. Les adresses e-mail actuelles sont des adresses à confirmer : elles ne fonctionneront que si le domaine correspondant existe.
+Le script met à jour `sitemap.xml`, `robots.txt`, les balises canonical, Open Graph, Twitter Cards et le JSON-LD. Il peut aussi remplacer les adresses de contact si nécessaire.
 
 ## Mettre à jour l'APK
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://votre-domaine.example/</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://votre-domaine.example/cgu.html</loc><lastmod>2026-10-11</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://votre-domaine.example/politique-confidentialite.html</loc><lastmod>2026-10-11</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://votre-domaine.example/mentions-legales.html</loc><lastmod>2026-10-11</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://adma-app-website.vercel.app/</loc><lastmod>2026-10-11</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://adma-app-website.vercel.app/cgu.html</loc><lastmod>2026-10-11</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://adma-app-website.vercel.app/politique-confidentialite.html</loc><lastmod>2026-10-11</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://adma-app-website.vercel.app/mentions-legales.html</loc><lastmod>2026-10-11</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
