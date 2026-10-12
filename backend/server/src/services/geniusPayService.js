@@ -1,6 +1,10 @@
 /**
  * ADMA — Service GeniusPay (Mobile Money Afrique)
  * Orange Money + MTN MoMo Cameroun (XAF)
+ *
+ * ✅ User-Agent + Accept + redirect:manual → évite les redirections HTML
+ * ✅ XOF au lieu de XAF → devise pivot GeniusPay
+ * ✅ Payload simplifié (mode checkout) → pas de payment_method
  */
 import crypto from 'crypto';
 import { config } from '../config/env.js';
@@ -11,18 +15,17 @@ async function geniusPayRequest(method, path, body = null) {
   const url     = `${config.geniusPay.baseUrl}${path}`;
   const payload = body ? JSON.stringify(body) : '';
 
-  // 🔍 LOG CRITIQUE : affiche l'URL COMPLÈTE et le baseUrl utilisé
-  logger.info('🔍 URL GENIUSPAY CONSTRUITE', {
-    baseUrl:  config.geniusPay.baseUrl,
+  // 🔍 LOG CRITIQUE : URL exacte construite
+  logger.info('🔍 URL GENIUSPAY', {
+    baseUrl:       config.geniusPay.baseUrl,
     baseUrlLength: config.geniusPay.baseUrl?.length,
-    baseUrlHex: config.geniusPay.baseUrl?.split('').map(c => c.charCodeAt(0)).join(','),
     path,
-    fullUrl:  url,
-    hasTrailingSpace: config.geniusPay.baseUrl?.endsWith(' '),
-    hasLeadingSpace:  config.geniusPay.baseUrl?.startsWith(' '),
+    fullUrl:       url,
+    fullUrlLength: url.length,
+    method,
   });
 
-  // 🛡️ 1. Vérifier que les clés sont présentes
+  // 🛡️ 1. Vérifier les clés
   if (!config.geniusPay.apiKey || !config.geniusPay.secretKey) {
     const err = new Error(
       'GeniusPay : clés API manquantes (GENIUSPAY_API_KEY / GENIUSPAY_SECRET_KEY)'
@@ -33,19 +36,33 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  logger.debug('GeniusPay → requête', { method, url });
+  // 🔍 Log des headers (clés masquées)
+  logger.info('GeniusPay → headers envoyés', {
+    'Content-Type': 'application/json',
+    'Accept':       'application/json',
+    'User-Agent':   'AdmaBackend/1.0 (+https://adma-app.onrender.com)',
+    'X-API-Key':    config.geniusPay.apiKey
+      ? `${config.geniusPay.apiKey.slice(0, 12)}...`
+      : 'ABSENT',
+    'X-API-Secret': config.geniusPay.secretKey
+      ? `${config.geniusPay.secretKey.slice(0, 12)}...`
+      : 'ABSENT',
+  });
 
-  // 🛡️ 2. Fetch avec try/catch
+  // 🛡️ 2. Fetch avec headers complets + redirect:manual
   let res;
   try {
     res = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
+        'Accept':       'application/json',
+        'User-Agent':   'AdmaBackend/1.0 (+https://adma-app.onrender.com)',
         'X-API-Key':    config.geniusPay.apiKey,
         'X-API-Secret': config.geniusPay.secretKey,
       },
       ...(body ? { body: payload } : {}),
+      redirect: 'manual',  // ← NE PAS suivre les redirections
     });
   } catch (fetchErr) {
     logger.error('GeniusPay — fetch a échoué', {
@@ -58,29 +75,47 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  // 🛡️ 3. Vérifier le Content-Type AVANT de lire le body
+  // 🚨 3. DÉTECTION REDIRECTION (le bug caché !)
+  if (res.status >= 300 && res.status < 400) {
+    const location = res.headers.get('location');
+    logger.error('🚨 GeniusPay a REDIRIGÉ (au lieu de JSON)', {
+      status:   res.status,
+      location,
+      url,
+      hint:     'Sans User-Agent, GeniusPay redirige vers / → fetch suivait et recevait du HTML',
+    });
+    const err = new Error(
+      `GeniusPay a redirigé vers ${location} au lieu de répondre en JSON`
+    );
+    err.statusCode = 502;
+    err.code       = 'GENIUSPAY_REDIRECTED';
+    err.details    = { status: res.status, location, url };
+    throw err;
+  }
+
+  // 🛡️ 4. Vérifier le Content-Type
   const contentType = res.headers.get('content-type') || '';
 
-  // 🛡️ 4. Lire le corps brut (text)
+  // 🛡️ 5. Lire le corps brut
   const rawText = await res.text();
 
-  logger.debug('GeniusPay ← réponse brute', {
-    status: res.status,
+  logger.debug('GeniusPay ← réponse', {
+    status:      res.status,
     contentType,
     bodyPreview: rawText.slice(0, 300),
   });
 
-  // 🛡️ 5. Si HTML détecté → erreur claire
+  // 🛡️ 6. Si HTML → erreur explicite
   if (contentType.includes('text/html')) {
-    logger.error('GeniusPay — réponse HTML (mauvaise URL ?)', {
+    logger.error('🚨 GeniusPay — réponse HTML (mauvaise URL ?)', {
       url,
-      status: res.status,
+      status:      res.status,
       contentType,
       bodyPreview: rawText.slice(0, 200),
+      hint:        'Vérifie User-Agent, Accept, ou contacte le support GeniusPay',
     });
     const err = new Error(
-      `GeniusPay a renvoyé du HTML au lieu de JSON. ` +
-      `Vérifie que l'URL appelée est correcte : ${url}`
+      `GeniusPay a renvoyé du HTML au lieu de JSON. URL : ${url} | Statut : ${res.status}`
     );
     err.statusCode = 502;
     err.code       = 'GENIUSPAY_HTML_RESPONSE';
@@ -88,7 +123,7 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  // 🛡️ 6. Parser le JSON seulement si le corps n'est pas vide
+  // 🛡️ 7. Parser le JSON
   let data = null;
   if (rawText && rawText.length > 0) {
     try {
@@ -96,7 +131,7 @@ async function geniusPayRequest(method, path, body = null) {
     } catch (parseErr) {
       logger.error('GeniusPay — réponse non-JSON', {
         url,
-        status: res.status,
+        status:      res.status,
         contentType,
         bodyPreview: rawText.slice(0, 300),
       });
@@ -107,7 +142,7 @@ async function geniusPayRequest(method, path, body = null) {
     }
   }
 
-  // 🛡️ 7. Gérer les erreurs HTTP
+  // 🛡️ 8. Erreurs HTTP
   if (!res.ok) {
     logger.error('GeniusPay API error', {
       status: res.status,
@@ -123,7 +158,7 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  // 🛡️ 8. Corps vide = erreur explicite
+  // 🛡️ 9. Corps vide
   if (data === null) {
     logger.error('GeniusPay — réponse 2xx mais corps vide', {
       url,
@@ -142,6 +177,7 @@ async function geniusPayRequest(method, path, body = null) {
 function mapOperatorToMmo(operator) {
   const map = {
     orange_cmr:   'ORANGE_CMR',
+    mtm_momo_cmr: 'MTN_MOMO_CMR',
     mtn_momo_cmr: 'MTN_MOMO_CMR',
   };
   return map[operator] || null;
@@ -156,6 +192,8 @@ export async function initiatePayment({
   reference,
   description,
 }) {
+  // On valide l'opérateur côté serveur, même si on ne l'envoie plus à GeniusPay
+  // (mode checkout : c'est GeniusPay qui fait choisir l'utilisateur)
   const mmoProvider = mapOperatorToMmo(operator);
   if (!mmoProvider) {
     const err = new Error('Opérateur non supporté (Cameroun uniquement)');
@@ -164,17 +202,20 @@ export async function initiatePayment({
     throw err;
   }
 
+  // Normaliser le numéro
   const cleanedPhone = phone.replace(/\s/g, '');
   const finalPhone   = cleanedPhone.startsWith('+')
     ? cleanedPhone
     : `+237${cleanedPhone.replace(/^237/, '')}`;
 
+  // ⚠️ PAYLOAD SIMPLIFIÉ (mode checkout)
+  // → Retire payment_method + mmo_provider pour éviter les rejets sandbox
+  // → XOF au lieu de XAF (devise pivot GeniusPay)
+  // → description sans em-dash (—)
   const payload = {
     amount,
-    currency:       'XAF',
-    payment_method: 'pawapay',
-    mmo_provider:   mmoProvider,
-    description:    description || `Adma — Abonnement ${plan}`,
+    currency:    'XOF',
+    description: `Adma Abonnement ${plan}`,
     customer: {
       phone:   finalPhone,
       country: 'CM',
@@ -190,13 +231,14 @@ export async function initiatePayment({
     amount,
     operator,
     mmoProvider,
-    phone: finalPhone,
+    phone:     finalPhone,
     reference,
+    mode:      'checkout',  // pas de payment_method → mode checkout
   });
 
   const data = await geniusPayRequest('POST', '/payments', payload);
 
-  // 🛡️ Vérifier que data.data existe avant d'y accéder
+  // 🛡️ Vérifier data.data
   if (!data || !data.data) {
     logger.error('GeniusPay — réponse sans .data', { data });
     const err = new Error('Réponse GeniusPay sans données (data manquant)');
@@ -212,6 +254,7 @@ export async function initiatePayment({
     status:    d.status,
     amount:    d.amount,
     currency:  d.currency,
+    checkout:  d.checkout_url || d.payment_url,
   });
 
   return {
