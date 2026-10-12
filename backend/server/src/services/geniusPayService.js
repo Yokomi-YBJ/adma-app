@@ -11,6 +11,17 @@ async function geniusPayRequest(method, path, body = null) {
   const url     = `${config.geniusPay.baseUrl}${path}`;
   const payload = body ? JSON.stringify(body) : '';
 
+  // 🔍 LOG CRITIQUE : affiche l'URL COMPLÈTE et le baseUrl utilisé
+  logger.info('🔍 URL GENIUSPAY CONSTRUITE', {
+    baseUrl:  config.geniusPay.baseUrl,
+    baseUrlLength: config.geniusPay.baseUrl?.length,
+    baseUrlHex: config.geniusPay.baseUrl?.split('').map(c => c.charCodeAt(0)).join(','),
+    path,
+    fullUrl:  url,
+    hasTrailingSpace: config.geniusPay.baseUrl?.endsWith(' '),
+    hasLeadingSpace:  config.geniusPay.baseUrl?.startsWith(' '),
+  });
+
   // 🛡️ 1. Vérifier que les clés sont présentes
   if (!config.geniusPay.apiKey || !config.geniusPay.secretKey) {
     const err = new Error(
@@ -47,23 +58,47 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  // 🛡️ 3. Lire le corps brut (text) au lieu de res.json()
+  // 🛡️ 3. Vérifier le Content-Type AVANT de lire le body
+  const contentType = res.headers.get('content-type') || '';
+
+  // 🛡️ 4. Lire le corps brut (text)
   const rawText = await res.text();
 
   logger.debug('GeniusPay ← réponse brute', {
     status: res.status,
-    body:   rawText.slice(0, 500), // tronqué pour les logs
+    contentType,
+    bodyPreview: rawText.slice(0, 300),
   });
 
-  // 🛡️ 4. Parser le JSON seulement si le corps n'est pas vide
+  // 🛡️ 5. Si HTML détecté → erreur claire
+  if (contentType.includes('text/html')) {
+    logger.error('GeniusPay — réponse HTML (mauvaise URL ?)', {
+      url,
+      status: res.status,
+      contentType,
+      bodyPreview: rawText.slice(0, 200),
+    });
+    const err = new Error(
+      `GeniusPay a renvoyé du HTML au lieu de JSON. ` +
+      `Vérifie que l'URL appelée est correcte : ${url}`
+    );
+    err.statusCode = 502;
+    err.code       = 'GENIUSPAY_HTML_RESPONSE';
+    err.details    = { url, status: res.status, contentType };
+    throw err;
+  }
+
+  // 🛡️ 6. Parser le JSON seulement si le corps n'est pas vide
   let data = null;
   if (rawText && rawText.length > 0) {
     try {
       data = JSON.parse(rawText);
     } catch (parseErr) {
       logger.error('GeniusPay — réponse non-JSON', {
+        url,
         status: res.status,
-        body:   rawText.slice(0, 500),
+        contentType,
+        bodyPreview: rawText.slice(0, 300),
       });
       const err = new Error('Réponse GeniusPay invalide (non-JSON)');
       err.statusCode = 502;
@@ -72,7 +107,7 @@ async function geniusPayRequest(method, path, body = null) {
     }
   }
 
-  // 🛡️ 5. Gérer les erreurs HTTP
+  // 🛡️ 7. Gérer les erreurs HTTP
   if (!res.ok) {
     logger.error('GeniusPay API error', {
       status: res.status,
@@ -88,7 +123,7 @@ async function geniusPayRequest(method, path, body = null) {
     throw err;
   }
 
-  // 🛡️ 6. Corps vide = erreur explicite
+  // 🛡️ 8. Corps vide = erreur explicite
   if (data === null) {
     logger.error('GeniusPay — réponse 2xx mais corps vide', {
       url,
