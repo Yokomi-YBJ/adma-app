@@ -235,7 +235,7 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.rowTextWrap}>
                 <Text style={styles.rowLabel}>{t('settings.appLanguage', 'Langue de l\'application')}</Text>
-                <Text style={styles.rowSub}>{currentLangObj.label}</Text>
+                <Text style={styles.rowSub}>{t(currentLangObj.labelKey)}</Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
