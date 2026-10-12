@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Linking,
   KeyboardAvoidingView, Platform, Animated, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -303,9 +303,21 @@ export default function LoginScreen() {
 
           {step === 1 && (
             <Text style={styles.legal}>
-              En continuant, vous acceptez nos{' '}
-              <Text style={styles.legalLink}>Conditions</Text> et notre{' '}
-              <Text style={styles.legalLink}>Politique de confidentialité</Text>
+              {t('auth.legalConsent')}{' '}
+              <Text
+                style={styles.legalLink}
+                onPress={() => Linking.openURL('https://adma-app-website.vercel.app/cgu.html')}
+                accessibilityRole="link"
+              >
+                {t('auth.termsLink')}
+              </Text>{' '}{t('auth.legalAnd')}{' '}
+              <Text
+                style={styles.legalLink}
+                onPress={() => Linking.openURL('https://adma-app-website.vercel.app/politique-confidentialite.html')}
+                accessibilityRole="link"
+              >
+                {t('auth.privacyLink')}
+              </Text>
             </Text>
           )}
         </View>

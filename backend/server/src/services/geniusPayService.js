@@ -1,10 +1,6 @@
 /**
  * ADMA — Service GeniusPay (Mobile Money Afrique)
  * Orange Money + MTN MoMo Cameroun (XAF)
- * Documentation : https://geniuspay.ci/docs/api
- *
- * ⚠️  On utilise uniquement XAF (Cameroun) — pas de conversion XOF.
- *     Le Cameroun est listé comme pays supporté : CM → XAF.
  */
 import crypto from 'crypto';
 import { config } from '../config/env.js';
@@ -15,23 +11,68 @@ async function geniusPayRequest(method, path, body = null) {
   const url     = `${config.geniusPay.baseUrl}${path}`;
   const payload = body ? JSON.stringify(body) : '';
 
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key':    config.geniusPay.apiKey,
-      'X-API-Secret': config.geniusPay.secretKey,
-    },
-    ...(body ? { body: payload } : {}),
-  });
-
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
+  // 🛡️ 1. Vérifier que les clés sont présentes
+  if (!config.geniusPay.apiKey || !config.geniusPay.secretKey) {
+    const err = new Error(
+      'GeniusPay : clés API manquantes (GENIUSPAY_API_KEY / GENIUSPAY_SECRET_KEY)'
+    );
+    err.statusCode = 500;
+    err.code       = 'GENIUSPAY_CONFIG_MISSING';
+    logger.error(err.message);
+    throw err;
   }
 
+  logger.debug('GeniusPay → requête', { method, url });
+
+  // 🛡️ 2. Fetch avec try/catch
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key':    config.geniusPay.apiKey,
+        'X-API-Secret': config.geniusPay.secretKey,
+      },
+      ...(body ? { body: payload } : {}),
+    });
+  } catch (fetchErr) {
+    logger.error('GeniusPay — fetch a échoué', {
+      url,
+      error: fetchErr.message,
+    });
+    const err = new Error(`Impossible de joindre GeniusPay : ${fetchErr.message}`);
+    err.statusCode = 502;
+    err.code       = 'GENIUSPAY_NETWORK_ERROR';
+    throw err;
+  }
+
+  // 🛡️ 3. Lire le corps brut (text) au lieu de res.json()
+  const rawText = await res.text();
+
+  logger.debug('GeniusPay ← réponse brute', {
+    status: res.status,
+    body:   rawText.slice(0, 500), // tronqué pour les logs
+  });
+
+  // 🛡️ 4. Parser le JSON seulement si le corps n'est pas vide
+  let data = null;
+  if (rawText && rawText.length > 0) {
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      logger.error('GeniusPay — réponse non-JSON', {
+        status: res.status,
+        body:   rawText.slice(0, 500),
+      });
+      const err = new Error('Réponse GeniusPay invalide (non-JSON)');
+      err.statusCode = 502;
+      err.code       = 'GENIUSPAY_INVALID_RESPONSE';
+      throw err;
+    }
+  }
+
+  // 🛡️ 5. Gérer les erreurs HTTP
   if (!res.ok) {
     logger.error('GeniusPay API error', {
       status: res.status,
@@ -39,11 +80,23 @@ async function geniusPayRequest(method, path, body = null) {
       data,
     });
     const err = new Error(
-      data?.error?.message || data?.message || 'Erreur GeniusPay'
+      data?.error?.message || data?.message || `Erreur GeniusPay (HTTP ${res.status})`
     );
     err.statusCode = 502;
     err.code       = data?.error?.code || 'GENIUSPAY_ERROR';
     err.details    = data;
+    throw err;
+  }
+
+  // 🛡️ 6. Corps vide = erreur explicite
+  if (data === null) {
+    logger.error('GeniusPay — réponse 2xx mais corps vide', {
+      url,
+      status: res.status,
+    });
+    const err = new Error('Réponse GeniusPay vide');
+    err.statusCode = 502;
+    err.code       = 'GENIUSPAY_EMPTY_RESPONSE';
     throw err;
   }
 
@@ -60,16 +113,6 @@ function mapOperatorToMmo(operator) {
 }
 
 // ── Initier un paiement ─────────────────────────────────────────
-/**
- * @param {Object} params
- * @param {number} params.amount       - Montant en XAF (entier)
- * @param {string} params.phone        - Numéro au format international (+2376XXXXXXXX)
- * @param {string} params.operator     - 'orange_cmr' | 'mtn_momo_cmr'
- * @param {string} params.plan         - 'premium' | 'professional' | 'enterprise'
- * @param {string} params.reference    - Référence externe unique (ex: PAY-...)
- * @param {string} [params.description]- Description optionnelle
- * @returns {Promise<{paymentId, reference, status, paymentUrl}>}
- */
 export async function initiatePayment({
   amount,
   phone,
@@ -86,22 +129,20 @@ export async function initiatePayment({
     throw err;
   }
 
-  // Nettoyage du numéro : retirer espaces et forcer +237...
   const cleanedPhone = phone.replace(/\s/g, '');
   const finalPhone   = cleanedPhone.startsWith('+')
     ? cleanedPhone
     : `+237${cleanedPhone.replace(/^237/, '')}`;
 
-  // Payload GeniusPay — XAF uniquement
   const payload = {
-    amount,                                // en XAF
-    currency:       'XAF',                 // ← forcé en XAF (Cameroun)
-    payment_method: 'pawapay',             // agrégateur MMO
-    mmo_provider:   mmoProvider,           // ORANGE_CMR ou MTN_MOMO_CMR
+    amount,
+    currency:       'XAF',
+    payment_method: 'pawapay',
+    mmo_provider:   mmoProvider,
     description:    description || `Adma — Abonnement ${plan}`,
     customer: {
       phone:   finalPhone,
-      country: 'CM',                       // ← Cameroun
+      country: 'CM',
     },
     metadata: {
       plan,
@@ -110,8 +151,26 @@ export async function initiatePayment({
     },
   };
 
+  logger.info('GeniusPay → initiatePayment', {
+    amount,
+    operator,
+    mmoProvider,
+    phone: finalPhone,
+    reference,
+  });
+
   const data = await geniusPayRequest('POST', '/payments', payload);
-  const d    = data.data || {};
+
+  // 🛡️ Vérifier que data.data existe avant d'y accéder
+  if (!data || !data.data) {
+    logger.error('GeniusPay — réponse sans .data', { data });
+    const err = new Error('Réponse GeniusPay sans données (data manquant)');
+    err.statusCode = 502;
+    err.code       = 'GENIUSPAY_NO_DATA';
+    throw err;
+  }
+
+  const d = data.data;
 
   logger.info('GeniusPay — Paiement initié', {
     reference: d.reference,
@@ -129,10 +188,19 @@ export async function initiatePayment({
   };
 }
 
-// ── Vérifier un paiement (par référence MTX-...) ────────────────
+// ── Vérifier un paiement ────────────────────────────────────────
 export async function verifyPayment(reference) {
   const data = await geniusPayRequest('GET', `/payments/${reference}`);
-  const d    = data.data || {};
+
+  if (!data || !data.data) {
+    logger.error('GeniusPay — verifyPayment sans .data', { reference, data });
+    const err = new Error('Réponse GeniusPay sans données');
+    err.statusCode = 502;
+    err.code       = 'GENIUSPAY_NO_DATA';
+    throw err;
+  }
+
+  const d = data.data;
 
   return {
     id:            d.id,
@@ -165,27 +233,12 @@ function mapStatus(s) {
 }
 
 // ── Vérification signature webhook ──────────────────────────────
-/**
- * Format GeniusPay :
- *   signature = HMAC-SHA256( timestamp + "." + json_payload , webhook_secret )
- *
- * Headers :
- *   X-Webhook-Signature
- *   X-Webhook-Timestamp
- *   X-Webhook-Event
- *
- * @param {Buffer|string} rawBody   - Corps brut de la requête (NON parsé)
- * @param {string}        signature - X-Webhook-Signature
- * @param {string}        timestamp - X-Webhook-Timestamp (Unix seconds)
- * @returns {boolean}
- */
 export function verifyWebhookSignature(rawBody, signature, timestamp) {
   if (!config.geniusPay.webhookSecret || !signature || !timestamp) {
     logger.warn('GeniusPay webhook — secret/signature/timestamp manquant');
     return false;
   }
 
-  // Protection replay : rejet si timestamp > 5 min
   const now = Math.floor(Date.now() / 1000);
   const ts  = parseInt(timestamp, 10);
   if (!Number.isFinite(ts) || Math.abs(now - ts) > 300) {
@@ -209,21 +262,4 @@ export function verifyWebhookSignature(rawBody, signature, timestamp) {
   } catch {
     return false;
   }
-}
-
-// ── Helpers (bonus) ─────────────────────────────────────────────
-/**
- * Liste des opérateurs MMO disponibles pour le Cameroun
- */
-export async function getCamerounProviders() {
-  const data = await geniusPayRequest('GET', '/pawapay/providers?country=CM');
-  return data.data?.providers || [];
-}
-
-/**
- * Solde du compte marchand GeniusPay
- */
-export async function getBalance() {
-  const data = await geniusPayRequest('GET', '/account/balance');
-  return data.data;
 }

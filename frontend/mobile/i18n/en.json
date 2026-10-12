@@ -18,7 +18,11 @@
     "invalidPhone": "Invalid number. Example: 6XXXXXXXX",
     "otpSent": "Code sent successfully",
     "otpInvalid": "Invalid code",
-    "otpExpired": "Code expired. Request a new one."
+    "otpExpired": "Code expired. Request a new one.",
+    "legalConsent": "By continuing, you agree to our",
+    "termsLink": "Terms",
+    "legalAnd": "and our",
+    "privacyLink": "Privacy Policy"
   },
   "onboarding": {
     "step1Title": "Find the right provider",
@@ -582,8 +586,10 @@
     "heroTitle": "Your data, your control",
     "heroSub": "ADMA is committed to protecting your privacy and handling your data transparently.",
     "onlineLink": "View complete policy online",
+    "termsTitle": "Terms of use",
     "policyTitle": "Privacy policy",
-    "policyUrl": "adma.onrender.com/confidentialite",
+    "policyUrl": "adma-app-website.vercel.app/politique-confidentialite.html",
+    "mentionsTitle": "Legal notices",
     "footer": "By using ADMA, you accept these terms.\nLast updated: September 2026",
     "dataTitle": "Data Protection",
     "dataText": "ADMA only collects information necessary to connect clients and service providers: contact details, profile photos and account identifiers. All data is encrypted in transit (HTTPS) and never sold to third parties.",

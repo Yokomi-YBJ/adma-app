@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, ActivityIndicator,
+  Image, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +20,7 @@ import VerifiedBadge from '../../components/ui/VerifiedBadge';
 import { SkeletonBox } from '../../components/ui/Skeleton';
 import api from '../../services/api';
 
-// ── Couleurs de plan ─────────────────────────────────────────────
+// ── Couleurs ─────────────────────────────────────────────────────
 const PLAN_COLORS = {
   free:         colors.textMuted,
   premium:      colors.primary,
@@ -41,28 +41,24 @@ const AVAILABILITY_COLORS = {
   unavailable: colors.danger,
 };
 
-// ── Skeleton de chargement (identique à l'esprit d'index.js) ─────
+// ── Skeleton de chargement ──────────────────────────────────────
 function SkeletonContent({ insets }) {
   return (
     <View style={{ flex: 1 }}>
-      {/* Header skeleton */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <SkeletonBox style={{ width: 120, height: 28, borderRadius: 8 }} />
         <SkeletonBox style={{ width: 42, height: 42, borderRadius: 13 }} />
       </View>
 
-      {/* Carte identité skeleton */}
       <View style={styles.identityCard}>
         <SkeletonBox style={{ width: 88, height: 88, borderRadius: 28, marginBottom: 14 }} />
         <SkeletonBox style={{ width: 160, height: 20, borderRadius: 6, marginBottom: 8 }} />
         <SkeletonBox style={{ width: 110, height: 14, borderRadius: 6 }} />
       </View>
 
-      {/* Section espace pro skeleton */}
       <View style={styles.section}>
         <SkeletonBox style={{ width: 100, height: 12, borderRadius: 4, marginBottom: 16 }} />
 
-        {/* Carte prestataire skeleton */}
         <View style={styles.previewCard}>
           <View style={styles.previewTop}>
             <SkeletonBox style={{ width: 64, height: 64, borderRadius: 16 }} />
@@ -94,10 +90,8 @@ function SkeletonContent({ insets }) {
           <SkeletonBox style={{ width: '60%', height: 12, borderRadius: 4 }} />
         </View>
 
-        {/* Bouton edit skeleton */}
         <SkeletonBox style={{ width: '100%', height: 48, borderRadius: 14, marginBottom: 14 }} />
 
-        {/* Liens pro skeleton */}
         <View style={styles.proLinks}>
           <SkeletonBox style={{ width: '100%', height: 72, borderRadius: 14, marginBottom: 10 }} />
           <SkeletonBox style={{ width: '100%', height: 72, borderRadius: 14 }} />
@@ -107,7 +101,7 @@ function SkeletonContent({ insets }) {
   );
 }
 
-// ── Écran principal ───────────────────────────────────────────────
+// ── Écran principal ─────────────────────────────────────────────
 export default function ProfileScreen() {
   const { t }     = useTranslation();
   const router    = useRouter();
@@ -117,15 +111,18 @@ export default function ProfileScreen() {
 
   const [provider,       setLocalProvider] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [loadingProv,    setLoadingProv]    = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
+  const [loadingProv,    setLoadingProv]    = useState(false);
 
-  const loadMyProvider = useCallback(async () => {
+  // ── Chargement de la fiche prestataire ──────────────────────────
+  // isRefresh = true → pull-to-refresh (pas de skeleton, juste le spinner)
+  const loadMyProvider = useCallback(async (isRefresh = false) => {
     if (!user) {
       setInitialLoading(false);
-      setLoadingProv(false);
       return;
     }
-    setLoadingProv(true);
+
+    if (!isRefresh) setLoadingProv(true);
     try {
       const res = await api.get('/providers/me');
       const data = res.data.data;
@@ -136,12 +133,20 @@ export default function ProfileScreen() {
     } finally {
       setLoadingProv(false);
       setInitialLoading(false);
+      if (isRefresh) setRefreshing(false);
     }
-  }, [user]);
+  }, [user, setProvider]);
 
-  useEffect(() => { loadMyProvider(); }, [loadMyProvider]);
+  // Premier chargement
+  useEffect(() => { loadMyProvider(false); }, [loadMyProvider]);
 
-  // ── Vue invité (pas de loading car pas de fetch) ────────────────
+  // Pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadMyProvider(true);
+  }, [loadMyProvider]);
+
+  // ── Vue invité ──────────────────────────────────────────────────
   if (!user) {
     return <GuestView insets={insets} router={router} t={t} />;
   }
@@ -155,6 +160,7 @@ export default function ProfileScreen() {
     );
   }
 
+  // ── Données calculées ──────────────────────────────────────────
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || t('provider.you');
   const initials = fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const verStatus = provider?.verificationStatus || 'none';
@@ -175,7 +181,18 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         {/* Carte identité */}
         <View style={styles.identityCard}>
           {user.avatarUrl || user.avatar_url ? (
@@ -260,7 +277,7 @@ export default function ProfileScreen() {
   );
 }
 
-// ── Aperçu fiche prestataire ──────────────────────────────────────
+// ── Aperçu fiche prestataire ────────────────────────────────────
 function ProviderPreview({ provider, verLabel, verColor, t }) {
   const availColor = AVAILABILITY_COLORS[provider.availability] || AVAILABILITY_COLORS.available;
   const availLabel = t(`provider.${provider.availability || 'available'}`);
@@ -293,9 +310,9 @@ function ProviderPreview({ provider, verLabel, verColor, t }) {
       )}
 
       <View style={styles.metricsRow}>
-        <Metric label={t('provider.reviews')}      value={provider.reviewCount || 0} />
+        <Metric label={t('provider.reviews')}        value={provider.reviewCount || 0} />
         <View style={styles.metricDivider} />
-        <Metric label={t('provider.trustScore')}   value={`${provider.trustScore || 0}%`} />
+        <Metric label={t('provider.trustScore')}     value={`${provider.trustScore || 0}%`} />
         <View style={styles.metricDivider} />
         <Metric label={t('provider.viewsThisMonth')} value={provider.viewsThisMonth || 0} />
       </View>
@@ -316,7 +333,7 @@ function Metric({ label, value }) {
   );
 }
 
-// ── Lien action rapide ────────────────────────────────────────────
+// ── Lien action rapide ──────────────────────────────────────────
 function ProLink({ icon, title, value, valueColor, onPress }) {
   return (
     <TouchableOpacity style={styles.proLinkCard} onPress={onPress} activeOpacity={0.7}>
@@ -330,7 +347,7 @@ function ProLink({ icon, title, value, valueColor, onPress }) {
   );
 }
 
-// ── Vue invité ────────────────────────────────────────────────────
+// ── Vue invité ──────────────────────────────────────────────────
 function GuestView({ insets, router, t }) {
   return (
     <View style={[styles.flex, { paddingTop: insets.top, backgroundColor: colors.background }]}>
@@ -353,7 +370,7 @@ function GuestView({ insets, router, t }) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────
+// ── Styles ──────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
 

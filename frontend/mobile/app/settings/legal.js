@@ -42,8 +42,14 @@ export default function LegalScreen() {
     { id: 'deletion',       icon: Trash2,         color: '#EF4444',      bg: '#FEF2F2',         label: t('legal.cniTitle'),            text: t('legal.cniText') },
   ];
 
-  const openPrivacyPolicy = () => {
-    Linking.openURL('https://adma.onrender.com/confidentialite').catch(() => {});
+  const documents = [
+    { id: 'terms', title: t('legal.termsTitle'), url: 'https://adma-app-website.vercel.app/cgu.html' },
+    { id: 'privacy', title: t('legal.policyTitle'), url: 'https://adma-app-website.vercel.app/politique-confidentialite.html' },
+    { id: 'mentions', title: t('legal.mentionsTitle'), url: 'https://adma-app-website.vercel.app/mentions-legales.html' },
+  ];
+
+  const openDocument = (url) => {
+    Linking.openURL(url).catch(() => {});
   };
 
   return (
@@ -74,18 +80,26 @@ export default function LegalScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.linkCard} onPress={openPrivacyPolicy} activeOpacity={0.8}>
-          <View style={styles.linkLeft}>
-            <View style={styles.linkIconWrap}>
-              <FileText size={20} color={colors.white} strokeWidth={2} />
+        {documents.map((document) => (
+          <TouchableOpacity
+            key={document.id}
+            style={styles.linkCard}
+            onPress={() => openDocument(document.url)}
+            activeOpacity={0.8}
+            accessibilityRole="link"
+          >
+            <View style={styles.linkLeft}>
+              <View style={styles.linkIconWrap}>
+                <FileText size={20} color={colors.white} strokeWidth={2} />
+              </View>
+              <View style={styles.linkTextWrap}>
+                <Text style={styles.linkTitle}>{document.title}</Text>
+                <Text style={styles.linkUrl}>{document.url.replace('https://', '')}</Text>
+              </View>
             </View>
-            <View style={styles.linkTextWrap}>
-              <Text style={styles.linkTitle}>{t('legal.policyTitle')}</Text>
-              <Text style={styles.linkUrl}>{t('legal.policyUrl')}</Text>
-            </View>
-          </View>
-          <ExternalLink size={20} color={colors.white} strokeWidth={2} />
-        </TouchableOpacity>
+            <ExternalLink size={20} color={colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        ))}
 
         <Text style={styles.footer}>{t('legal.footer')}</Text>
       </ScrollView>

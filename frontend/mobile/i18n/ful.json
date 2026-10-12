@@ -18,7 +18,11 @@
     "invalidPhone": "Nimero fenaande. Misaali: 6XXXXXXXX",
     "otpSent": "Kooduure nelnde",
     "otpInvalid": "Kooduure fenaande",
-    "otpExpired": "Kooduure balɗi. Ɗaɗnu kine."
+    "otpExpired": "Kooduure balɗi. Ɗaɗnu kine.",
+    "legalConsent": "So a yeesii yeeso, a jaɓii",
+    "termsLink": "Laabi huutoraade",
+    "legalAnd": "e",
+    "privacyLink": "Sariya reenaare sirri"
   },
   "onboarding": {
     "step1Title": "Yiyto jofniido booɗɗo",
@@ -582,8 +586,10 @@
     "heroTitle": "Keeje maa, toppitagol maa",
     "heroSub": "ADMA ɗo waɗa koo ɗume ngam reena nder sirri maa.",
     "onlineLink": "Ndaaru sariya fuu nder internet",
+    "termsTitle": "Laabi huutoraade",
     "policyTitle": "Sariya reenaare sirri",
-    "policyUrl": "adma.onrender.com/confidentialite",
+    "policyUrl": "adma-app-website.vercel.app/politique-confidentialite.html",
+    "mentionsTitle": "Haalanɗe sariya",
     "footer": "To a huutori ADMA, a jaɓii sariya ɗee.\nKesɗitinol cakkitiiɗo : lewru seeɗto 2026",
     "dataTitle": "Reenaare keeje",
     "dataText": "ADMA ɗon resnda tan keeje haanɗe ngam jokkondirgo yimɓe: nimero telefon, kootooji profil e konte. Keeje ɗe ɗon reenaa boo yeeyataake sam.",
