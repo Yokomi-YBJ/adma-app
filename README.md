@@ -8,7 +8,7 @@ Le produit est structuré comme une application multi-couches :
 - un backend API REST en Node.js / Express,
 - une interface d’administration web en React + Vite,
 - une application mobile en React Native / Expo,
-- une base de données MySQL,
+- une base de données TiDB Cloud, serverless et compatible MySQL,
 - des services tiers pour les SMS, les paiements, les emails et les notifications push.
 
 Le projet couvre plusieurs cas d’usage :
@@ -17,7 +17,7 @@ Le projet couvre plusieurs cas d’usage :
 - vérification de prestataires via pièces d’identité ;
 - avis et recommandations de clients ;
 - signalements et modération ;
-- notifications, abonnements premium, paiement mobile money avec KPay ;
+- notifications, abonnements premium et paiement mobile money avec GeniusPay ;
 - tableau de bord d’administration pour superviser les utilisateurs, prestataires, paiements et vérifications.
 
 ADMA a une logique à la fois commerciale et sociale : aider à la découverte de services de proximité tout en créant de la confiance grâce à la vérification, au classement, aux avis et à la modération.
@@ -95,7 +95,7 @@ Le rayon de visibilité détermine la distance maximale à laquelle la fiche du 
 
 #### Moyens de paiement
 
-Les paiements sont intégrés via KPay, un service de paiement mobile money au Cameroun (Orange Money et MTN MoMo).
+Les paiements passent par GeniusPay et l’agrégateur PawaPay, en Orange Money ou MTN MoMo Cameroun. La devise utilisée est le XAF. Les frais sont de 100 FCFA + 1 % par transaction réussie.
 
 #### Sources de revenus
 
@@ -163,12 +163,12 @@ Le parcours prestataire ressemble à ceci :
 ### 3.2 Services externes intégrés
 
 Le projet utilise plusieurs services tiers pour couvrir les besoins critiques :
-- Twilio : envoi de codes OTP/SMS,
+- Orange Developer Cameroun : envoi de codes OTP/SMS,
 - Cloudinary : stockage et transformation d’images,
-- KPay : paiement mobile money,
+- GeniusPay avec PawaPay : paiement mobile money,
 - Resend : envoi d’e-mails OTP admin,
 - Expo : notifications push mobiles,
-- MySQL : stockage des données transactionnelles.
+- TiDB Cloud : stockage serverless des données transactionnelles, compatible MySQL.
 
 ---
 
@@ -252,7 +252,7 @@ Elle permet :
 
 ### 4.4 Base de données
 
-Le système utilise MySQL 8.0+ avec un schéma relationnel détaillé contenant notamment :
+Le système utilise TiDB Cloud, une base serverless compatible MySQL, avec un schéma relationnel détaillé contenant notamment :
 - users,
 - otp_codes,
 - refresh_tokens,
@@ -275,6 +275,8 @@ Le système utilise MySQL 8.0+ avec un schéma relationnel détaillé contenant 
 - notifications,
 - notification_preferences.
 
+TiDB Cloud ne prenant pas en charge les triggers SQL ni les index FULLTEXT utilisés ici, les recalculs et recherches concernés sont gérés côté application.
+
 Cette organisation reflète le besoin d’un système à la fois transactionnel et orienté décision d’entreprise ou de modération.
 
 ---
@@ -285,7 +287,7 @@ Cette organisation reflète le besoin d’un système à la fois transactionnel 
 
 - Node.js >= 20
 - Express 5
-- MySQL 8+
+- TiDB Cloud (MySQL-compatible, serverless)
 - JWT (access + refresh)
 - bcryptjs pour le hachage
 - express-validator pour la validation
@@ -296,7 +298,7 @@ Cette organisation reflète le besoin d’un système à la fois transactionnel 
 - morgan pour les logs HTTP
 - node-cron pour les tâches planifiées
 - multer pour l’upload d’images
-- Twilio, Resend, Cloudinary, Expo SDK, KPay integration
+- Orange Developer Cameroun, Resend, Cloudinary, Expo SDK, GeniusPay / PawaPay
 
 ### 5.2 Frontend web admin
 
@@ -317,6 +319,7 @@ Cette organisation reflète le besoin d’un système à la fois transactionnel 
 - i18next pour l’internationalisation
 - Axios
 - NetInfo / expo-location / expo-notifications
+- expo-web-browser pour ouvrir la page de paiement GeniusPay
 - MapLibre React Native pour la cartographie
 
 ---
@@ -345,9 +348,9 @@ Charge le fichier `.env` depuis le dossier backend/server, puis centralise la co
 - configuration serveur,
 - base de données,
 - JWT,
-- Twilio,
+- Orange Developer Cameroun,
 - Cloudinary,
-- KPay,
+- GeniusPay,
 - Resend,
 - Expo,
 - paramètres de sécurité.
@@ -360,7 +363,7 @@ Le backend applique :
 - limite de débit globale via `globalRateLimit`,
 - validation des entrées,
 - gestion centralisée des erreurs,
-- protection spécifique des webhooks KPay utilisant le body brut avant le parser JSON.
+- protection spécifique du webhook GeniusPay utilisant le body brut avant le parser JSON.
 
 ### 6.4 Structure fonctionnelle
 
@@ -393,11 +396,15 @@ Chaque module route expose des endpoints REST :
 
 #### services
 Les services regroupent les intégrations externes et les traitements complexes :
-- `kpayService.js` : paiement mobile money,
-- `imgdbService.js` : stockage ou suppression d’images,
-- `notificationService.js` : notifications push / e-mail,
-- `cacheService.js` : gestion du cache,
-- `smsService.js` : envoi de SMS OTP.
+- `geniusPayService.js` : paiements GeniusPay via PawaPay,
+- `subscriptionService.js` : abonnements et downgrades différés,
+- `pricingService.js` : tarification et fidélité,
+- `imgdbService.js` : stockage d’images sur Cloudinary,
+- `notificationService.js` : notifications push Expo,
+- `cacheService.js` : cache mémoire LRU,
+- `smsService.js` : SMS OTP via Orange Developer,
+- `mailService.js` : e-mails via Resend,
+- `systemMonitorService.js` : monitoring système.
 
 #### middleware
 Les middlewares présentent :
@@ -495,7 +502,7 @@ La table `verification_requests` stocke :
 Les tables `subscriptions` et `payments` permettent de gérer :
 - les plans,
 - les montants,
-- les paiements KPay,
+- les paiements GeniusPay,
 - le statut des transactions,
 - la validité des abonnements.
 
@@ -534,6 +541,12 @@ La table `subscriptions` conserve un historique de chaque paiement avec :
 
 Ceci permet un audit précis du chiffre d’affaires et de l’impact du programme de fidélité.
 
+### 7.10 Downgrade différé
+
+La table `providers` contient `pending_plan_change` et `pending_plan_effective_at` pour enregistrer un changement de plan à venir. Une montée en gamme est appliquée immédiatement; une descente de gamme est programmée à la fin de la période en cours, et le plan actuel reste actif jusque-là.
+
+Le comportement est géré dans `subscriptionService.js`, `scheduler.js`, `paymentController.js` et `routes/webhooks.js`. Le prestataire peut consulter ou annuler sa programmation avec `GET /api/v1/payments/pending-plan` et `DELETE /api/v1/payments/pending-plan`. Le job `applyDueDowngrades` s’exécute toutes les 6 heures et lors du rattrapage au démarrage du serveur.
+
 ---
 
 ## 8. Sécurité du projet
@@ -568,8 +581,8 @@ Le backend prend en compte plusieurs niveaux de sécurité :
 Les fichiers `.env` et les secrets ne doivent pas être commités. Les variables nécessaires comprennent :
 - JWT secret,
 - DB credentials,
-- KPay credentials,
-- Twilio credentials,
+- GeniusPay credentials,
+- Orange Developer credentials,
 - Cloudinary credentials,
 - Resend API key,
 - Expo token.
@@ -582,7 +595,7 @@ Les fichiers `.env` et les secrets ne doivent pas être commités. Les variables
 
 1. l’utilisateur fournit un numéro de téléphone,
 2. le backend valide le format camerounais,
-3. envoie un OTP via Twilio,
+3. envoie un OTP via Orange Developer Cameroun,
 4. l’utilisateur valide le code,
 5. le système crée le compte,
 6. le backend génère un access token et un refresh token,
@@ -635,20 +648,20 @@ Le système met ensuite à jour les statistiques de confiance et le classement d
 
 ### 9.6 Abonnement et paiement
 
-Un prestataire peut souscrire à un plan premium avec paiement via KPay.
+Un prestataire peut souscrire à un plan avec paiement direct USSD via GeniusPay et PawaPay (Orange Money ou MTN MoMo Cameroun, en XAF).
 
 Le flux est :
 1. vérification de la validité du plan,
 2. calcul du prix de fidélité via `pricingService.js`,
 3. création d’un enregistrement de paiement,
-4. appel à l’API KPay,
+4. appel à l’API GeniusPay sur `https://geniuspay.ci/api/v1/merchant`,
 5. réception du statut,
 6. activation du plan si paiement réussi,
 7. mise à jour du compteur de fidélité et des dates d’expiration.
 
-### 9.7 Webhooks KPay
+### 9.7 Webhooks GeniusPay
 
-Le webhook KPay est traité par un routeur dédié. Il permet de confirmer le statut d’un paiement et de mettre à jour le système en temps réel.
+Le webhook GeniusPay est traité par un routeur dédié à l’URL `https://adma-app.onrender.com/api/v1/webhooks/geniuspay`. Il permet de confirmer le statut d’un paiement et de mettre à jour le système en temps réel.
 
 Important : le body est traité en `raw` avant le JSON parsing global pour garantir la vérification de signature et la fiabilité du traitement.
 
@@ -759,6 +772,12 @@ Important : le body est traité en `raw` avant le JSON parsing global pour garan
 #### GET `/api/v1/payments/:id/status`
 - Vérifie le statut d’un paiement.
 
+#### GET `/api/v1/payments/pending-plan`
+- Consulte le downgrade programmé du prestataire connecté.
+
+#### DELETE `/api/v1/payments/pending-plan`
+- Annule le downgrade programmé.
+
 ### 10.7 Notifications
 
 #### GET `/api/v1/notifications`
@@ -828,6 +847,7 @@ Le backend démarre plusieurs tâches automatiques via `node-cron` :
 - suppression des CNI après 24 heures (chaque heure),
 - rappels d’abonnement 3 jours avant expiration (8h chaque matin),
 - désactivation des plans expirés et réinitialisation de la fidélité après 30 jours (00h05),
+- application des downgrades échus toutes les 6 heures et au démarrage du serveur (`applyDueDowngrades`),
 - nettoyage des tokens OTP et refresh (2h chaque nuit),
 - relances sur prestataires inactifs depuis 30 jours (dimanche 10h).
 
@@ -841,10 +861,10 @@ Ces jobs garantissent la propreté du système et la bonne gestion des données 
 
 - Node.js 20+
 - npm ou pnpm
-- MySQL 8+
+- TiDB Cloud (serverless, compatible MySQL)
 - accès à un compte Cloudinary,
-- compte Twilio,
-- compte KPay,
+- compte Orange Developer Cameroun,
+- compte GeniusPay / PawaPay,
 - compte Resend,
 - compte Expo pour push notifications.
 
@@ -855,28 +875,36 @@ Le fichier `.env` backend contient au minimum :
 ```env
 NODE_ENV=development
 PORT=5000
+API_URL=http://localhost:5000
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=adma_db
+DB_SSL=false
 JWT_SECRET=...
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=30d
 ADMIN_JWT_SECRET=...
-TWILIO_ACCOUNT_SID=...
-TWILIO_AUTH_TOKEN=...
-TWILIO_PHONE_NUMBER=...
+ADMIN_JWT_EXPIRES=8h
+ORANGE_CLIENT_ID=...
+ORANGE_CLIENT_SECRET=...
+ORANGE_SENDER_NUMBER=...
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
-KPAY_API_KEY=...
-KPAY_SECRET_KEY=...
-KPAY_BASE_URL=https://admin.kpay.site/api/v1
-KPAY_WEBHOOK_SECRET=...
+GENIUSPAY_BASE_URL=https://geniuspay.ci/api/v1/merchant
+GENIUSPAY_API_KEY=...
+GENIUSPAY_SECRET_KEY=...
+GENIUSPAY_WEBHOOK_SECRET=...
 RESEND_API_KEY=...
 RESEND_FROM_EMAIL=...
 ADMIN_ALERT_EMAIL=admin@adma.cm
 EXPO_ACCESS_TOKEN=...
-CORS_ALLOWED_ORIGINS=http://localhost:3000
+CORS_ALLOWED_ORIGINS=http://localhost:4000
+BCRYPT_ROUNDS=12
+OTP_EXPIRES_MINUTES=10
+OTP_MAX_ATTEMPTS=3
 ```
 
 ### 12.3 Installation backend
@@ -941,13 +969,16 @@ La structure de base est créée par SQL. Les données initiales incluent les vi
 
 Pour production, on recommande :
 - un backend Node.js sur un VPS ou une instance cloud,
-- une base MySQL hébergée (MySQL Cloud, Cloud SQL, RDS, etc.),
+- le backend déployé sur `https://adma-app.onrender.com`,
+- une base TiDB Cloud serverless compatible MySQL,
 - stockage de fichiers/images sur Cloudinary,
 - CDN / reverse proxy si besoin,
 - HTTPS obligatoire,
 - mécanisme de surveillance de logs,
 - environnement séparé pour test et prod,
 - règle de sécurité sur les données privées.
+
+Webhook GeniusPay : `https://adma-app.onrender.com/api/v1/webhooks/geniuspay`.
 
 ### 13.2 Bonnes pratiques
 
@@ -1118,6 +1149,20 @@ Ce dépôt est un projet de développement interne / applicatif, sans licence ex
 
 ## 22. Changelog
 
+### v1.2 — GeniusPay + Downgrade différé (Oct 2026)
+
+- Migration KPay → GeniusPay.
+- Mode paiement direct USSD (Orange Money + MTN MoMo Cameroun) via PawaPay, en XAF.
+- Système de downgrade différé, avec upgrades immédiats et changements à la fin de période.
+- Migration Twilio → Orange Developer Cameroun.
+- Validation stricte de `planId`, `operator` et `phoneNumber` côté serveur.
+- Rate limit paiement porté à 5 tentatives (le code actuel est configuré à 3 tentatives par fenêtre de 10 minutes).
+- Reconnaissance du statut `payment.refunded` dans le mapping GeniusPay et dans la vérification du statut local; l’événement webhook `payment.refunded` est actuellement ignoré.
+- Priorité à la base de données locale sur l’API GeniusPay pour les statuts terminaux.
+- Notifications push lors de la programmation et de l’application d’un downgrade.
+- Invalidation du cache après downgrade.
+- Vérification de l’expiration du checkout côté frontend.
+
 ### v1.1 — Fidélité tarifaire
 
 - Ajout du système de fidélité évolutif.
@@ -1135,10 +1180,10 @@ Ce dépôt est un projet de développement interne / applicatif, sans licence ex
 
 ### v1.0 — Version initiale
 
-- MVP backend Node.js / Express + MySQL.
+- MVP backend Node.js / Express + TiDB Cloud (compatible MySQL).
 - Application mobile React Native / Expo.
 - Dashboard admin React + Vite.
-- Intégrations : Twilio, Cloudinary, KPay, Resend, Expo Push.
+- Intégrations : Orange Developer Cameroun, Cloudinary, GeniusPay / PawaPay, Resend, Expo Push.
 - Système d’avis, signalements et vérification CNI.
 - Système de notifications push avec canaux Android.
 - Recherche géolocalisée « Autour de moi ».

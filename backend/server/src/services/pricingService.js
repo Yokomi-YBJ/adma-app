@@ -1,5 +1,11 @@
 /**
  * ADMA — Service de tarification (fidélité progressive)
+ *
+ * Source de vérité : README.md section 2.4
+ * Grille tarifaire :
+ *   Premium      : 1300 → 1100 → 850
+ *   Professional : 3900 → 3200 → 2500
+ *   Enterprise   : 7500 → 6200 → 4900
  */
 
 // ── Hiérarchie des plans (0 = plus bas) ─────────────────────────
@@ -17,6 +23,14 @@ export const PLAN_DAYS = {
   enterprise:   30,
 };
 
+// ── Rayons de visibilité par plan (km) ──────────────────────────
+export const PLAN_RADIUS_KM = {
+  free:         3,
+  premium:      5,
+  professional: 8,
+  enterprise:   null, // illimité
+};
+
 // ── Vérifier si c'est un downgrade ──────────────────────────────
 export function isDowngrade(currentPlan, newPlan) {
   return (PLAN_LEVELS[newPlan] ?? 0) < (PLAN_LEVELS[currentPlan] ?? 0);
@@ -27,21 +41,21 @@ export function isUpgrade(currentPlan, newPlan) {
   return (PLAN_LEVELS[newPlan] ?? 0) > (PLAN_LEVELS[currentPlan] ?? 0);
 }
 
-// ── Calcul du prix avec fidélité ────────────────────────────────
-// (Garde ta logique existante — exemple ci-dessous)
+// ── Grille tarifaire (SOURCE DE VÉRITÉ — cf. README § 2.4) ──────
 const BASE_PRICES = {
-  premium:      { base: 5000,  prices: [5000,  4500,  4000] },
-  professional: { base: 10000, prices: [10000, 9000,  8000] },
-  enterprise:   { base: 20000, prices: [20000, 18000, 16000] },
+  premium:      { base: 1300, prices: [1300, 1100, 850] },
+  professional: { base: 3900, prices: [3900, 3200, 2500] },
+  enterprise:   { base: 7500, prices: [7500, 6200, 4900] },
 };
 
+// ── Calcul du prix avec fidélité ────────────────────────────────
 export function computePrice(plan, loyaltyMonths = 0) {
   const config = BASE_PRICES[plan];
   if (!config) {
     throw new Error(`Plan inconnu: ${plan}`);
   }
 
-  const step = Math.min(loyaltyMonths, 2); // 0, 1, 2
+  const step = Math.min(Math.max(0, loyaltyMonths), 2);
   const finalPrice = config.prices[step];
   const basePrice  = config.base;
   const discountPercent = Math.round(
@@ -60,8 +74,6 @@ export function computePrice(plan, loyaltyMonths = 0) {
 export function computeNewLoyaltyMonths(provider) {
   const current = provider.loyalty_months || 0;
 
-  // Si le dernier renouvellement était il y a moins de 60 jours
-  // → on incrémente, sinon on repart de 0
   if (!provider.last_renewal_at) {
     return 1;
   }
@@ -72,5 +84,23 @@ export function computeNewLoyaltyMonths(provider) {
   if (daysSince <= 60) {
     return Math.min(current + 1, 3);
   }
-  return 1; // reset
+  return 1;
+}
+
+// ── Grille complète pour l'écran Forfaits (mobile) ──────────────
+export function getPlansGrid() {
+  return {
+    premium: {
+      prices: BASE_PRICES.premium.prices,
+      radius: PLAN_RADIUS_KM.premium,
+    },
+    professional: {
+      prices: BASE_PRICES.professional.prices,
+      radius: PLAN_RADIUS_KM.professional,
+    },
+    enterprise: {
+      prices: BASE_PRICES.enterprise.prices,
+      radius: PLAN_RADIUS_KM.enterprise,
+    },
+  };
 }
