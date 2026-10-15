@@ -1,5 +1,6 @@
 /**
  * ADMA — Contrôleur Authentification Admin
+ * ✅ Anti-brute-force (lockout 15 min après 5 échecs par email+IP)
  */
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -13,6 +14,47 @@ import { Resend } from 'resend';
 const resend = new Resend(config.resend.apiKey);
 const OTP_MIN = 10;
 
+// ── Anti-brute-force : compteur d'échecs en mémoire ────────────
+// Clé : `${email}:${ip}` — Reset sur redéploiement
+// Pour une solution persistante, migrer vers une table `admin_login_attempts`
+const loginAttempts  = new Map();
+const LOCKOUT_THRESHOLD   = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 min
+
+function isLocked(email, ip) {
+  const key   = `${email}:${ip}`;
+  const entry = loginAttempts.get(key);
+  if (!entry) return false;
+
+  // Expiré → on nettoie
+  if (Date.now() - entry.firstAt > LOCKOUT_DURATION_MS) {
+    loginAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= LOCKOUT_THRESHOLD;
+}
+
+function recordFailure(email, ip) {
+  const key   = `${email}:${ip}`;
+  const entry = loginAttempts.get(key) || { count: 0, firstAt: Date.now() };
+  entry.count++;
+  loginAttempts.set(key, entry);
+}
+
+function recordSuccess(email, ip) {
+  loginAttempts.delete(`${email}:${ip}`);
+}
+
+// ── Nettoyage périodique du Map (toutes les 30 min) ────────────
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of loginAttempts.entries()) {
+    if (now - entry.firstAt > LOCKOUT_DURATION_MS) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 30 * 60 * 1000);
+
 /**
  * Connexion initiale (envoi OTP par email)
  */
@@ -24,21 +66,40 @@ export const login = async (req, res, next) => {
 
   const { email, password } = req.body;
 
+  // ⚡ Anti-brute-force : vérifier si email+IP est bloqué
+  if (isLocked(email, req.ip)) {
+    logger.warn('Admin login bloqué (trop de tentatives)', {
+      email, ip: req.ip,
+    });
+    return next(new AppError(
+      'Trop de tentatives. Réessayez dans 15 minutes.',
+      429,
+      'ADMIN_LOCKED_OUT'
+    ));
+  }
+
   try {
     const [rows] = await query('SELECT * FROM admins WHERE email=? AND is_active=TRUE', [email]);
     if (!rows.length) {
+      recordFailure(email, req.ip);
+      logger.warn('Admin login échoué (email inconnu)', { email, ip: req.ip });
       throw new AppError('Identifiants invalides', 401, 'INVALID_CREDENTIALS');
     }
 
     const admin = rows[0];
     const valid = await bcrypt.compare(password, admin.password_hash);
     if (!valid) {
+      recordFailure(email, req.ip);
+      logger.warn('Admin login échoué (mot de passe)', { email, ip: req.ip });
       throw new AppError('Identifiants invalides', 401, 'INVALID_CREDENTIALS');
     }
 
-    // Génération OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const hash = await bcrypt.hash(code, 10);
+    // ✅ Succès → reset compteur
+    recordSuccess(email, req.ip);
+
+    // ── Génération OTP ──────────────────────────────────────────
+    const code    = Math.floor(100000 + Math.random() * 900000).toString();
+    const hash    = await bcrypt.hash(code, 10);
     const expires = new Date(Date.now() + OTP_MIN * 60 * 1000);
 
     // Nettoyage et insertion OTP
@@ -48,9 +109,9 @@ export const login = async (req, res, next) => {
       [admin.id, hash, expires]
     );
 
-    // Envoi de l'email
+    // ── Envoi email ─────────────────────────────────────────────
     if (process.env.NODE_ENV !== 'test') {
-      // En développement, on log toujours le code pour permettre le test sans email
+      // En développement : log du code pour tester sans email
       if (process.env.NODE_ENV === 'development') {
         logger.warn(`[DEV] Admin OTP pour ${admin.email} : ${code}`);
       }
@@ -59,8 +120,8 @@ export const login = async (req, res, next) => {
         logger.info(`Envoi OTP admin à ${admin.email}...`);
 
         const result = await resend.emails.send({
-          from: config.resend.fromEmail,
-          to: admin.email,
+          from:    config.resend.fromEmail,
+          to:      admin.email,
           subject: `[Adma Admin] Code de connexion : ${code}`,
           html: `
             <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background-color:#fff">
@@ -89,7 +150,6 @@ export const login = async (req, res, next) => {
           `,
         });
 
-        // ── Vérification explicite de l'erreur Resend ──
         // Le SDK Resend ne lève JAMAIS d'exception : il retourne { data, error }
         if (result.error) {
           logger.error(`Resend a refusé l'envoi : ${result.error.message}`, {
@@ -103,7 +163,7 @@ export const login = async (req, res, next) => {
       } catch (emailErr) {
         logger.error(`Erreur envoi OTP admin : ${emailErr.message}`);
 
-        // En développement, on renvoie le code directement pour ne pas bloquer
+        // En développement, on renvoie le code pour ne pas bloquer
         if (process.env.NODE_ENV === 'development') {
           return res.json({
             success: true,
