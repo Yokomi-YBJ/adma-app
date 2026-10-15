@@ -142,7 +142,7 @@ function buildAlertHtml({ subject, body }) {
 
     <!-- CTA -->
     <div style="text-align:center;">
-      <a href="https://adma-app.onrender.com/api/v1/admin/monitoring/health"
+      <a href="https://adma-app.vercel.app"
          style="display:inline-block;background-color:#0B162C;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:12px;letter-spacing:0.3px;">
         Voir le dashboard admin
       </a>
