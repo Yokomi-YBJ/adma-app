@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { authenticateAdmin } from '../middleware/auth.js';
-import { loginRateLimit } from '../middleware/rateLimit.js';
+import { adminLoginRateLimit, scannerRateLimit } from '../middleware/rateLimit.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 // Contrôleurs
@@ -25,10 +25,13 @@ import * as monitCtrl from '../controllers/admin/adminMonitoringController.js';
 
 const router = Router();
 
+// ✅ Anti-scanner global sur toutes les routes admin
+router.use(scannerRateLimit);
+
 // ── 1. AUTH ADMIN (Publique & OTP) ────────────────────────────────
 router.post(
   '/auth/login',
-  loginRateLimit,
+  adminLoginRateLimit,          // ← 5 tentatives / 15 min (au lieu de 10)
   [
     body('email').isEmail().withMessage('Email invalide').normalizeEmail(),
     body('password').notEmpty().withMessage('Mot de passe requis'),
@@ -38,15 +41,13 @@ router.post(
 
 router.post(
   '/auth/verify-otp',
-  loginRateLimit,
+  adminLoginRateLimit,          // ← idem
   [
     body('adminId').isInt().toInt().withMessage('ID admin invalide'),
     body('code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('Le code doit comporter 6 chiffres'),
   ],
   asyncHandler(authCtrl.verifyOTP)
 );
-
-router.get('/auth/me', authenticateAdmin, asyncHandler(authCtrl.getMe));
 
 // ── 2. PROFIL & PARAMÈTRES ADMIN ──────────────────────────────────
 router.get('/profile', authenticateAdmin, asyncHandler(profCtrl.getProfile));

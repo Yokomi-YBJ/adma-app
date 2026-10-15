@@ -23,11 +23,31 @@ export function notFoundHandler(req, res) {
   });
 }
 
-// Rate limit interne : max 1 alerte email toutes les 5 minutes
+// ── Rate limit interne pour les emails d'alerte ────────────────
 let lastAlertTime = 0;
 const ALERT_COOLDOWN_MS = 5 * 60 * 1000;
 
-function maybeAlert(err, req) {
+// ── Types d'erreurs qu'on N'ALERTE PAS (bruit des scanners) ────
+const NOISY_ERROR_CODES = [
+  'ECONNRESET',
+  'ECONNABORTED',
+  'EPIPE',
+  'ETIMEDOUT',
+];
+
+function isNoisyError(err) {
+  if (err.name === 'SyntaxError' && err.message.includes('JSON')) return true;
+  if (err.type === 'entity.parse.failed') return true;
+  if (err.type === 'entity.too.large') return true;
+  if (NOISY_ERROR_CODES.includes(err.code)) return true;
+  if (err.code === 'UNAUTHORIZED' || err.code === 'INVALID_TOKEN') return true;
+  if (err.code === 'TOKEN_EXPIRED') return true;
+  return false;
+}
+
+async function maybeAlert(err, req) {
+  if (isNoisyError(err)) return;
+
   const now = Date.now();
   if (now - lastAlertTime < ALERT_COOLDOWN_MS) return;
   lastAlertTime = now;
@@ -37,6 +57,8 @@ function maybeAlert(err, req) {
     body: [
       `Timestamp: ${new Date().toISOString()}`,
       `Route: ${req.method} ${req.originalUrl}`,
+      `IP: ${req.ip}`,
+      `User-Agent: ${req.headers['user-agent'] || 'unknown'}`,
       `User: ${req.user?.id || req.admin?.id || 'anonyme'}`,
       `Code: ${err.code || 'N/A'}`,
       `Message: ${err.message}`,
@@ -48,10 +70,12 @@ function maybeAlert(err, req) {
 async function recordServerError(err, req) {
   try {
     const details = JSON.stringify({
-      path: req.originalUrl || req.path,
-      code: err.code || null,
+      path:    req.originalUrl || req.path,
+      code:    err.code || null,
       message: err.message,
-      user: req.user?.id || req.admin?.id || null,
+      ip:      req.ip,
+      ua:      req.headers['user-agent'] || null,
+      user:    req.user?.id || req.admin?.id || null,
     });
     await query(
       `INSERT INTO admin_logs (admin_id, action, target_type, details)
@@ -59,17 +83,43 @@ async function recordServerError(err, req) {
       [details]
     );
   } catch {
-    // La journalisation en base ne doit jamais bloquer la réponse HTTP
+    // Ne bloque jamais la réponse HTTP
   }
 }
 
 export async function errorHandler(err, req, res, _next) {
-  // ── 1. Erreurs applicatives contrôlées ─────────────────────────────
+  // ── 1. Erreurs de parsing (scanners / mauvais format) ──────────
+  if (err.type === 'entity.parse.failed' || err.name === 'SyntaxError') {
+    logger.warn('Requête malformée (scanner ?)', {
+      path: req.originalUrl || req.path,
+      ip:   req.ip,
+      ua:   req.headers['user-agent'] || 'unknown',
+      err:  err.message.slice(0, 100),
+    });
+
+    return res.status(400).json({
+      success: false,
+      code: 'INVALID_PAYLOAD',
+      message: 'Format de requête invalide. JSON attendu.',
+    });
+  }
+
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Requête trop volumineuse.',
+    });
+  }
+
+  // ── 2. Erreurs applicatives contrôlées ─────────────────────────
   if (err.name === 'AppError') {
     if (err.statusCode >= 500) {
       logger.error(`[${err.code}] ${err.message}`, { path: req.path });
       maybeAlert(err, req);
       await recordServerError(err, req);
+    } else {
+      logger.warn(`[${err.code}] ${err.message}`, { path: req.path, ip: req.ip });
     }
     return res.status(err.statusCode).json({
       success: false,
@@ -79,11 +129,11 @@ export async function errorHandler(err, req, res, _next) {
     });
   }
 
-  // ── 2. Erreurs Multer (Uploads) ───────────────────────────────────
+  // ── 3. Erreurs Multer ──────────────────────────────────────────
   if (err.name === 'MulterError') {
     let message = 'Erreur lors du téléversement du fichier.';
     if (err.code === 'LIMIT_FILE_SIZE') {
-      message = 'Le fichier sélectionné est trop volumineux (taille maximale autorisée : 5 Mo).';
+      message = 'Le fichier est trop volumineux (max : 5 Mo).';
     } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
       message = 'Format ou champ de fichier non pris en charge.';
     }
@@ -94,50 +144,47 @@ export async function errorHandler(err, req, res, _next) {
     });
   }
 
-  // ── 3. Erreurs Base de données (MySQL / TiDB) ────────────────────
+  // ── 4. Erreurs BD ──────────────────────────────────────────────
   if (err.code === 'ER_DUP_ENTRY') {
     return res.status(409).json({
-      success: false,
-      code: 'DUPLICATE',
-      message: 'Cet élément existe déjà dans le système.',
+      success: false, code: 'DUPLICATE',
+      message: 'Cet élément existe déjà.',
     });
   }
 
   if (err.code === 'ER_NO_REFERENCED_ROW_2' || err.code === 'ER_NO_REFERENCED_ROW') {
     return res.status(400).json({
-      success: false,
-      code: 'INVALID_REFERENCE',
-      message: 'Une référence sélectionnée (ville, quartier ou catégorie) est introuvable.',
+      success: false, code: 'INVALID_REFERENCE',
+      message: 'Une référence sélectionnée est introuvable.',
     });
   }
 
   if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
     return res.status(409).json({
-      success: false,
-      code: 'RESOURCE_LOCKED',
-      message: 'Impossible de supprimer cet élément car des données actives y sont rattachées.',
+      success: false, code: 'RESOURCE_LOCKED',
+      message: 'Impossible de supprimer : des données actives y sont rattachées.',
     });
   }
 
   if (err.code === 'ER_DATA_TOO_LONG') {
     return res.status(400).json({
-      success: false,
-      code: 'DATA_TOO_LONG',
-      message: 'Le texte renseigné dépasse la longueur maximale permise.',
+      success: false, code: 'DATA_TOO_LONG',
+      message: 'Le texte dépasse la longueur maximale.',
     });
   }
 
-  if (['ECONNREFUSED', 'ETIMEDOUT', 'PROTOCOL_CONNECTION_LOST', 'ER_CON_COUNT_ERROR'].includes(err.code)) {
-    logger.error('Erreur de connexion base de données', { code: err.code, message: err.message });
+  if (['ECONNREFUSED', 'PROTOCOL_CONNECTION_LOST', 'ER_CON_COUNT_ERROR'].includes(err.code)) {
+    logger.error('Erreur de connexion BD', { code: err.code, message: err.message });
     return res.status(503).json({
-      success: false,
-      code: 'DATABASE_UNAVAILABLE',
-      message: 'Le service est temporairement indisponible suite à une surcharge réseau. Veuillez réessayer dans quelques instants.',
+      success: false, code: 'DATABASE_UNAVAILABLE',
+      message: 'Service temporairement indisponible. Réessayez dans quelques instants.',
     });
   }
 
-  // ── 4. Erreurs imprévues (500) ────────────────────────────────────
-  logger.error('Erreur non gérée', { message: err.message, stack: err.stack, path: req.path });
+  // ── 5. Erreurs imprévues (500) ────────────────────────────────
+  logger.error('Erreur non gérée', {
+    message: err.message, stack: err.stack, path: req.path, ip: req.ip,
+  });
   maybeAlert(err, req);
   await recordServerError(err, req);
 
@@ -146,7 +193,7 @@ export async function errorHandler(err, req, res, _next) {
     success: false,
     code: 'INTERNAL_ERROR',
     message: isProd
-      ? 'Une erreur inattendue est survenue. Veuillez réessayer dans quelques instants.'
+      ? 'Une erreur inattendue est survenue.'
       : err.message,
   });
 }

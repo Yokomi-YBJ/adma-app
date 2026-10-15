@@ -37,11 +37,10 @@ export const config = {
     adminExpires:  process.env.ADMIN_JWT_EXPIRES   || '8h',
   },
 
-  // Orange Developer Cameroun (SMS OTP)
-  orange: {
-    clientId:     requireEnv('ORANGE_CLIENT_ID',     ''),
-    clientSecret: requireEnv('ORANGE_CLIENT_SECRET', ''),
-    senderNumber: process.env.ORANGE_SENDER_NUMBER || '',
+  // ── MboaSMS (SMS OTP mobile — Cameroun) ─────────────────────────
+  mboaSMS: {
+    apiKey:   requireEnv('MBOASMS_API_KEY', ''),
+    senderId: process.env.MBOASMS_SENDER_ID || '', // vide = sender par défaut du compte
   },
 
   cloudinary: {
@@ -52,16 +51,17 @@ export const config = {
 
   // ── GeniusPay (Mobile Money Afrique — XAF Cameroun) ─────────────
   geniusPay: {
-    apiKey:        requireEnv('GENIUSPAY_API_KEY',        ''), // pk_live_... ou pk_sandbox_...
-    secretKey:     requireEnv('GENIUSPAY_SECRET_KEY',     ''), // sk_live_... ou sk_sandbox_...
+    apiKey:        requireEnv('GENIUSPAY_API_KEY',        ''),
+    secretKey:     requireEnv('GENIUSPAY_SECRET_KEY',     ''),
     baseUrl:       process.env.GENIUSPAY_BASE_URL || 'https://geniuspay.ci/api/v1/merchant',
-    webhookSecret: requireEnv('GENIUSPAY_WEBHOOK_SECRET', ''), // whsec_...
+    webhookSecret: requireEnv('GENIUSPAY_WEBHOOK_SECRET', ''),
   },
 
   expo: {
     accessToken: process.env.EXPO_ACCESS_TOKEN || '',
   },
 
+  // ── Resend (UNIQUEMENT pour l'auth admin) ───────────────────────
   resend: {
     apiKey:    requireEnv('RESEND_API_KEY',   ''),
     fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@adma.cm',

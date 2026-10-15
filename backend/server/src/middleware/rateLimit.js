@@ -8,7 +8,7 @@ export const globalRateLimit = rateLimit({
   skip: () => process.env.NODE_ENV === 'test',
 });
 
-// Protection anti-bombing SMS : limite par IP (max 10 requêtes par 15 min)
+// ── OTP mobile ─────────────────────────────────────────────────────
 export const otpIpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, max: 10, standardHeaders: 'draft-7', legacyHeaders: false,
   keyGenerator: (req) => req.ip,
@@ -16,7 +16,6 @@ export const otpIpRateLimit = rateLimit({
   skip: () => process.env.NODE_ENV === 'test',
 });
 
-// Limite par numéro de téléphone (max 3 requêtes par 10 min)
 export const otpPhoneRateLimit = rateLimit({
   windowMs: 10 * 60 * 1000, max: 3, standardHeaders: 'draft-7', legacyHeaders: false,
   keyGenerator: (req) => req.body?.phone || req.ip,
@@ -26,12 +25,38 @@ export const otpPhoneRateLimit = rateLimit({
 
 export const otpRateLimit = [otpIpRateLimit, otpPhoneRateLimit];
 
+// ── Login utilisateur (mobile) ─────────────────────────────────────
 export const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, max: 10, standardHeaders: 'draft-7', legacyHeaders: false,
   keyGenerator: (req) => req.body?.phone || req.body?.email || req.ip,
   message: hit('Trop de tentatives de connexion.'),
 });
 
+// ── Login admin (anti-brute-force renforcé) ────────────────────────
+// 5 tentatives / 15 min par IP (endpoint sensible)
+export const adminLoginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => `admin:${req.ip}`,
+  message: hit('Trop de tentatives de connexion admin. Blocage temporaire.'),
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
+// ── Anti-scanner global sur tout /admin et /auth ───────────────────
+// 30 requêtes / minute par IP (bloque les scripts de scan)
+export const scannerRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  message: hit('Trop de requêtes. Ralentissez.'),
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
+// ── Uploads ────────────────────────────────────────────────────────
 export const uploadRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, max: 30, standardHeaders: 'draft-7', legacyHeaders: false,
   message: hit("Trop d'uploads. Attendez une heure."),
@@ -48,11 +73,10 @@ export const reportRateLimit = rateLimit({
 });
 
 // ── Paiements ─────────────────────────────────────────────────────
-// 3 tentatives de paiement par 10 minutes par utilisateur
-// Évite le spam d'appels à KPay (chaque initiate coûte une requête API)
+// 5 tentatives / 10 min par utilisateur (au lieu de 3, moins frustrant)
 export const paymentRateLimit = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 3,
+  max: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   keyGenerator: (req) => `user_${req.user?.id || req.ip}`,
