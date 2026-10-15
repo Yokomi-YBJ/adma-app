@@ -19,7 +19,7 @@ export function notFoundHandler(req, res) {
   res.status(404).json({
     success: false,
     code: 'NOT_FOUND',
-    message: `La ressource demandée (${req.method} ${req.path}) est introuvable.`,
+    message: 'Ressource introuvable.',
   });
 }
 

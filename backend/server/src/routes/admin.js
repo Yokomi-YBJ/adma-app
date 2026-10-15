@@ -191,4 +191,8 @@ router.get('/monitoring/health', authenticateAdmin, asyncHandler(monitCtrl.getSy
 router.get('/monitoring/errors', authenticateAdmin, asyncHandler(monitCtrl.getRecentErrors));
 router.post('/monitoring/test-alert', authenticateAdmin, asyncHandler(monitCtrl.testAlert));
 
+router.use((req, res) => {
+  res.status(401).json({ success: false, code: 'UNAUTHORIZED', message: 'Authentification requise.' });
+});
+
 export default router;
