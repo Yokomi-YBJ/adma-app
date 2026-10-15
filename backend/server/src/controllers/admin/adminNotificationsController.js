@@ -128,7 +128,7 @@ export async function broadcast(req, res) {
   const payload = validateBroadcastPayload(req.body);
 
   const isScheduled = !!payload.scheduledAt;
-  const status      = isScheduled ? 'scheduled' : 'sending';
+  const status = isScheduled ? 'scheduled' : 'draft';
 
   const [result] = await query(
     `INSERT INTO admin_broadcasts
