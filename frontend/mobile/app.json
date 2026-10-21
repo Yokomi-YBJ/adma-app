@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAFBFC",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "notification": {
       "icon": "./assets/notification-icon.png",
       "color": "#5FC2BA",
@@ -79,7 +74,8 @@
         }
       ],
       "@maplibre/maplibre-react-native",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
