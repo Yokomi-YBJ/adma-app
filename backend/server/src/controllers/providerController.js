@@ -235,8 +235,12 @@ export const createProvider = asyncHandler(async (req, res) => {
 // ── Modifier fiche ────────────────────────────────────────────────
 export const updateProvider = asyncHandler(async (req, res) => {
   const providerId = parseInt(req.params.id);
-  const [rows] = await query('SELECT id, user_id, cloudinary_id FROM providers WHERE id=? AND deleted_at IS NULL', [providerId]);
+  const [rows] = await query('SELECT id, user_id, cloudinary_id, plan FROM providers WHERE id=? AND deleted_at IS NULL', [providerId]);
   if (!rows.length || rows[0].user_id !== req.user.id) throw new AppError('Accès refusé', 403, 'FORBIDDEN');
+
+  if (req.body.websiteUrl && (!rows[0].plan || rows[0].plan === 'free')) {
+    throw new AppError('L\'ajout d\'un site web nécessite un abonnement payant', 403, 'FEATURE_NOT_ALLOWED');
+  }
 
   const allowed = { name:'name', specialty:'specialty', description:'description',
     contactMethod:'contact_method', phoneNumber:'phone_number', whatsappNumber:'whatsapp_number',

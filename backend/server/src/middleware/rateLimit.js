@@ -18,7 +18,17 @@ export const otpIpRateLimit = rateLimit({
 
 export const otpPhoneRateLimit = rateLimit({
   windowMs: 10 * 60 * 1000, max: 3, standardHeaders: 'draft-7', legacyHeaders: false,
-  keyGenerator: (req) => req.body?.phone || req.ip,
+  keyGenerator: (req) => {
+    const raw = req.body?.phone;
+    if (typeof raw === 'string') {
+      const cleaned = raw.replace(/\s/g, '').replace(/[^+\d]/g, '');
+      if (cleaned.length >= 9) {
+        return cleaned.replace(/^\+?237/, '');
+      }
+      return cleaned;
+    }
+    return req.ip;
+  },
   message: hit('Trop de tentatives pour ce numéro. Attendez 10 minutes avant de redemander un code.'),
   skip: () => process.env.NODE_ENV === 'test',
 });
@@ -81,4 +91,16 @@ export const paymentRateLimit = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => `user_${req.user?.id || req.ip}`,
   message: hit('Trop de tentatives de paiement. Attendez 10 minutes.'),
+});
+
+// ── Événements de contact (vues, clics) ───────────────────────────
+// 30 requêtes / minute par IP (anti-spam métriques)
+export const contactRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  message: hit('Trop d\'interactions en peu de temps. Veuillez patienter.'),
+  skip: () => process.env.NODE_ENV === 'test',
 });

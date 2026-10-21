@@ -287,7 +287,11 @@ export const getStatus = asyncHandler(async (req, res) => {
     const gp = await gpVerify(payment.kpay_external_id);
 
     if (gp.status !== payment.status) {
-      await query('UPDATE payments SET status=? WHERE id=?', [gp.status, payment.id]);
+      // Si GeniusPay signale 'completed', ne pas mettre à jour directement ici
+      // afin de laisser le webhook officiel activer l'abonnement et garantir l'intégrité
+      if (gp.status !== 'completed') {
+        await query('UPDATE payments SET status=? WHERE id=?', [gp.status, payment.id]);
+      }
     }
 
     return res.json({

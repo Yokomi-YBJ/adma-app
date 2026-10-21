@@ -34,8 +34,9 @@ CREATE TABLE `admins` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `admins` (`id`, `email`, `password_hash`, `full_name`, `is_active`, `last_login_at`, `created_at`) VALUES
-(1, 'beyeayokomi@gmail.com', '$2a$12$DdKre50B70rxk81eegWwn.7qY1vu5Ixv4VpQ3r0idkC/U1ADHY3hK', 'Yokomi Beyea', 1, '2026-10-07 10:26:22', '2026-09-30 14:39:41');
+-- Seed initial admin (placeholder)
+INSERT INTO `admins` (`id`, `email`, `password_hash`, `full_name`, `is_active`) VALUES
+(1, 'admin@adma.cm', '$2a$12$placeholder_remplacer_par_vrai_hash_bcrypt', 'Administrateur Adma', 1);
 
 -- ------------------------------------------------------------
 -- TABLE : admin_broadcasts
@@ -62,9 +63,6 @@ CREATE TABLE `admin_broadcasts` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `admin_broadcasts` (`id`, `admin_id`, `title_fr`, `title_en`, `title_ful`, `body_fr`, `body_en`, `body_ful`, `type`, `target_type`, `target_value`, `status`, `scheduled_at`, `sent_at`, `recipients_count`, `failed_count`, `error_message`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Adma arrive bientôt', 'Adma arrive bientôt', 'Adma arrive bientôt', 'Bonjour,\n\nNous sommes heureux de vous annoncer que l''application Adma sera bientôt disponible à Ngaoundéré et dans toute la région de l''Adamaoua.\n\nVous pourrez bientôt découvrir et contacter directement les meilleurs prestataires de votre quartier, consulter leurs avis vérifiés, et profiter de nos services en toute simplicité.\n\nRestez connectés, nous vous préviendrons dès le lancement officiel.', 'Bonjour,\n\nNous sommes heureux de vous annoncer que l''application Adma sera bientôt disponible à Ngaoundéré et dans toute la région de l''Adamaoua.\n\nVous pourrez bientôt découvrir et contacter directement les meilleurs prestataires de votre quartier, consulter leurs avis vérifiés, et profiter de nos services en toute simplicité.\n\nRestez connectés, nous vous préviendrons dès le lancement officiel.', 'Bonjour,\n\nNous sommes heureux de vous annoncer que l''application Adma sera bientôt disponible à Ngaoundéré et dans toute la région de l''Adamaoua.\n\nVous pourrez bientôt découvrir et contacter directement les meilleurs prestataires de votre quartier, consulter leurs avis vérifiés, et profiter de nos services en toute simplicité.\n\nRestez connectés, nous vous préviendrons dès le lancement officiel.', 'info', 'all', NULL, 'sending', NULL, NULL, 0, 0, NULL, '2026-10-05 20:27:41', '2026-10-05 20:27:41');
-
 -- ------------------------------------------------------------
 -- TABLE : admin_logs
 -- ------------------------------------------------------------
@@ -79,26 +77,6 @@ CREATE TABLE `admin_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `admin_logs` (`id`, `admin_id`, `action`, `target_type`, `target_id`, `details`, `ip_address`, `created_at`) VALUES
-(1, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-01 07:35:36'),
-(2, 1, 'verification_approve', 'provider', 1, '{\"badgeType\":\"verified_id\"}', NULL, '2026-10-01 07:57:37'),
-(3, 1, 'provider_update', 'provider', 1, '{\"name\":\"OmiTech\",\"specialty\":\"Développement logiciel\",\"plan\":\"free\",\"verification_status\":\"verified\",\"is_active\":1}', NULL, '2026-10-01 08:21:14'),
-(4, 1, 'provider_update', 'provider', 1, '{\"name\":\"OmiTech\",\"specialty\":\"Développement logiciel\",\"plan\":\"enterprise\",\"verification_status\":\"verified\",\"is_active\":1}', NULL, '2026-10-01 08:23:38'),
-(5, 1, 'report_resolve', 'report', 1, '{\"note\":\"Avis supprimé\"}', NULL, '2026-10-01 09:46:25'),
-(6, 1, 'review_hide', 'review', 1, NULL, NULL, '2026-10-01 09:46:46'),
-(7, 1, 'review_restore', 'review', 1, NULL, NULL, '2026-10-01 09:47:02'),
-(8, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-05 17:13:18'),
-(9, 1, 'verification_approve', 'provider', 2, '{\"badgeType\":\"verified_id\"}', NULL, '2026-10-05 17:14:36'),
-(10, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-05 17:29:09'),
-(11, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-05 19:22:40'),
-(12, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-05 20:15:41'),
-(13, 1, 'broadcast_notification', 'broadcast', 1, '{\"titleFr\":\"Adma arrive bientôt\",\"type\":\"info\",\"targetType\":\"all\",\"targetValue\":null,\"scheduled\":false}', NULL, '2026-10-05 20:27:41'),
-(14, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-07 09:57:52'),
-(15, 1, 'verification_reject', 'provider', 3, '{\"reason\":\"photo flou\"}', NULL, '2026-10-07 10:02:02'),
-(16, 1, 'login', NULL, NULL, NULL, NULL, '2026-10-07 10:26:22'),
-(17, 1, 'error', 'server', NULL, '{\"path\":\"/api/v1/users/avatar\",\"code\":null,\"message\":\"Cloudinary : Erreur inconnue\",\"user\":1}', NULL, '2026-10-08 12:42:41'),
-(18, 1, 'error', 'server', NULL, '{\"path\":\"/api/v1/payments/initiate\",\"code\":null,\"message\":\"fetch failed\",\"user\":1}', NULL, '2026-10-08 12:51:51');
-
 -- ------------------------------------------------------------
 -- TABLE : admin_otp_codes
 -- ------------------------------------------------------------
@@ -110,9 +88,6 @@ CREATE TABLE `admin_otp_codes` (
   `used_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `admin_otp_codes` (`id`, `admin_id`, `code_hash`, `expires_at`, `used_at`, `created_at`) VALUES
-(17, 1, '$2a$10$fJBM7uhEo/rBZLS0WwAj4.rzqwyzgkSYCGZA6MJYOOuut5avdEGQ6', '2026-10-07 10:36:22', '2026-10-07 10:26:22', '2026-10-07 10:25:56');
 
 -- ------------------------------------------------------------
 -- TABLE : cities
@@ -267,19 +242,6 @@ CREATE TABLE `users` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `users` (`id`, `phone`, `phone_verified`, `first_name`, `last_name`, `avatar_url`, `cloudinary_id`, `phone_public`, `status`, `expo_push_token`, `last_seen_at`, `created_at`, `updated_at`) VALUES
-(1, '+237691094048', 1, '', 'Beyea Yokomi', 'https://res.cloudinary.com/bxcicl0c/image/upload/v1791359183/adma/users/1/avatar.jpg', 'adma/users/1/avatar', 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', '2026-10-08 12:46:32', '2026-10-01 07:49:41', '2026-10-08 12:46:32'),
-(2, '+237699000000', 1, '', '', NULL, NULL, 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', '2026-10-07 07:49:38', '2026-10-01 07:58:22', '2026-10-07 07:49:38'),
-(3, '+237699000001', 1, '', '', NULL, NULL, 0, 'active', NULL, NULL, '2026-10-01 08:30:41', '2026-10-01 08:30:41'),
-(4, '+237699000002', 1, '', '', NULL, NULL, 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', NULL, '2026-10-01 16:43:29', '2026-10-01 16:43:31'),
-(5, '+237698213258', 1, '', '', NULL, NULL, 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', '2026-10-05 17:09:49', '2026-10-02 18:52:09', '2026-10-05 17:09:49'),
-(6, 'del_6_+237691094018', 1, '', '', NULL, NULL, 0, 'deleted', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', '2026-10-05 13:37:35', '2026-10-02 19:02:42', '2026-10-05 13:37:54'),
-(7, 'del_7_+237653945342', 1, '', '', NULL, NULL, 0, 'deleted', NULL, NULL, '2026-10-05 13:35:03', '2026-10-05 13:36:51'),
-(8, '+237685312532', 1, '', '', NULL, NULL, 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', NULL, '2026-10-05 14:28:33', '2026-10-05 14:28:37'),
-(9, '+237691085421', 1, '', '', NULL, NULL, 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', NULL, '2026-10-05 15:35:10', '2026-10-05 15:35:13'),
-(10, '+237693000000', 1, '', '', NULL, NULL, 0, 'active', 'ExponentPushToken[1OdH_ICAPZIoE3_9vnumN1]', '2026-10-07 10:11:55', '2026-10-07 09:19:55', '2026-10-07 10:11:55'),
-(11, '+237691094040', 1, '', '', NULL, NULL, 0, 'active', NULL, NULL, '2026-10-08 12:42:10', '2026-10-08 12:42:10');
-
 -- ------------------------------------------------------------
 -- TABLE : otp_codes
 -- ------------------------------------------------------------
@@ -293,13 +255,6 @@ CREATE TABLE `otp_codes` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `otp_codes` (`id`, `phone`, `code_hash`, `attempts`, `expires_at`, `used_at`, `created_at`) VALUES
-(78, '+237691094048', '$2a$08$D0QLO14i3At/xnnrjlxmZOIl9sP/K.h3lMr/Z7mEsq8IjplurjwsK', 0, '2026-10-08 13:29:22', '2026-10-08 12:19:33', '2026-10-08 12:19:22'),
-(79, '+237691094048', '$2a$08$ml4MQGsErM0aYDCMqlyT0Osng.Tb1lqgDvR51fB9HMdYdPTB7U.L6', 0, '2026-10-08 13:47:36', '2026-10-08 12:37:46', '2026-10-08 12:37:37'),
-(80, '+237691094048', '$2a$08$.6/A1hyn/4HzoA85HKsa6.6gBd2.u0NtZoPKemgvJkoPh4JecYSIy', 0, '2026-10-08 13:51:59', '2026-10-08 12:46:17', '2026-10-08 12:41:59'),
-(81, '+237691094040', '$2a$08$iEy5oQ1qF1fohPqlLmWszOMjqY6lVqjcNKRv7qDM31pWSnHyBDzaa', 0, '2026-10-08 13:52:03', '2026-10-08 12:42:10', '2026-10-08 12:42:03'),
-(82, '+237691094048', '$2a$08$dlecWh6fMIeJkXere5IDUudbtLY.Ud0yYn3mzWYZvnuGPHUrRb1ha', 0, '2026-10-08 13:56:18', '2026-10-08 12:46:32', '2026-10-08 12:46:18');
-
 -- ------------------------------------------------------------
 -- TABLE : refresh_tokens
 -- ------------------------------------------------------------
@@ -312,13 +267,6 @@ CREATE TABLE `refresh_tokens` (
   `revoked_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `refresh_tokens` (`id`, `user_id`, `token_hash`, `device_info`, `expires_at`, `revoked_at`, `created_at`) VALUES
-(65, 1, '219ac8d3cecf11cbfc75c45a6f16be8db3e2fecd97d3f18d4653043fbb22edf1', 'android', '2026-11-07 12:19:34', '2026-10-08 12:36:24', '2026-10-08 12:19:34'),
-(66, 1, 'c16892081e3e913efb7e04bf2c8edabab216d3234c5a387c5712f92abf6adec0', NULL, '2026-11-07 12:36:24', '2026-10-08 12:37:32', '2026-10-08 12:36:24'),
-(67, 1, '429161127039ca401ad43a60101ce0eb58936fc3aaac3f493b6d3360c111a4d9', 'android', '2026-11-07 12:37:46', '2026-10-08 12:41:50', '2026-10-08 12:37:46'),
-(68, 11, '18c07e3e8cb80c0949868059b30780e40a6273a69e8fa46fd7bcc9db9e3c48e6', 'android', '2026-11-07 12:42:10', '2026-10-08 12:46:11', '2026-10-08 12:42:10'),
-(69, 1, '283e65576090e6c034eee7beb4e3ba4f1307436c7f86ce69e7ef0eaacf0b5ad6', 'android', '2026-11-07 12:46:32', NULL, '2026-10-08 12:46:32');
 
 -- ------------------------------------------------------------
 -- TABLE : categories
@@ -425,45 +373,6 @@ CREATE TABLE `providers` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `providers` (
-  `id`, `user_id`, `category_id`, `name`, `specialty`, `description`,
-  `city_id`, `neighborhood_id`, `latitude`, `longitude`, `geo_updated_at`,
-  `phone_number`, `whatsapp_number`, `contact_method`,
-  `photo_url`, `cloudinary_id`, `website_url`, `availability`, `hours_json`,
-  `verification_status`, `verified_at`,
-  `plan`, `plan_expires_at`, `loyalty_months`, `last_renewal_at`,
-  `pending_plan_change`, `pending_plan_effective_at`,
-  `review_count`, `recommend_count`, `trust_score`, `ranking_score`,
-  `is_active`, `suspended_at`, `deleted_at`, `created_at`, `updated_at`
-) VALUES
-(1, 1, 36, 'OmiTech', 'Développement logiciel', 'Je conçois et développe vos applications',
- 1, 25, 7.3074926, 13.5623106, '2026-10-02 18:32:05',
- '691094048', '691094048', 'both',
- 'https://res.cloudinary.com/bxcicl0c/image/upload/v1790841227/adma/providers/1/profile.jpg', 'adma/providers/1/profile', NULL, 'available', NULL,
- 'verified', '2026-10-01 08:23:38',
- 'enterprise', NULL, 0, NULL,
- NULL, NULL,
- 2, 1, 50, 60.4,
- 1, NULL, NULL, '2026-10-01 07:53:47', '2026-10-02 18:32:05'),
-(2, 5, 13, 'Boutique 4', 'Réparateur de téléphone', 'Téléphone portable',
- 1, 11, 7.4259753, 13.5568872, '2026-10-05 13:46:47',
- '653945342', '653945342', 'both',
- NULL, NULL, NULL, 'available', NULL,
- 'verified_id', '2026-10-05 17:14:35',
- 'free', NULL, 0, NULL,
- NULL, NULL,
- 1, 1, 100, 50.2,
- 1, NULL, NULL, '2026-10-02 18:58:07', '2026-10-05 17:14:35'),
-(3, 10, 24, '2s peinture', 'Peintre', NULL,
- 3, 77, NULL, NULL, NULL,
- '695802238', NULL, 'phone',
- NULL, NULL, NULL, 'available', NULL,
- 'none', NULL,
- 'free', NULL, 0, NULL,
- NULL, NULL,
- 0, 0, 0, 0,
- 1, NULL, NULL, '2026-10-07 09:32:46', '2026-10-07 10:02:02');
-
 -- ------------------------------------------------------------
 -- TABLE : provider_photos
 -- ------------------------------------------------------------
@@ -497,11 +406,6 @@ CREATE TABLE `verification_requests` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `verification_requests` (`id`, `provider_id`, `cni_front_url`, `cni_back_url`, `cni_front_cld`, `cni_back_cld`, `message`, `status`, `reviewed_by`, `reviewed_at`, `review_note`, `cni_deleted_at`, `created_at`, `updated_at`) VALUES
-(1, 1, NULL, NULL, NULL, NULL, NULL, 'approved', 1, '2026-10-01 07:57:36', NULL, '2026-10-05 17:36:58', '2026-10-01 07:55:40', '2026-10-05 17:36:58'),
-(2, 2, NULL, NULL, NULL, NULL, NULL, 'approved', 1, '2026-10-05 17:14:35', NULL, '2026-10-07 07:35:32', '2026-10-05 17:11:19', '2026-10-07 07:35:32'),
-(3, 3, NULL, NULL, NULL, NULL, NULL, 'rejected', 1, '2026-10-07 10:02:02', 'photo flou', '2026-10-08 12:02:44', '2026-10-07 10:01:08', '2026-10-08 12:02:44');
-
 -- ------------------------------------------------------------
 -- TABLE : reviews
 -- ------------------------------------------------------------
@@ -515,11 +419,6 @@ CREATE TABLE `reviews` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `reviews` (`id`, `provider_id`, `reviewer_id`, `verdict`, `comment`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, 2, 'recommend', 'Pas mal. Je recommande', 'active', '2026-10-01 07:59:17', '2026-10-01 09:47:01'),
-(2, 1, 4, 'discourage', 'C''est un bandit', 'active', '2026-10-01 16:43:53', '2026-10-01 16:43:53'),
-(3, 2, 1, 'recommend', 'Très bon artisan', 'active', '2026-10-05 16:59:27', '2026-10-05 16:59:27');
 
 -- ------------------------------------------------------------
 -- TABLE : review_responses
@@ -542,12 +441,6 @@ CREATE TABLE `favorites` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `favorites` (`id`, `user_id`, `provider_id`, `created_at`) VALUES
-(1, 9, 1, '2026-10-05 15:38:22'),
-(2, 2, 1, '2026-10-05 17:45:57'),
-(3, 1, 2, '2026-10-07 07:54:44'),
-(4, 10, 1, '2026-10-07 09:24:52');
-
 -- ------------------------------------------------------------
 -- TABLE : contact_events
 -- ------------------------------------------------------------
@@ -558,23 +451,6 @@ CREATE TABLE `contact_events` (
   `event_type` enum('profile_view','phone_click','whatsapp_click') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `contact_events` (`id`, `provider_id`, `user_id`, `event_type`, `created_at`) VALUES
-(1, 1, 2, 'profile_view', '2026-10-01 07:58:59'),
-(2, 1, 2, 'whatsapp_click', '2026-10-01 09:37:53'),
-(3, 1, 2, 'phone_click', '2026-10-01 09:37:59'),
-(4, 1, 1, 'profile_view', '2026-10-01 09:48:01'),
-(5, 1, 5, 'phone_click', '2026-10-02 18:58:39'),
-(6, 1, 1, 'profile_view', '2026-10-02 19:07:04'),
-(7, 2, 1, 'phone_click', '2026-10-05 13:34:25'),
-(8, 2, 7, 'phone_click', '2026-10-05 13:35:29'),
-(9, 1, 2, 'profile_view', '2026-10-05 14:12:36'),
-(10, 1, NULL, 'profile_view', '2026-10-05 16:41:50'),
-(11, 1, 10, 'profile_view', '2026-10-07 09:25:28'),
-(12, 2, 10, 'profile_view', '2026-10-07 09:34:24'),
-(13, 1, 1, 'profile_view', '2026-10-08 12:20:52'),
-(14, 2, 1, 'whatsapp_click', '2026-10-08 12:36:24'),
-(15, 2, 1, 'phone_click', '2026-10-08 12:36:42');
 
 -- ------------------------------------------------------------
 -- TABLE : reports
@@ -591,11 +467,6 @@ CREATE TABLE `reports` (
   `resolved_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `reports` (`id`, `reporter_id`, `target_type`, `target_id`, `reason`, `description`, `status`, `resolved_by`, `resolved_at`, `created_at`) VALUES
-(1, 2, 'provider', 1, 'problematic_behavior', NULL, 'resolved', 1, '2026-10-01 09:46:25', '2026-10-01 09:38:12'),
-(2, 10, 'provider', 1, 'wrong_info', NULL, 'pending', NULL, NULL, '2026-10-07 10:12:19'),
-(3, 1, 'provider', 2, 'wrong_number', NULL, 'pending', NULL, NULL, '2026-10-08 12:36:57');
 
 -- ------------------------------------------------------------
 -- TABLE : subscriptions
@@ -638,10 +509,6 @@ CREATE TABLE `payments` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `payments` (`id`, `subscription_id`, `provider_id`, `plan_intent`, `kpay_payment_id`, `kpay_reference`, `kpay_external_id`, `amount`, `currency`, `mobile_operator`, `phone_number`, `status`, `failure_reason`, `webhook_received_at`, `created_at`, `updated_at`) VALUES
-(1, NULL, 1, 'enterprise', NULL, NULL, 'ADMA-7E5643F8-36C', 7500, 'XAF', 'mtn_momo_cmr', '691094048', 'failed', NULL, NULL, '2026-10-05 13:31:33', '2026-10-05 13:31:35'),
-(2, NULL, 1, 'enterprise', NULL, NULL, 'ADMA-4D3880BD-293', 7500, 'XAF', 'orange_cmr', '653130463', 'failed', NULL, NULL, '2026-10-08 12:51:40', '2026-10-08 12:51:51');
-
 -- ------------------------------------------------------------
 -- TABLE : notifications
 -- ------------------------------------------------------------
@@ -660,19 +527,6 @@ CREATE TABLE `notifications` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `notifications` (`id`, `user_id`, `type`, `title_fr`, `title_en`, `body_fr`, `body_en`, `data_json`, `is_read`, `sent_at`, `read_at`, `created_at`) VALUES
-(1, 1, 'verification_approved', 'Vérification approuvée', 'Verification approved', 'Félicitations ! Badge identité vérifiée obtenu.', 'Your verification badge has been granted.', '{}', 1, '2026-10-01 07:57:37', '2026-10-08 12:34:17', '2026-10-01 07:57:37'),
-(2, 1, 'new_review', 'Nouvel avis', 'New review', 'Un utilisateur vous a recommandé.', 'Un utilisateur reviewed your profile.', '{\"providerId\":1}', 1, '2026-10-01 07:59:18', '2026-10-08 12:34:16', '2026-10-01 07:59:18'),
-(3, 1, 'review_updated', 'Avis modifié', 'Review updated', 'Un utilisateur a modifié son avis (positive → positive).', 'Un utilisateur updated their review.', '{\"providerId\":1}', 1, '2026-10-01 09:37:48', '2026-10-08 12:34:16', '2026-10-01 09:37:48'),
-(4, 1, 'new_review', 'Nouvel avis', 'New review', 'Un utilisateur vous a déconseillé.', 'Un utilisateur reviewed your profile.', '{\"providerId\":1}', 1, '2026-10-01 16:43:54', '2026-10-08 12:34:16', '2026-10-01 16:43:54'),
-(5, 1, 'new_favorite', 'Nouveau favori', 'New favorite', 'Un utilisateur a ajouté votre fiche à ses favoris.', 'A user added your profile to their favorites.', '{}', 1, '2026-10-05 15:38:22', '2026-10-08 12:34:15', '2026-10-05 15:38:22'),
-(6, 5, 'new_review', 'Nouvel avis', 'New review', 'Beyea Yokomi vous a recommandé.', 'Beyea Yokomi reviewed your profile.', '{\"providerId\":2}', 0, '2026-10-05 16:59:28', NULL, '2026-10-05 16:59:28'),
-(7, 5, 'verification_approved', 'Vérification approuvée', 'Verification approved', 'Félicitations ! Badge identité vérifiée obtenu.', 'Your verification badge has been granted.', '{}', 0, '2026-10-05 17:14:36', NULL, '2026-10-05 17:14:36'),
-(8, 1, 'new_favorite', 'Nouveau favori', 'New favorite', 'Un utilisateur a ajouté votre fiche à ses favoris.', 'A user added your profile to their favorites.', '{}', 1, '2026-10-05 17:45:57', '2026-10-08 12:34:28', '2026-10-05 17:45:57'),
-(9, 5, 'new_favorite', 'Nouveau favori', 'New favorite', 'Un utilisateur a ajouté votre fiche à ses favoris.', 'A user added your profile to their favorites.', '{}', 0, '2026-10-07 07:54:44', NULL, '2026-10-07 07:54:44'),
-(10, 1, 'new_favorite', 'Nouveau favori', 'New favorite', 'Un utilisateur a ajouté votre fiche à ses favoris.', 'A user added your profile to their favorites.', '{}', 1, '2026-10-07 09:24:52', '2026-10-08 12:34:33', '2026-10-07 09:24:52'),
-(11, 10, 'verification_rejected', 'Demande de vérification refusée', 'Verification request rejected', 'photo flou', 'Your request was not approved. Please submit new documents.', '{}', 1, '2026-10-07 10:02:02', '2026-10-07 10:17:05', '2026-10-07 10:02:02');
-
 -- ------------------------------------------------------------
 -- TABLE : notification_preferences
 -- ------------------------------------------------------------
@@ -686,19 +540,6 @@ CREATE TABLE `notification_preferences` (
   `contact_reminder` tinyint(1) NOT NULL DEFAULT 1,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `notification_preferences` (`user_id`, `new_review`, `review_response`, `verification_update`, `subscription_reminder`, `favorite_update`, `contact_reminder`, `updated_at`) VALUES
-(1, 1, 1, 1, 1, 1, 1, '2026-10-01 07:49:41'),
-(2, 1, 1, 1, 1, 1, 1, '2026-10-01 07:58:22'),
-(3, 1, 1, 1, 1, 1, 1, '2026-10-01 08:30:42'),
-(4, 1, 1, 1, 1, 1, 1, '2026-10-01 16:43:29'),
-(5, 1, 1, 1, 1, 1, 1, '2026-10-02 18:52:09'),
-(6, 1, 1, 1, 1, 1, 1, '2026-10-02 19:02:42'),
-(7, 1, 1, 1, 1, 1, 1, '2026-10-05 13:35:03'),
-(8, 1, 1, 1, 1, 1, 1, '2026-10-05 14:28:33'),
-(9, 1, 1, 1, 1, 1, 1, '2026-10-05 15:35:10'),
-(10, 1, 1, 1, 1, 1, 1, '2026-10-07 09:19:55'),
-(11, 1, 1, 1, 1, 1, 1, '2026-10-08 12:42:10');
 
 -- ============================================================
 -- INDEXES
@@ -832,27 +673,27 @@ ALTER TABLE `verification_requests`
 -- ============================================================
 -- AUTO INCREMENT
 -- ============================================================
-ALTER TABLE `admins`                MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-ALTER TABLE `admin_broadcasts`      MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-ALTER TABLE `admin_logs`            MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
-ALTER TABLE `admin_otp_codes`       MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
-ALTER TABLE `categories`            MODIFY `id` tinyint(3) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
-ALTER TABLE `cities`                MODIFY `id` tinyint(3) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-ALTER TABLE `contact_events`        MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
-ALTER TABLE `favorites`             MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
-ALTER TABLE `neighborhoods`         MODIFY `id` smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
-ALTER TABLE `notifications`         MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-ALTER TABLE `otp_codes`             MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
-ALTER TABLE `payments`              MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-ALTER TABLE `providers`             MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `admins`                MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `admin_broadcasts`      MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `admin_logs`            MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `admin_otp_codes`       MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `categories`            MODIFY `id` tinyint(3) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `cities`                MODIFY `id` tinyint(3) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `contact_events`        MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `favorites`             MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `neighborhoods`         MODIFY `id` smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `notifications`         MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `otp_codes`             MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `payments`              MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `providers`             MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 ALTER TABLE `provider_photos`       MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-ALTER TABLE `refresh_tokens`        MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
-ALTER TABLE `reports`               MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-ALTER TABLE `reviews`               MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `refresh_tokens`        MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `reports`               MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `reviews`               MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 ALTER TABLE `review_responses`      MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE `subscriptions`         MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-ALTER TABLE `users`                 MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-ALTER TABLE `verification_requests` MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `users`                 MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+ALTER TABLE `verification_requests` MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 -- ============================================================
 -- FOREIGN KEYS

@@ -3,6 +3,7 @@
  * ✅ Anti-brute-force (lockout 15 min après 5 échecs par email+IP)
  * ✅ Template email pro via mailService.sendAdminOTP()
  */
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
@@ -13,9 +14,11 @@ import { logger } from '../../utils/logger.js';
 import { sendAdminOTP } from '../../services/mailService.js';
 
 const OTP_MIN = 10;
+const MAX_OTP_ATTEMPTS = 3;
 
 // ── Anti-brute-force : compteur d'échecs en mémoire ────────────
 const loginAttempts = new Map();
+const otpVerifyAttempts = new Map();
 const LOCKOUT_THRESHOLD   = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
@@ -41,12 +44,28 @@ function recordSuccess(email, ip) {
   loginAttempts.delete(`${email}:${ip}`);
 }
 
+function recordOtpFailure(adminId) {
+  const entry = otpVerifyAttempts.get(adminId) || { count: 0, firstAt: Date.now() };
+  entry.count++;
+  otpVerifyAttempts.set(adminId, entry);
+  return entry.count;
+}
+
+function clearOtpAttempts(adminId) {
+  otpVerifyAttempts.delete(adminId);
+}
+
 // Nettoyage périodique
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of loginAttempts.entries()) {
     if (now - entry.firstAt > LOCKOUT_DURATION_MS) {
       loginAttempts.delete(key);
+    }
+  }
+  for (const [key, entry] of otpVerifyAttempts.entries()) {
+    if (now - entry.firstAt > OTP_MIN * 60 * 1000) {
+      otpVerifyAttempts.delete(key);
     }
   }
 }, 30 * 60 * 1000);
@@ -92,7 +111,7 @@ export const login = async (req, res, next) => {
     recordSuccess(email, req.ip);
 
     // ── Génération OTP ──────────────────────────────────────────
-    const code    = Math.floor(100000 + Math.random() * 900000).toString();
+    const code    = crypto.randomInt(100000, 1000000).toString();
     const hash    = await bcrypt.hash(code, 10);
     const expires = new Date(Date.now() + OTP_MIN * 60 * 1000);
 
@@ -117,16 +136,6 @@ export const login = async (req, res, next) => {
 
       if (!result.ok) {
         logger.error(`Envoi OTP admin échoué : ${result.reason}`);
-
-        // En développement, renvoie le code pour ne pas bloquer
-        if (process.env.NODE_ENV === 'development') {
-          return res.json({
-            success: true,
-            message: 'Code généré (email échoué — code affiché en dev)',
-            data: { adminId: admin.id, devCode: code },
-          });
-        }
-
         throw new AppError('Impossible d\'envoyer le code par email', 500, 'EMAIL_SEND_FAILED');
       }
     } else {
@@ -166,9 +175,18 @@ export const verifyOTP = async (req, res, next) => {
 
     const valid = await bcrypt.compare(code, rows[0].code_hash);
     if (!valid) {
-      throw new AppError('Code incorrect', 400, 'OTP_INVALID');
+      const attempts = recordOtpFailure(adminId);
+      const remaining = Math.max(0, MAX_OTP_ATTEMPTS - attempts);
+      if (remaining === 0) {
+        await query('UPDATE admin_otp_codes SET used_at=NOW() WHERE id=?', [rows[0].id]);
+        clearOtpAttempts(adminId);
+        logger.warn('Admin OTP invalidé après trop de tentatives infructueuses', { adminId });
+        throw new AppError('Trop de tentatives incorrectes. Le code a été invalidé.', 429, 'OTP_MAX_ATTEMPTS');
+      }
+      throw new AppError(`Code incorrect. ${remaining} tentative(s) restante(s).`, 400, 'OTP_INVALID');
     }
 
+    clearOtpAttempts(adminId);
     await query('UPDATE admin_otp_codes SET used_at=NOW() WHERE id=?', [rows[0].id]);
 
     const [admins] = await query(
