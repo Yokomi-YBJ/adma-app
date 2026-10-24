@@ -140,9 +140,9 @@ export async function initiatePayment({
     ? cleanedPhone
     : `+237${cleanedPhone.replace(/^237/, '')}`;
 
+  // ✅ CORRECTION : Suppression de la ligne 'currency' qui causait l'erreur 'validation.in'
   const payload = {
     amount,
-    currency:       'XAF',
     payment_method: 'pawapay',
     mmo_provider:   mmoProvider,
     description:    `Adma Abonnement ${plan}`,
@@ -273,4 +273,4 @@ export function verifyWebhookSignature(rawBody, signature, timestamp) {
   } catch {
     return false;
   }
-}
+    }
