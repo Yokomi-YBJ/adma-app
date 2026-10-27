@@ -1,27 +1,28 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Image, StyleSheet, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { colors } from '../../constants/colors';
 
 export function LoadingScreen() {
-  const scale   = useRef(new Animated.Value(0.85)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [message, setMessage] = useState("Chargement...");
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale,   { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
-      Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start();
+    // Si Render est endormi, au bout de 5s on prévient l'utilisateur
+    const timer = setTimeout(() => {
+      setMessage("Connexion au serveur en cours...\n(Le serveur se réveille, merci de patienter)");
+    }, 5000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <View style={styles.container}>
-      <Animated.View style={{ opacity, transform: [{ scale }] }}>
-        <Image
-          source={require('../../assets/icon.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </Animated.View>
+      <Image 
+        source={require('../../assets/icon.png')} 
+        style={styles.logo} 
+        resizeMode="contain" 
+      />
+      <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />
+      <Text style={styles.text}>{message}</Text>
     </View>
   );
 }
@@ -29,9 +30,23 @@ export function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: '#FAFBFC', // La même couleur que ton splash natif
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logo: { width: 120, height: 120 },
+  logo: {
+    width: 150,
+    height: 150,
+    marginBottom: 30,
+  },
+  spinner: {
+    marginBottom: 20,
+  },
+  text: {
+    fontSize: 14,
+    color: '#3B556D',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
+  },
 });
