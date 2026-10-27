@@ -1,21 +1,30 @@
 /**
  * ADMA — Layout racine
- * Initialise : i18n, cache, auth, réseau, notifications push
  */
 import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import { initI18n }   from '../i18n';
 import { initCache }  from '../services/cache';
 import { useAuthStore }    from '../store/auth.store';
 import { useNetworkStore } from '../store/network.store';
 import { registerForPushNotifications, setupNotificationListeners } from '../services/notifications';
 import { colors } from '../constants/colors';
-import { LoadingScreen } from '../components/ui/LoadingScreen';
+import { LoadingScreen } from '../components/ui/LoadingScreen'; // On garde ton LoadingScreen
 import { AppModalProvider } from '../components/ui/AppModal';
+
+// Empêche le splash natif de disparaître tout seul
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Réveille Render en arrière-plan
+if (process.env.EXPO_PUBLIC_API_URL) {
+  fetch(`${process.env.EXPO_PUBLIC_API_URL}/health`).catch(() => {});
+}
 
 function AuthGuard({ children }) {
   const router    = useRouter();
@@ -40,31 +49,36 @@ export default function RootLayout() {
   const subscribeNetwork = useNetworkStore((s) => s.subscribe);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
-  // ── 1. Bootstrap initial — une seule fois au mount ──────────────
   useEffect(() => {
+    // 1. On cache le splash natif IMMÉDIATEMENT
+    SplashScreen.hideAsync().catch(() => {});
+
     (async () => {
-      await Promise.all([initI18n(), initCache()]);
-      await init();
-      setReady(true);
+      try {
+        await Promise.all([initI18n(), initCache()]);
+        await init();
+      } catch (e) {
+        console.error("Erreur init:", e);
+      } finally {
+        setReady(true);
+      }
     })();
+    
     const unsub = subscribeNetwork();
     return unsub;
   }, []);
 
-  // ── 2. Enregistrement push — à chaque connexion ─────────────────
   useEffect(() => {
-    if (ready && isLoggedIn) {
-      registerForPushNotifications();
-    }
+    if (ready && isLoggedIn) registerForPushNotifications();
   }, [ready, isLoggedIn]);
 
-  // ── 3. Listeners notifications ──────────────────────────────────
   useEffect(() => {
     if (!ready) return;
     const cleanup = setupNotificationListeners(router);
     return cleanup;
   }, [ready]);
 
+  // Tant que l'app n'est pas prête, on affiche notre écran simple
   if (!ready) return <LoadingScreen />;
 
   return (
@@ -84,6 +98,7 @@ export default function RootLayout() {
               headerBackTitleVisible: false,
             }}
           >
+            {/* ... Tes Stack.Screen restent identiques ... */}
             <Stack.Screen name="(auth)"                    options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)"                    options={{ headerShown: false }} />
             <Stack.Screen name="onboarding/index"          options={{ headerShown: false, gestureEnabled: false }} />
