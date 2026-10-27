@@ -53,6 +53,15 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FAFBFC",
+          "image": "./assets/icon.png",
+          "imageWidth": 150,
+          "resizeMode": "contain"
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
