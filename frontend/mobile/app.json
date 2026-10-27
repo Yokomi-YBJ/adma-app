@@ -53,6 +53,17 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableProguardInReleaseBuilds": true,
+            "useLegacyPackaging": false
+          }
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
@@ -74,8 +85,7 @@
         }
       ],
       "@maplibre/maplibre-react-native",
-      "expo-web-browser",
-      "expo-font"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
