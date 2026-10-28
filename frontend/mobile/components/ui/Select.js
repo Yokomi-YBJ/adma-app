@@ -125,7 +125,7 @@ export function Select({
       {/* Select Modal */}
       <Modal
         visible={isOpen}
-        animationType="slide"
+        animationType="none"
         transparent
         onRequestClose={() => setIsOpen(false)}
       >

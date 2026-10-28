@@ -100,7 +100,7 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={fm.container}>
         <View style={fm.handle} />
         <View style={fm.header}>

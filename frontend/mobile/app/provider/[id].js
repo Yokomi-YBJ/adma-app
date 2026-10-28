@@ -303,7 +303,7 @@ function EditReviewModal({ visible, review, onClose, onSave }) {
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={[styles.modalHeader, { paddingTop: 16 }]}>
           <TouchableOpacity style={styles.backBtn} onPress={onClose}>

@@ -356,7 +356,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* Modal Sélection de Langue */}
-      <Modal visible={langModal} transparent animationType="fade" onRequestClose={() => setLangModal(false)}>
+      <Modal visible={langModal} transparent animationType="none" onRequestClose={() => setLangModal(false)}>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} onPress={() => setLangModal(false)} />
           <View style={styles.modalContent}>

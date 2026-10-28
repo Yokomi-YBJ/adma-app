@@ -9,11 +9,6 @@ import {
   BackHandler,
   Linking,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import {
   AlertCircle,
   TriangleAlert,
@@ -77,19 +72,8 @@ export function AdmaModal() {
   const confirm = useModalStore((s) => s.confirm);
   const dismiss = useModalStore((s) => s.dismiss);
 
-  const scale = useSharedValue(0.92);
-  const opacity = useSharedValue(0);
-
-  // Tous les hooks sont appelés inconditionnellement au sommet
   useEffect(() => {
-    if (modal) {
-      Keyboard.dismiss();
-      scale.value = withSpring(1, { damping: 18, stiffness: 240 });
-      opacity.value = withSpring(1, { damping: 20 });
-    } else {
-      scale.value = 0.92;
-      opacity.value = 0;
-    }
+    if (modal) Keyboard.dismiss();
   }, [modal]);
 
   useEffect(() => {
@@ -106,11 +90,6 @@ export function AdmaModal() {
     const sub = BackHandler.addEventListener('hardwareBackPress', handleBack);
     return () => sub.remove();
   }, [modal, dismiss]);
-
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
 
   if (!modal) return null;
 
@@ -153,7 +132,7 @@ export function AdmaModal() {
     <Modal
       transparent
       visible={true}
-      animationType="fade"
+      animationType="none"
       accessibilityViewIsModal={true}
       accessibilityRole="alertdialog"
       onRequestClose={modal.dismissible ? dismiss : undefined}
@@ -166,7 +145,7 @@ export function AdmaModal() {
           accessible={false}
         />
 
-        <Animated.View style={[styles.card, cardAnimatedStyle]}>
+        <View style={styles.card}>
           <View style={[styles.iconWrap, { backgroundColor: config.bg }]}>
             <Icon size={28} color={config.color} strokeWidth={2.2} />
           </View>
@@ -210,7 +189,7 @@ export function AdmaModal() {
               <Text style={styles.confirmText}>{confirmLabel}</Text>
             </TouchableOpacity>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
