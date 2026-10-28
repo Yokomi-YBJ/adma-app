@@ -40,6 +40,9 @@ export default function MapScreen() {
 
   const [providers, setProviders] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [providersError, setProvidersError] = useState(null);
+  const [mapUnavailable, setMapUnavailable] = useState(false);
+  const [mapKey, setMapKey] = useState(0);
 
   const initialLat = params.lat ? parseFloat(params.lat) : 7.3167;
   const initialLng = params.lng ? parseFloat(params.lng) : 13.5833;
@@ -47,6 +50,7 @@ export default function MapScreen() {
   // ── Fetch avec bbox explicite ───────────────────────────────────
   const fetchProviders = useCallback(async ({ west, south, east, north }) => {
     setLoading(true);
+    setProvidersError(null);
     try {
       const p = new URLSearchParams({
         north: String(north),
@@ -58,11 +62,24 @@ export default function MapScreen() {
       });
       const res = await api.get(`/providers/map?${p}`);
       setProviders(res.data.data?.providers || []);
-    } catch {
-      setProviders([]);
+    } catch (error) {
+      setProvidersError(error.userMessage || t('errors.generic'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [initialLat, initialLng]);
+  }, [initialLat, initialLng, t]);
+
+  const retryMap = useCallback(() => {
+    setMapUnavailable(false);
+    setMapKey((key) => key + 1);
+    lastBoundsRef.current = null;
+    fetchProviders({
+      west:  initialLng - INITIAL_BBOX_DELTA,
+      east:  initialLng + INITIAL_BBOX_DELTA,
+      south: initialLat - INITIAL_BBOX_DELTA,
+      north: initialLat + INITIAL_BBOX_DELTA,
+    });
+  }, [fetchProviders, initialLat, initialLng]);
 
   // ── Fetch initial — bbox large ──────────────────────────────────
   useEffect(() => {
@@ -138,11 +155,14 @@ export default function MapScreen() {
   return (
     <View style={styles.flex}>
       <MapView
+        key={mapKey}
         style={styles.map}
         mapStyle={MAP_STYLE}
         logoEnabled={false}
         attributionEnabled={false}
         onRegionDidChange={handleRegionChange}
+        onDidFailLoadingMap={() => setMapUnavailable(true)}
+        onDidFinishLoadingMap={() => setMapUnavailable(false)}
       >
         <Camera
           ref={cameraRef}
@@ -250,6 +270,17 @@ export default function MapScreen() {
         </ShapeSource>
       </MapView>
 
+      {(mapUnavailable || providersError) && (
+        <View style={styles.errorOverlay}>
+          <Text style={styles.errorText}>
+            {mapUnavailable ? t('map.mapError') : providersError}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={retryMap} activeOpacity={0.8}>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View
         pointerEvents="box-none"
         style={[styles.overlay, { paddingTop: insets.top + 12 }]}
@@ -269,7 +300,7 @@ export default function MapScreen() {
               ? t('map.loading')
               : t('map.results', { count: providers.length })}
           </Text>
-          {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />}
+          {loading && <ActivityIndicator size="small" color={colors.primaryDark} style={{ marginLeft: 8 }} />}
         </View>
       </View>
     </View>
@@ -301,6 +332,27 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   backText: { fontSize: 14, fontWeight: '700', color: colors.navy },
+  errorOverlay: {
+    position: 'absolute',
+    top: '42%',
+    left: 32,
+    right: 32,
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 18,
+    elevation: 8,
+  },
+  errorText: { color: colors.navy, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  retryBtn: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 12,
+    backgroundColor: colors.navy,
+  },
+  retryText: { color: colors.white, fontSize: 14, fontWeight: '700' },
   counter: {
     backgroundColor: colors.white,
     paddingHorizontal: 12,

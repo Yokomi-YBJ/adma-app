@@ -8,13 +8,14 @@ import {
   HelpCircle, UserPlus, ShieldCheck, CreditCard, Bell, AlertCircle, FileText,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
+import { showAppModal } from '../../components/ui/AppModal';
 
 function FAQItem({ item, isLast }) {
   const Icon = item.icon;
   return (
     <View style={[styles.faqItem, !isLast && styles.faqBorder]}>
       <View style={styles.faqIconWrap}>
-        <Icon size={20} color={colors.primary} strokeWidth={2} />
+        <Icon size={20} color={colors.primaryDark} strokeWidth={2} />
       </View>
       <View style={styles.faqBody}>
         <Text style={styles.faqQuestion}>{item.question}</Text>
@@ -45,12 +46,21 @@ export default function SupportScreen() {
     { id: 'subscription', icon: CreditCard,     question: t('support.faqs.subscriptionQ'), answer: t('support.faqs.subscriptionA') },
     { id: 'payment',      icon: CreditCard,     question: t('support.faqs.paymentQ'),      answer: t('support.faqs.paymentA') },
     { id: 'notifications',icon: Bell,           question: t('support.faqs.notificationsQ'),answer: t('support.faqs.notificationsA') },
-    { id: 'reviews',      icon: FileText,       question: t('support.faqs.registerQ'),     answer: t('support.faqs.registerA') },
-    { id: 'report',       icon: AlertCircle,    question: t('support.faqs.verificationQ'), answer: t('support.faqs.verificationA') },
+    { id: 'reviews',      icon: FileText,       question: t('support.faqs.reviewsQ'),      answer: t('support.faqs.reviewsA') },
+    { id: 'report',       icon: AlertCircle,    question: t('support.faqs.reportQ'),       answer: t('support.faqs.reportA') },
   ];
 
   const openLink = async (url) => {
-    try { await Linking.openURL(url); } catch {}
+    try {
+      await Linking.openURL(url);
+    } catch {
+      showAppModal({
+        title: t('common.error'),
+        message: t('errors.generic'),
+        confirmText: t('common.ok'),
+        variant: 'error',
+      });
+    }
   };
 
   return (
@@ -71,7 +81,7 @@ export default function SupportScreen() {
             onPress={() => setActiveTab(key)}
             activeOpacity={0.7}
           >
-            <Icon size={18} color={activeTab === key ? colors.primary : colors.textMuted} strokeWidth={2} />
+            <Icon size={18} color={activeTab === key ? colors.primaryDark : colors.textMuted} strokeWidth={2} />
             <Text style={[styles.tabText, activeTab === key && styles.tabTextActive]}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -84,7 +94,7 @@ export default function SupportScreen() {
         {activeTab === 'faq' ? (
           <>
             <View style={styles.hero}>
-              <HelpCircle size={32} color={colors.primary} strokeWidth={2} />
+              <HelpCircle size={32} color={colors.primaryDark} strokeWidth={2} />
               <Text style={styles.heroTitle}>{t('support.faqTitle')}</Text>
               <Text style={styles.heroSub}>{t('support.subtitle')}</Text>
             </View>
@@ -98,7 +108,7 @@ export default function SupportScreen() {
         ) : (
           <>
             <View style={styles.hero}>
-              <Headphones size={32} color={colors.primary} strokeWidth={2} />
+              <Headphones size={32} color={colors.primaryDark} strokeWidth={2} />
               <Text style={styles.heroTitle}>{t('support.contactTitle')}</Text>
               <Text style={styles.heroSub}>{t('support.contactSubtitle')}</Text>
             </View>
@@ -106,7 +116,7 @@ export default function SupportScreen() {
             <View style={styles.contactList}>
               <TouchableOpacity style={styles.contactCard} onPress={() => openLink('mailto:beyeayokomi@gmail.com')} activeOpacity={0.8}>
                 <View style={[styles.contactIconWrap, { backgroundColor: colors.primaryBg }]}>
-                  <Mail size={22} color={colors.primary} strokeWidth={2} />
+                  <Mail size={22} color={colors.primaryDark} strokeWidth={2} />
                 </View>
                 <View style={styles.contactText}>
                   <Text style={styles.contactTitle}>{t('support.emailBtn')}</Text>
@@ -124,7 +134,7 @@ export default function SupportScreen() {
 
               <TouchableOpacity style={styles.contactCard} onPress={() => openLink('https://wa.me/237691094048')} activeOpacity={0.8}>
                 <View style={[styles.contactIconWrap, { backgroundColor: colors.primaryBg }]}>
-                  <MessageSquareText size={22} color={colors.primary} strokeWidth={2} />
+                  <MessageSquareText size={22} color={colors.primaryDark} strokeWidth={2} />
                 </View>
                 <View style={styles.contactText}>
                   <Text style={styles.contactTitle}>{t('support.whatsappBtn')}</Text>
@@ -133,7 +143,7 @@ export default function SupportScreen() {
             </View>
 
             <View style={styles.notice}>
-              <ShieldAlert size={16} color={colors.primary} />
+              <ShieldAlert size={16} color={colors.primaryDark} />
               <Text style={styles.noticeText}>{t('support.contactSubtitle')}</Text>
             </View>
           </>
@@ -174,9 +184,9 @@ const styles = StyleSheet.create({
     gap: 8, paddingVertical: 10, borderRadius: 14,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: 'transparent',
   },
-  tabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  tabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primaryDark },
   tabText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-  tabTextActive: { color: colors.primary, fontWeight: '700' },
+  tabTextActive: { color: colors.primaryText, fontWeight: '700' },
 
   scroll: { padding: 16, gap: 16 },
 
@@ -228,7 +238,7 @@ const styles = StyleSheet.create({
   notice: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     padding: 14, borderRadius: 14, backgroundColor: colors.primaryBg,
-    borderWidth: 1, borderColor: colors.primary + '30',
+    borderWidth: 1, borderColor: colors.primaryDark,
   },
   noticeText: { flex: 1, fontSize: 13, lineHeight: 20, color: colors.textSecondary },
 });

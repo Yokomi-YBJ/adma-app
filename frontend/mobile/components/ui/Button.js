@@ -2,12 +2,12 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'rea
 import { colors } from '../../constants/colors';
 
 const VARIANTS = {
-  primary:   { bg: colors.primary,   text: colors.white,  border: colors.primary },
-  secondary: { bg: colors.white,     text: colors.primary, border: colors.primary },
-  danger:    { bg: colors.danger,    text: colors.white,  border: colors.danger },
-  ghost:     { bg: 'transparent',    text: colors.primary, border: 'transparent' },
-  navy:      { bg: colors.navy,      text: colors.white,  border: colors.navy },
-  outline:   { bg: colors.white,     text: colors.text,   border: colors.border },
+  primary:   { bg: colors.primaryText, text: colors.white,       border: colors.primaryText },
+  secondary: { bg: colors.white,     text: colors.primaryText, border: colors.primaryText },
+  danger:    { bg: colors.dangerDark, text: colors.white,       border: colors.dangerDark },
+  ghost:     { bg: 'transparent',    text: colors.primaryText, border: 'transparent' },
+  navy:      { bg: colors.navy,      text: colors.white,       border: colors.navy },
+  outline:   { bg: colors.white,     text: colors.text,        border: colors.border },
 };
 
 const SIZES = {
@@ -31,6 +31,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.75}
+      accessibilityRole="button"
       style={[
         styles.base,
         {
@@ -59,7 +60,7 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  base:      { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  base:      { minHeight: 44, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   inner:     { flexDirection: 'row', alignItems: 'center' },
   text:      { fontWeight: '700', letterSpacing: 0.1 },
   iconLeft:  { marginRight: 8 },

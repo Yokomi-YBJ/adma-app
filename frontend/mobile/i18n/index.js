@@ -53,6 +53,7 @@ function detectSystemLanguage() {
 
 export async function initI18n() {
   let savedLang = null;
+  // If storage is unavailable, choose the device language instead.
   try { savedLang = await AsyncStorage.getItem(LANG_KEY); } catch {}
 
   const language = SUPPORTED.includes(savedLang) ? savedLang : detectSystemLanguage();
@@ -75,6 +76,7 @@ export async function initI18n() {
 export async function setLanguage(lang) {
   if (!SUPPORTED.includes(lang)) return;
   await i18n.changeLanguage(lang);
+  // Language change remains active for this run even if persistence is unavailable.
   try { await AsyncStorage.setItem(LANG_KEY, lang); } catch {}
 }
 

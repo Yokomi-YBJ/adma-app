@@ -187,7 +187,7 @@ export default function SettingsScreen() {
 
           <View style={styles.editProfileBtn}>
             <Text style={styles.editProfileText}>{t('common.edit', 'Modifier')}</Text>
-            <ChevronRight size={16} color={colors.primary} />
+            <ChevronRight size={16} color={colors.primaryDark} />
           </View>
         </TouchableOpacity>
 
@@ -381,7 +381,7 @@ export default function SettingsScreen() {
                     <Text style={[styles.langLabel, active && styles.langLabelActive]}>{t(item.labelKey)}</Text>
                     <Text style={styles.langSublabel}>{t(item.sublabelKey)}</Text>
                   </View>
-                  {active && <CheckCircle2 size={20} color={colors.primary} strokeWidth={2.5} />}
+                  {active && <CheckCircle2 size={20} color={colors.primaryDark} strokeWidth={2.5} />}
                 </TouchableOpacity>
               );
             })}
@@ -393,7 +393,7 @@ export default function SettingsScreen() {
       {loading && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.primaryDark} />
             <Text style={styles.loadingText}>{t('settings.loggingOut', 'Déconnexion en cours...')}</Text>
           </View>
         </View>
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   langOptionActive: {
-    borderColor: colors.primary,
+    borderColor: colors.primaryDark,
     backgroundColor: colors.primaryBg,
   },
   langLabel: {

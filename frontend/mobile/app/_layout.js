@@ -24,10 +24,14 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 export { ErrorBoundary };
 
 // Empêche le splash natif de disparaître tout seul
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// Expo peut rejeter cet appel si le splash natif a déjà été empêché ; le layout garde le rendu de secours.
+SplashScreen.preventAutoHideAsync().catch((error) => {
+  console.warn('[ADMA] Impossible de maintenir le splash natif.', error);
+});
 
 // Réveille Render en arrière-plan
 if (process.env.EXPO_PUBLIC_API_URL) {
+  // Best-effort warm-up only; normal API requests provide user-visible errors and retries.
   fetch(`${process.env.EXPO_PUBLIC_API_URL}/health`).catch(() => {});
 }
 
@@ -55,8 +59,9 @@ export default function RootLayout() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   useEffect(() => {
-    // Masquage du splash screen natif
-    SplashScreen.hideAsync().catch(() => {});
+    SplashScreen.hideAsync().catch((error) => {
+      console.warn('[ADMA] Impossible de masquer le splash natif.', error);
+    });
 
     (async () => {
       try {

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, ChevronRight, WifiOff, Bell } from 'lucide-react-native';
+import { AlertCircle, Search, MapPin, ChevronRight, WifiOff, Bell } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
 import { CACHE_TTL } from '../../constants/config';
@@ -20,6 +20,7 @@ import { ProviderCard }    from '../../components/cards/ProviderCard';
 import { CategoryCard }    from '../../components/cards/CategoryCard';
 import { SkeletonBox, SkeletonProviderCard } from '../../components/ui/Skeleton';
 import { useNetworkStore } from '../../store/network.store';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export default function HomeScreen() {
   const { t }       = useTranslation();
@@ -35,10 +36,11 @@ export default function HomeScreen() {
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isOffline,  setIsOffline]  = useState(false);
+  const [loadError,  setLoadError]  = useState(null);
 
   const loadData = useCallback(async (force = false) => {
     try {
-      loadNotifs().catch(() => {});
+      loadNotifs();
       const [cachedCats, cachedProvs] = await Promise.all([
         getCache('home_categories'),
         getCache('home_providers'),
@@ -47,6 +49,7 @@ export default function HomeScreen() {
       if (!force && cachedCats && cachedProvs) {
         setCategories(cachedCats);
         setProviders(cachedProvs);
+        setLoadError(null);
         setLoading(false);
         setRefreshing(false);
         return;
@@ -63,11 +66,13 @@ export default function HomeScreen() {
       setCategories(cats);
       setProviders(provs);
       setIsOffline(false);
+      setLoadError(null);
 
       await setCache('home_categories', cats,  CACHE_TTL.categories);
       await setCache('home_providers',  provs, CACHE_TTL.providers);
-    } catch {
+    } catch (error) {
       setIsOffline(true);
+      setLoadError(error.userMessage || t('errors.generic'));
       const [c, p] = await Promise.all([
         getCache('home_categories'),
         getCache('home_providers'),
@@ -78,7 +83,7 @@ export default function HomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [loadNotifs, t]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -122,7 +127,7 @@ export default function HomeScreen() {
             {greeting()}{user?.firstName ? `, ${user.firstName}` : ''}
           </Text>
           <View style={styles.locationRow}>
-            <MapPin size={13} color={colors.primary} strokeWidth={2.5} />
+            <MapPin size={13} color={colors.primaryDark} strokeWidth={2.5} />
             <Text style={styles.location}>{t('home.location')}</Text>
           </View>
         </View>
@@ -156,6 +161,11 @@ export default function HomeScreen() {
               <View style={styles.offlineBanner}>
                 <WifiOff size={14} color={colors.warning} />
                 <Text style={styles.offlineText}>{t('home.noConnection')}</Text>
+                {loadError && (
+                  <TouchableOpacity onPress={() => loadData(true)} activeOpacity={0.75}>
+                    <Text style={styles.offlineRetry}>{t('common.retry')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
@@ -176,7 +186,7 @@ export default function HomeScreen() {
                   onPress={() => router.push('/(tabs)/search')}
                 >
                   <Text style={styles.seeAll}>{t('home.seeAll')}</Text>
-                  <ChevronRight size={14} color={colors.primary} />
+                  <ChevronRight size={14} color={colors.primaryDark} />
                 </TouchableOpacity>
               </View>
               <View style={styles.categoryListWrapper}>
@@ -200,7 +210,15 @@ export default function HomeScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
               </View>
-              {providers.length === 0 ? (
+              {providers.length === 0 && loadError ? (
+                <EmptyState
+                  icon={AlertCircle}
+                  title={t('common.error')}
+                  message={loadError}
+                  action={() => loadData(true)}
+                  actionLabel={t('common.retry')}
+                />
+              ) : providers.length === 0 ? (
                 <View style={styles.emptyProviders}>
                   <Text style={styles.emptyText}>{t('home.noProviders')}</Text>
                 </View>
@@ -236,7 +254,7 @@ const styles = StyleSheet.create({
   headerLeft:   { flex: 1 },
   greeting:     { fontSize: 24, fontWeight: '800', color: colors.navy, letterSpacing: -0.3 },
   locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
-  location:     { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  location:     { fontSize: 13, color: colors.primaryText, fontWeight: '600' },
   notifIconBtn: {
     width: 44, height: 44, borderRadius: 14,
     backgroundColor: colors.surface,
@@ -258,6 +276,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.warning + '30',
   },
   offlineText:  { fontSize: 12, color: colors.warning, fontWeight: '600', flex: 1 },
+  offlineRetry: { fontSize: 12, color: colors.navy, fontWeight: '700' },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -282,7 +301,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.navy },
   seeAllBtn:    { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  seeAll:       { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  seeAll:       { fontSize: 13, color: colors.primaryText, fontWeight: '600' },
 
   categoryListWrapper: { paddingHorizontal: 16, height: 120 },
   categoriesList:      { paddingRight: 10 },

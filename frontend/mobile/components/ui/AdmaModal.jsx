@@ -133,8 +133,17 @@ export function AdmaModal() {
 
   const handleConfirmPress = () => {
     if (variantKey === 'permission' && !modal.onConfirm) {
-      Linking.openSettings().catch(() => {});
-      confirm();
+      Linking.openSettings()
+        .then(confirm)
+        .catch(() => {
+          confirm();
+          useModalStore.getState().show({
+            type: 'error',
+            title: t('common.error'),
+            message: t('errors.generic'),
+            confirmText: t('common.ok'),
+          });
+        });
     } else {
       confirm();
     }

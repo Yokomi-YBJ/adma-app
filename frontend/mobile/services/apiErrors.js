@@ -15,6 +15,7 @@ export const ERROR_CODE_MAP = {
   INVALID_CREDENTIALS:     'errors.INVALID_CREDENTIALS',
   INVALID_PASSWORD:        'errors.INVALID_PASSWORD',
   INVALID_REFRESH_TOKEN:   'errors.INVALID_REFRESH_TOKEN',
+  INVALID_TOKEN:           'errors.INVALID_TOKEN',
   MISSING_REFRESH_TOKEN:   'errors.MISSING_REFRESH_TOKEN',
   TOKEN_EXPIRED:           'errors.TOKEN_EXPIRED',
   UNAUTHORIZED:            'errors.UNAUTHORIZED',
@@ -37,6 +38,7 @@ export const ERROR_CODE_MAP = {
   CANNOT_DEACTIVATE_SELF:  'errors.CANNOT_DEACTIVATE_SELF',
   CANT_REVIEW_OWN:         'errors.CANT_REVIEW_OWN',
   CATEGORY_HAS_CHILDREN:   'errors.CATEGORY_HAS_CHILDREN',
+  CATEGORY_IN_USE:         'errors.CATEGORY_IN_USE',
   NO_PROVIDER:             'errors.NO_PROVIDER',
   PROVIDER_EXISTS:         'errors.PROVIDER_EXISTS',
   PROVIDER_NOT_FOUND:      'errors.PROVIDER_NOT_FOUND',
@@ -46,6 +48,7 @@ export const ERROR_CODE_MAP = {
 
   // Fichiers & Données
   DATA_TOO_LONG:           'errors.DATA_TOO_LONG',
+  DOWNGRADE_NOT_ALLOWED:   'errors.DOWNGRADE_NOT_ALLOWED',
   DUPLICATE:               'errors.DUPLICATE',
   EMAIL_EXISTS:            'errors.EMAIL_EXISTS',
   EMAIL_SEND_FAILED:       'errors.EMAIL_SEND_FAILED',
@@ -104,7 +107,10 @@ export function getLocalizedErrorMessage(err) {
   // Pas de réponse HTTP (Erreur réseau ou timeout)
   if (!err.response) {
     if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-      return i18n.t('errors.timeout', "Le délai d'attente a expiré. Veuillez réessayer.");
+      return i18n.t(
+        'errors.serverWakingUp',
+        'Connexion au serveur... Le serveur se réveille, merci de patienter.'
+      );
     }
     return i18n.t('errors.network', 'Connexion internet interrompue. Vérifiez votre réseau.');
   }

@@ -31,7 +31,7 @@ export function Input({
         multiline && styles.multiline,
       ]}>
         {prefix && <Text style={styles.prefix}>{prefix}</Text>}
-        {Icon && <Icon size={18} color={focused ? colors.primary : colors.textMuted} style={styles.icon} />}
+        {Icon && <Icon size={18} color={focused ? colors.primaryDark : colors.textMuted} style={styles.icon} />}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -93,11 +93,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 48,
   },
-  focused:    { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  focused:    { borderColor: colors.primaryDark, backgroundColor: colors.primaryBg },
   disabled:   { backgroundColor: colors.surface, opacity: 0.6 },
   multiline:  { alignItems: 'flex-start', paddingVertical: 12 },
   icon:       { marginRight: 10 },
-  prefix:     { fontSize: 15, fontWeight: '700', color: colors.primary, marginRight: 8 },
+  prefix:     { fontSize: 15, fontWeight: '700', color: colors.primaryText, marginRight: 8 },
   suffix:     { fontSize: 14, color: colors.textMuted, marginLeft: 4 },
   input: {
     flex: 1, fontSize: 15, color: colors.text,

@@ -22,7 +22,6 @@ export function useLocation() {
 
       if (status !== 'granted') {
         setError('permission_denied');
-        setLoading(false);
         return null;
       }
 
@@ -38,12 +37,12 @@ export function useLocation() {
         longitude: pos.coords.longitude,
       };
       setLocation(coords);
-      setLoading(false);
       return coords;
     } catch (err) {
       setError('fetch_failed');
+      throw err;
+    } finally {
       setLoading(false);
-      return null;
     }
   }, []);
 

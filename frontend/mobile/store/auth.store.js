@@ -25,13 +25,16 @@ export const useAuthStore = create((set, get) => ({
         try {
           const pRes = await api.get('/providers/me');
           if (pRes.data?.success) provider = pRes.data.data;
-        } catch {}
+        } catch {
+          // Profile screen re-fetches provider data and displays its own error state.
+        }
         set({ user, provider, isLoggedIn: true, isLoading: false });
       } else {
         await clearTokens();
         set({ isLoading: false });
       }
-    } catch {
+    } catch (error) {
+      console.warn('[Auth] Unable to restore the saved session:', error);
       set({ isLoading: false });
     }
   },
@@ -42,7 +45,9 @@ export const useAuthStore = create((set, get) => ({
     try {
       const pRes = await api.get('/providers/me');
       if (pRes.data?.success) provider = pRes.data.data;
-    } catch {}
+    } catch {
+      // Provider lookup is optional at login; the profile screen retries it before offering creation.
+    }
     set({ user: userData, provider, isLoggedIn: true });
   },
 
@@ -50,7 +55,9 @@ export const useAuthStore = create((set, get) => ({
     try {
       const refresh = await import('expo-secure-store').then(m => m.getItemAsync('adma_refresh_token'));
       if (refresh) await api.post('/auth/logout', {}, { headers: { 'X-Refresh-Token': refresh } });
-    } catch {}
+    } catch {
+      // Server-side logout is best-effort; local tokens and auth state are cleared below.
+    }
     await clearTokens();
     set({ user: null, provider: null, isLoggedIn: false });
   },

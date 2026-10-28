@@ -9,7 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
-  User, Settings, Briefcase, Star, ChevronRight,
+  User, Settings, Briefcase, Star, ChevronRight, AlertCircle,
   Edit3, CheckCheck, Wifi, Phone, MessageSquare,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/ui/Button';
 import VerifiedBadge from '../../components/ui/VerifiedBadge';
 import { SkeletonBox } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
 import api from '../../services/api';
 
 // ── Couleurs ─────────────────────────────────────────────────────
@@ -108,8 +109,11 @@ export default function ProfileScreen() {
   const insets    = useSafeAreaInsets();
   const user      = useAuthStore((s) => s.user);
   const setProvider = useAuthStore((s) => s.setProvider);
+  const storedProvider = useAuthStore((s) => s.provider);
 
-  const [provider,       setLocalProvider] = useState(null);
+  const [provider,       setLocalProvider] = useState(storedProvider || null);
+  const [providerError,  setProviderError] = useState(null);
+  const [providerLoaded, setProviderLoaded] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing,     setRefreshing]     = useState(false);
   const [loadingProv,    setLoadingProv]    = useState(false);
@@ -128,14 +132,16 @@ export default function ProfileScreen() {
       const data = res.data.data;
       setLocalProvider(data);
       setProvider(data);
-    } catch {
-      setLocalProvider(null);
+      setProviderError(null);
+      setProviderLoaded(true);
+    } catch (error) {
+      setProviderError(error.userMessage || t('errors.generic'));
     } finally {
       setLoadingProv(false);
       setInitialLoading(false);
       if (isRefresh) setRefreshing(false);
     }
-  }, [user, setProvider]);
+  }, [user, setProvider, t]);
 
   // Premier chargement
   useEffect(() => { loadMyProvider(false); }, [loadMyProvider]);
@@ -214,9 +220,17 @@ export default function ProfileScreen() {
 
           {loadingProv ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.primaryDark} />
               <Text style={styles.loadingText}>{t('profile.loadingCard')}</Text>
             </View>
+          ) : providerError ? (
+            <EmptyState
+              icon={AlertCircle}
+              title={t('common.error')}
+              message={providerError}
+              action={() => loadMyProvider(false)}
+              actionLabel={t('common.retry')}
+            />
           ) : provider ? (
             <>
               <TouchableOpacity
@@ -254,7 +268,7 @@ export default function ProfileScreen() {
                 />
               </View>
             </>
-          ) : (
+          ) : providerLoaded ? (
             <TouchableOpacity
               style={styles.createBanner}
               onPress={() => router.push('/provider/create')}
@@ -270,7 +284,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.bannerDeco} />
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -289,7 +303,7 @@ function ProviderPreview({ provider, verLabel, verColor, t }) {
           <Image source={{ uri: provider.photoUrl }} style={styles.providerPhoto} />
         ) : (
           <View style={styles.providerPhotoFallback}>
-            <Briefcase size={24} color={colors.primary} />
+            <Briefcase size={24} color={colors.primaryDark} />
           </View>
         )}
         <View style={{ flex: 1 }}>
@@ -406,7 +420,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 3, borderColor: colors.white,
   },
-  avatarInitials: { fontSize: 30, fontWeight: '800', color: colors.primary },
+  avatarInitials: { fontSize: 30, fontWeight: '800', color: colors.primaryText },
   profileName:   { fontSize: 20, fontWeight: '800', color: colors.navy, marginBottom: 4 },
   profilePhone:  { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
 
@@ -460,7 +474,7 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   editBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: colors.primary, borderRadius: 14,
+    gap: 8, backgroundColor: colors.primaryText, borderRadius: 14,
     paddingVertical: 14,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
@@ -482,7 +496,7 @@ const styles = StyleSheet.create({
   proLinkValue: { fontSize: 15, fontWeight: '700' },
 
   createBanner: {
-    backgroundColor: colors.primary, borderRadius: 20,
+    backgroundColor: colors.primaryText, borderRadius: 20,
     overflow: 'hidden', padding: 24, marginBottom: 24,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
@@ -498,7 +512,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.white,
     paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12,
   },
-  createCtaText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
+  createCtaText: { color: colors.primaryText, fontWeight: '700', fontSize: 14 },
   bannerDeco: {
     position: 'absolute', right: -40, top: -40,
     width: 140, height: 140, borderRadius: 70,

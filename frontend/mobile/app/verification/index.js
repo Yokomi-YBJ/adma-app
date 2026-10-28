@@ -37,14 +37,14 @@ import { Button } from '../../components/ui/Button';
 import { showAppModal } from '../../components/ui/AppModal';
 import VerifiedBadge from '../../components/ui/VerifiedBadge';
 
-async function pickImage() {
+async function pickImage(t) {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
     showAppModal({
-      title: 'Permission requise',
-      message: 'Autorisez l\'accès à vos photos.',
-      confirmText: 'OK',
-      variant: 'warning',
+      title: t('common.error'),
+      message: t('create.permPhoto'),
+      confirmText: t('common.openSettings'),
+      variant: 'permission',
     });
     return null;
   }
@@ -88,18 +88,33 @@ export default function VerificationScreen() {
         const currentSt = provData.verificationStatus || provData.verification_status || 'none';
         setStatus(currentSt);
       }
-    } catch {
-      // Garder le statut du store si erreur réseau
+    } catch (error) {
+      showAppModal({
+        title: t('common.error'),
+        message: error.userMessage || t('errors.generic'),
+        confirmText: t('common.retry'),
+        variant: 'network',
+        onConfirm: fetchLatestStatus,
+      });
     } finally {
       setRefreshing(false);
     }
   }
 
   async function pick(side) {
-    const img = await pickImage();
-    if (!img) return;
-    if (side === 'front') setCniFront(img);
-    else setCniBack(img);
+    try {
+      const img = await pickImage(t);
+      if (!img) return;
+      if (side === 'front') setCniFront(img);
+      else setCniBack(img);
+    } catch (error) {
+      showAppModal({
+        title: t('common.error'),
+        message: error.userMessage || t('errors.generic'),
+        confirmText: t('common.ok'),
+        variant: 'error',
+      });
+    }
   }
 
   async function submit() {
@@ -160,9 +175,9 @@ export default function VerificationScreen() {
             activeOpacity={0.7}
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.primaryDark} />
             ) : (
-              <RefreshCw size={18} color={colors.primary} />
+              <RefreshCw size={18} color={colors.primaryDark} />
             )}
           </TouchableOpacity>
         </View>
@@ -314,7 +329,7 @@ export default function VerificationScreen() {
             ].map(({ Icon, text }, i) => (
               <View key={i} style={styles.benefitRow}>
                 <View style={[styles.benefitIcon, { backgroundColor: colors.primaryBg }]}>
-                  <Icon size={18} color={colors.primary} />
+                  <Icon size={18} color={colors.primaryDark} />
                 </View>
                 <Text style={styles.benefitText}>{text}</Text>
               </View>
@@ -352,7 +367,7 @@ export default function VerificationScreen() {
         <View style={styles.benefits}>
           <Text style={styles.benefitsCardTitle}>{t('verification.whatIs', 'Pourquoi se vérifier ?')}</Text>
           {[
-            { Icon: CheckCircle2, color: colors.primary, text: t('verification.benefit1', 'Badge bleu visible sur votre fiche') },
+            { Icon: CheckCircle2, color: colors.primaryDark, text: t('verification.benefit1', 'Badge bleu visible sur votre fiche') },
             { Icon: TrendingUp, color: colors.success, text: t('verification.benefit2', 'Meilleur classement dans les résultats') },
             { Icon: Shield, color: colors.info, text: t('verification.benefit3', 'Confiance accrue des clients') },
           ].map(({ Icon, color: c, text }, i) => (
@@ -387,7 +402,7 @@ export default function VerificationScreen() {
               </>
             ) : (
               <>
-                <Camera size={28} color={colors.primary} />
+                <Camera size={28} color={colors.primaryDark} />
                 <Text style={styles.photoText}>{t('verification.addPhotoFront', 'Ajouter la photo recto')}</Text>
               </>
             )}
@@ -741,7 +756,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: colors.primary + '50',
+    borderColor: colors.primaryDark,
     borderStyle: 'dashed',
     backgroundColor: colors.primaryBg,
     justifyContent: 'center',
@@ -752,7 +767,7 @@ const styles = StyleSheet.create({
   },
   photoBoxFilled: {
     borderStyle: 'solid',
-    borderColor: colors.primary,
+    borderColor: colors.primaryDark,
     backgroundColor: colors.surface,
   },
   photoPreview: {

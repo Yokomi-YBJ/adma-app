@@ -61,7 +61,7 @@ export function Select({
     setSearchQuery('');
   }
 
-  const borderColor = error ? colors.danger : isOpen ? colors.primary : colors.border;
+  const borderColor = error ? colors.danger : isOpen ? colors.primaryDark : colors.border;
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -83,7 +83,7 @@ export function Select({
           {Icon && (
             <Icon
               size={18}
-              color={selectedOption ? colors.primary : colors.textMuted}
+              color={selectedOption ? colors.primaryDark : colors.textMuted}
               style={styles.leadingIcon}
             />
           )}
@@ -107,7 +107,7 @@ export function Select({
 
         <ChevronDown
           size={18}
-          color={isOpen ? colors.primary : colors.textMuted}
+          color={isOpen ? colors.primaryDark : colors.textMuted}
           style={[styles.chevron, isOpen && styles.chevronRotated]}
         />
       </TouchableOpacity>
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   triggerFocused: {
-    borderColor: colors.primary,
+    borderColor: colors.primaryDark,
     backgroundColor: colors.primaryBg,
   },
   triggerDisabled: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   optionItemSelected: {
     backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   optionInfo: {
     flex: 1,
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryText,
     justifyContent: 'center',
     alignItems: 'center',
   },

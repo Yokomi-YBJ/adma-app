@@ -99,12 +99,12 @@ api.interceptors.response.use(
         processQueue(refreshErr, null);
 
         // Nettoyer les tokens
+        // Continue local sign-out even if a token was already removed from SecureStore.
         await SecureStore.deleteItemAsync(ACCESS_KEY).catch(() => {});
         await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
         delete api.defaults.headers.common.Authorization;
 
-        // Déconnecter proprement le store sans boucle d'appel API
-        useAuthStore.setState({ user: null, provider: null, isLoggedIn: false });
+        await useAuthStore.getState().logout();
 
         // Afficher le modal bloquant de session expirée
         useModalStore.getState().show({
@@ -116,7 +116,9 @@ api.interceptors.response.use(
           onConfirm: () => {
             import('expo-router').then(({ router }) => {
               router.replace('/(auth)/login');
-            }).catch(() => {});
+            }).catch((error) => {
+              console.error('[API] Unable to navigate to login after session expiry:', error);
+            });
           },
         });
 
@@ -138,6 +140,7 @@ export async function saveTokens(accessToken, refreshToken) {
 }
 
 export async function clearTokens() {
+  // Token deletion is idempotent; continue clearing the other key and in-memory header if one is absent.
   await SecureStore.deleteItemAsync(ACCESS_KEY).catch(() => {});
   await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
   delete api.defaults.headers.common.Authorization;

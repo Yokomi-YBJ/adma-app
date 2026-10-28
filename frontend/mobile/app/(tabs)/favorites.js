@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Heart } from 'lucide-react-native';
+import { AlertCircle, Heart } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
 import api from '../../services/api';
@@ -21,16 +21,21 @@ export default function FavoritesScreen() {
   const [favorites,  setFavorites]  = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError,  setLoadError]  = useState(null);
 
   const load = useCallback(async () => {
     if (!user) { setLoading(false); return; }
+    setLoadError(null);
     try {
       const res = await api.get('/favorites');
       setFavorites(res.data.data || []);
-    } catch {}
-    setLoading(false);
-    setRefreshing(false);
-  }, [user]);
+    } catch (error) {
+      setLoadError(error.userMessage || t('errors.generic'));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -91,14 +96,34 @@ export default function FavoritesScreen() {
               colors={[colors.primary]}
             />
           }
+          ListHeaderComponent={
+            loadError && favorites.length > 0 ? (
+              <View style={styles.errorHeader}>
+                <Text style={styles.errorText}>{loadError}</Text>
+                <TouchableOpacity onPress={load} activeOpacity={0.75}>
+                  <Text style={styles.retryText}>{t('common.retry')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
-            <EmptyState
-              icon={Heart}
-              title={t('favorites.empty')}
-              message={t('favorites.emptyHint')}
-              action={() => router.push('/(tabs)/search')}
-              actionLabel={t('favorites.browseProviders')}
-            />
+            loadError ? (
+              <EmptyState
+                icon={AlertCircle}
+                title={t('common.error')}
+                message={loadError}
+                action={load}
+                actionLabel={t('common.retry')}
+              />
+            ) : (
+              <EmptyState
+                icon={Heart}
+                title={t('favorites.empty')}
+                message={t('favorites.emptyHint')}
+                action={() => router.push('/(tabs)/search')}
+                actionLabel={t('favorites.browseProviders')}
+              />
+            )
           }
         />
       )}
@@ -116,4 +141,17 @@ const styles = StyleSheet.create({
   title:   { fontSize: 28, fontWeight: '800', color: colors.navy },
   count:   { fontSize: 13, color: colors.textMuted, marginTop: 4, fontWeight: '500' },
   list:    { paddingTop: 10, paddingBottom: 24, flexGrow: 1 },
+  errorHeader: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.dangerBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  errorText: { flex: 1, color: colors.danger, fontSize: 13 },
+  retryText: { color: colors.navy, fontSize: 13, fontWeight: '700' },
 });

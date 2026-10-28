@@ -101,7 +101,15 @@ export default function EditProviderScreen() {
       setAllCategories(cRes.data.data || []);
       setCities(ciRes.data.data || []);
       setNeighborhoods(nRes.data.data || []);
-    } catch {}
+    } catch (error) {
+      showAppModal({
+        title: t('common.error'),
+        message: error.userMessage || t('errors.generic'),
+        confirmText: t('common.retry'),
+        variant: 'network',
+        onConfirm: loadMetaData,
+      });
+    }
   }
 
   const categoryOptions = useMemo(() => {
@@ -146,23 +154,32 @@ export default function EditProviderScreen() {
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
   async function pickPhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showAppModal({
+          title: t('common.error', 'Erreur'),
+          message: t('create.permPhoto', 'Autorisez l\'accès à vos photos.'),
+          confirmText: t('common.openSettings'),
+          variant: 'permission',
+        });
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!res.canceled) setPhoto(res.assets[0]);
+    } catch (error) {
       showAppModal({
         title: t('common.error', 'Erreur'),
-        message: t('create.permPhoto', 'Autorisez l\'accès à vos photos.'),
-        confirmText: 'OK',
-        variant: 'warning',
+        message: error.userMessage || t('errors.generic'),
+        confirmText: t('common.ok'),
+        variant: 'error',
       });
-      return;
     }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (!res.canceled) setPhoto(res.assets[0]);
   }
 
   // ── GPS ────────────────────────────────────────────────────────
@@ -174,10 +191,9 @@ export default function EditProviderScreen() {
         showAppModal({
           title: t('create.geoPermDenied', 'Localisation désactivée'),
           message: t('create.geoPermDeniedMsg', 'Activez la localisation dans vos paramètres pour définir votre zone de service.'),
-          confirmText: 'OK',
-          variant: 'warning',
+          confirmText: t('common.openSettings'),
+          variant: 'permission',
         });
-        setGeoLoading(false);
         return;
       }
 
@@ -200,12 +216,13 @@ export default function EditProviderScreen() {
     } catch (err) {
       showAppModal({
         title: t('common.error', 'Erreur'),
-        message: err.response?.data?.message || t('create.geoError', 'Impossible d\'obtenir votre position.'),
+        message: err.userMessage || t('create.geoError', 'Impossible d\'obtenir votre position.'),
         confirmText: 'OK',
         variant: 'danger',
       });
+    } finally {
+      setGeoLoading(false);
     }
-    setGeoLoading(false);
   }
 
   async function removeGeoLocation() {
@@ -222,12 +239,13 @@ export default function EditProviderScreen() {
           setGeoCoords(null);
           setHasGeo(false);
           updateProv({ latitude: null, longitude: null });
-        } catch {
+        } catch (error) {
           showAppModal({
             title: t('common.error', 'Erreur'),
-            message: t('common.deleteError', 'Échec de la suppression.'),
-            confirmText: 'OK',
-            variant: 'danger',
+            message: error.userMessage || t('common.deleteError', 'Échec de la suppression.'),
+            confirmText: t('common.retry'),
+            variant: 'network',
+            onConfirm: removeGeoLocation,
           });
         }
       },
@@ -304,8 +322,8 @@ export default function EditProviderScreen() {
         <Text style={styles.title}>{t('provider.editProfile', 'Modifier ma fiche')}</Text>
         <TouchableOpacity style={styles.saveIconBtn} onPress={save} disabled={saving}>
           {saving
-            ? <ActivityIndicator size="small" color={colors.primary} />
-            : <Save size={20} color={colors.primary} />
+            ? <ActivityIndicator size="small" color={colors.primaryDark} />
+            : <Save size={20} color={colors.primaryDark} />
           }
         </TouchableOpacity>
       </View>
@@ -547,16 +565,16 @@ const styles = StyleSheet.create({
   photoWrap:       { alignSelf:'center', position:'relative', marginBottom:28 },
   photo:           { width:100, height:100, borderRadius:24, backgroundColor:colors.surface },
   photoFallback:   { justifyContent:'center', alignItems:'center', backgroundColor:colors.primaryBg },
-  photoInitial:    { fontSize:42, fontWeight:'900', color:colors.primary },
-  cameraBtn:       { position:'absolute', bottom:-4, right:-4, width:30, height:30, borderRadius:9, backgroundColor:colors.primary, justifyContent:'center', alignItems:'center', borderWidth:2, borderColor:colors.white },
+  photoInitial:    { fontSize:42, fontWeight:'900', color:colors.primaryText },
+  cameraBtn:       { position:'absolute', bottom:-4, right:-4, width:30, height:30, borderRadius:9, backgroundColor:colors.primaryText, justifyContent:'center', alignItems:'center', borderWidth:2, borderColor:colors.white },
   fieldLabel:      { fontSize:13, fontWeight:'600', color:colors.text, marginBottom:10 },
   
   // Option Grid for Contact Methods
   optionGrid:      { gap:8, marginBottom:16 },
   optionBtn:       { padding:14, borderRadius:12, backgroundColor:colors.white, borderWidth:1.5, borderColor:colors.border },
-  optionBtnActive: { borderColor:colors.primary, backgroundColor:colors.primaryBg },
+  optionBtnActive: { borderColor:colors.primaryDark, backgroundColor:colors.primaryBg },
   optionText:      { fontSize:14, color:colors.textSecondary, fontWeight:'500' },
-  optionTextActive:{ color:colors.primary, fontWeight:'700' },
+  optionTextActive:{ color:colors.primaryText, fontWeight:'700' },
 
   // Upgrade hint pour le site web
   upgradeHint: {
@@ -579,7 +597,7 @@ const styles = StyleSheet.create({
   geoSection:      { backgroundColor:colors.surface, borderRadius:18, padding:18, marginBottom:24 },
   sectionTitle:    { fontSize:16, fontWeight:'700', color:colors.navy, marginBottom:6 },
   geoDesc:         { fontSize:13, color:colors.textMuted, lineHeight:18, marginBottom:16 },
-  geoPlanText:     { color:colors.primary, fontWeight:'700' },
+  geoPlanText:     { color:colors.primaryText, fontWeight:'700' },
   geoDefinedCard:  { flexDirection:'row', alignItems:'flex-start', gap:12, backgroundColor:colors.successBg, borderRadius:12, padding:14, borderWidth:1, borderColor:colors.success+'40', marginBottom:14 },
   geoDefinedTitle: { fontSize:14, fontWeight:'700', color:colors.success },
   geoDefinedCoords:{ fontSize:11, color:colors.textMuted, marginTop:2, fontFamily:'monospace' },
@@ -588,7 +606,7 @@ const styles = StyleSheet.create({
   geoUndefinedText:{ flex:1, fontSize:13, color:colors.textMuted, lineHeight:18 },
   geoBtns:         { flexDirection:'row', gap:10 },
   geoActionBtn:    { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8, paddingVertical:12, borderRadius:12 },
-  geoActionBtnPrimary: { backgroundColor:colors.primary },
+  geoActionBtnPrimary: { backgroundColor:colors.primaryText },
   geoActionBtnDanger:  { backgroundColor:colors.dangerBg, borderWidth:1, borderColor:colors.danger+'40' },
   geoActionBtnText:    { fontSize:14, fontWeight:'700', color:colors.white },
   geoActionBtnDangerText: { fontSize:14, fontWeight:'700', color:colors.danger },

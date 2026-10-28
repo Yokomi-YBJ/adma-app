@@ -195,7 +195,7 @@ export default function EditProfileScreen() {
             disabled={uploadingAvatar}
             activeOpacity={0.8}
           >
-            <Camera size={16} color={colors.primary} />
+            <Camera size={16} color={colors.primaryDark} />
           </TouchableOpacity>
         </View>
 
@@ -217,7 +217,7 @@ export default function EditProfileScreen() {
           />
 
           <View style={styles.callout}>
-            <UserRound size={18} color={colors.primary} />
+            <UserRound size={18} color={colors.primaryDark} />
             <Text style={styles.calloutText}>
               {t('editProfile.calloutText', 'Ces informations seront visibles sur vos avis et vos échanges.')}
             </Text>

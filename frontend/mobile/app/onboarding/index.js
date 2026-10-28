@@ -280,7 +280,9 @@ export default function OnboardingScreen() {
     setFinishing(true);
     try {
       await AsyncStorage.setItem('adma_onboarded', '1');
-    } catch {}
+    } catch {
+      // Continue to the app; a storage failure only means onboarding may be shown again next launch.
+    }
     // Petit délai pour laisser l'animation se voir (perception de fluidité)
     setTimeout(() => {
       router.replace(isLoggedIn ? '/(tabs)' : '/(auth)/login');

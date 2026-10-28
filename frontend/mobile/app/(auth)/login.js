@@ -78,7 +78,7 @@ export default function LoginScreen() {
     });
   };
 
-    function validatePhone(p) {
+  function validatePhone(p) {
     return /^6[4-9]\d{7}$/.test(p.replace(/\s/g, ''));
   }
 
@@ -175,8 +175,8 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        enabled={Platform.OS === 'ios'}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        enabled
         style={styles.container}
       >
         <View style={styles.topSection}>
@@ -271,7 +271,7 @@ export default function LoginScreen() {
                 >
                   <RotateCcw
                     size={16}
-                    color={countdown > 0 ? colors.textMuted : colors.primary}
+                    color={countdown > 0 ? colors.textMuted : colors.primaryDark}
                     strokeWidth={2.5}
                   />
                   <Text style={[styles.resendText, countdown > 0 && styles.resendTextMuted]}>
@@ -466,12 +466,13 @@ const styles = StyleSheet.create({
   resendBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 44,
     marginTop: 20,
     alignSelf: 'flex-start',
   },
   resendText: {
     fontSize: 15,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '700',
     marginLeft: 8,
   },

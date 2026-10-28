@@ -62,9 +62,9 @@ export default function ReviewScreen() {
 
   if (done) {
     return (
-      <View style={styles.doneWrap}>
+      <View style={[styles.doneWrap, { paddingBottom: 40 + insets.bottom }]}>
         <View style={styles.doneIcon}>
-          <ThumbsUp size={40} color={colors.primary} />
+          <ThumbsUp size={40} color={colors.primaryDark} />
         </View>
         <Text style={styles.doneTitle}>{t('review.success')}</Text>
         <Text style={styles.doneDesc}>{t('review.disclaimer')}</Text>
@@ -87,7 +87,10 @@ export default function ReviewScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.question}>{t('review.question')}</Text>
 
         <View style={styles.verdictRow}>

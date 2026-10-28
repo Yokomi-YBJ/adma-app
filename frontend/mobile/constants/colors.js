@@ -6,7 +6,7 @@ export const colors = {
   // Brand
   primary:       '#5FC2BA',
   primaryDark:   '#3B8F89',
-  primaryText:   '#167C74', // WCAG AA conforme (> 5.1:1 sur blanc)
+  primaryText:   '#167C74', // Contraste WCAG AA 5.04:1 sur fond blanc
   primaryLight:  '#9FDEDA',
   primaryBg:     '#EBF7F7',
   primaryBgAlt:  '#D8F2F0',

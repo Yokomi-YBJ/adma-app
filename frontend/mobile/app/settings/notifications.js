@@ -101,7 +101,7 @@ export default function NotificationPreferencesScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.summary}>
           <View style={styles.iconWrap}>
-            <Bell size={18} color={colors.primary} />
+            <Bell size={18} color={colors.primaryDark} />
           </View>
           <View style={styles.summaryText}>
             <Text style={styles.summaryTitle}>{t('notificationPrefs.centerTitle')}</Text>

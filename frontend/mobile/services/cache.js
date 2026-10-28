@@ -34,7 +34,9 @@ export async function setCache(key, value, ttlMs = CACHE_TTL.providers) {
       'INSERT OR REPLACE INTO cache (key, data, expires, created) VALUES (?, ?, ?, ?)',
       [key, data, expires, now]
     );
-  } catch {}
+  } catch {
+    // Cache writes are best-effort; callers still receive the live API result.
+  }
 }
 
 export async function getCache(key) {
@@ -49,21 +51,32 @@ export async function getCache(key) {
       return null;
     }
     return JSON.parse(row.data);
-  } catch { return null; }
+  } catch {
+    // A corrupt or unavailable cache is treated as a cache miss so callers can fetch fresh data.
+    return null;
+  }
 }
 
 export async function invalidateCache(keyPattern) {
   try {
     await getDB().runAsync('DELETE FROM cache WHERE key LIKE ?', [`${keyPattern}%`]);
-  } catch {}
+  } catch {
+    // Cache invalidation must not block the corresponding live API operation.
+  }
 }
 
 export async function clearExpiredCache() {
   try {
     await getDB().runAsync('DELETE FROM cache WHERE expires < ?', [Date.now()]);
-  } catch {}
+  } catch {
+    // Expired entries are opportunistically cleaned on later cache operations.
+  }
 }
 
 export async function clearAllCache() {
-  try { await getDB().runAsync('DELETE FROM cache'); } catch {}
+  try {
+    await getDB().runAsync('DELETE FROM cache');
+  } catch {
+    // Cache contents are disposable and can be rebuilt from the API.
+  }
 }

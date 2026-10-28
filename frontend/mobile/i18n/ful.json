@@ -416,6 +416,10 @@
   },
   "plans": {
     "title": "Ceɗe",
+    "loadError": "Wawaa loowde njoɓdiiji. Ƴeewto seŋorde maa kadi ɗaɓɓu kine.",
+    "pendingError": "Wawaa ƴeewtaade waylude ceɗe nde waɗaama.",
+    "scheduledTitle": "Waylude nde waɗaama",
+    "scheduledBody": "Waylude e ceɗe {{plan}} ñande {{date}}.",
     "noProvider": {
       "title": "Alaa fiisgol golloowo",
       "body": "Sosu fiisgol maa ngam heɓde ceɗe."
@@ -457,6 +461,21 @@
     "phoneLabel": "Limto ngam ɗaccude",
     "note": "A heɓay habaru e telefoŋ maa ngam teeŋtinde njoɓdi ndi.",
     "payButton": "Njoɓ {{amount}} FCFA",
+    "processing": "Njoɓdi ndi woni e waɗde...",
+    "opening": "Udditde hello njoɓdi...",
+    "awaitingConfirmation": "Ndeento teeŋtinal...",
+    "waiting": "Ndeento teeŋtinal... ({{seconds}}s)",
+    "waitingHint": "Rewto tinndinooje e hello njoɓdi walla habaru mobile money.",
+    "resuming": "Ƴeewtagol njoɓdi ndi fuɗɗitii...",
+    "statusCheckFailed": "Ƴeewtagol waawaa jooni. Ɗaɓɓitagol hesere woni e waɗde...",
+    "timeoutMessage": "Teeŋtinal njoɓdi ndi ɗo ɓuri sahaa. A waawi ƴeewtaade kadi tawa a fuɗɗitaaki njoɓdi keseri.",
+    "pendingTitle": "Njoɓdi ndee ɗoɗii",
+    "checkAgain": "Ƴeewto kadi",
+    "storageUnavailable": "Reenndugol njoɓdi e telefon waawaa. Hoto uddit ngoo hello haa teeŋtinal njoɓdi.",
+    "storageInvalid": "Habaruuji reenndugol njoɓdi ɗiɗi moƴƴaani, ɗi momtaama.",
+    "browserError": "Wawaa udditde hello njoɓdi. Ƴeewto habaru mobile money.",
+    "linkExpired": "Hello njoɓdi ena waawi timmude. Min ƴeewtata so njoɓdi teeŋtinaama.",
+    "invalidRequest": "Habaruuji ceɗe ɗii moƴƴaani. Rutto e doggol ceɗe.",
     "error": {
       "operator": "Suɓo opaeraatoor",
       "phone": "Limto Kameruun ngo moƴƴaani",
@@ -643,7 +662,11 @@
       "paymentQ": "Noy mi yoɓata plan?",
       "paymentA": "Daga kaye plans, suɓo plan maa, boo a yoɓa bee Orange Money koo MTN Mobile Money nder jam e KPay.",
       "notificationsQ": "Ko waɗi mi heɓaay kaaɗunde?",
-      "notificationsA": "Ndaaru to kaaɗunde ɗon uddita nder teeltanɗe telefon maa e nder app ngal boo."
+      "notificationsA": "Ndaaru to kaaɗunde ɗon uddita nder teeltanɗe telefon maa e nder app ngal boo.",
+      "reviewsQ": "Noy mi winndirta eƴɓere dow jofniido?",
+      "reviewsA": "Uddit kaye jofniido oo, suɓo eƴɓere, tee hollu no kuugal makko waɗi e maa.",
+      "reportQ": "Noy mi hollirta kaye koo winndannde?",
+      "reportA": "Uddit kaye ndee, suɓo «Hollude», suɓo dalil, tee ɓeydu kabaruuji so ena haani."
     }
   },
   "legal": {
@@ -687,8 +710,10 @@
     "CANNOT_DEACTIVATE_SELF": "A waawaa nyiffude konte ma hoore ma.",
     "CANT_REVIEW_OWN": "A waawaa hokkude miijo dow kuugal ma hoore ma.",
     "CATEGORY_HAS_CHILDREN": "Fedde nde ɗon mari felle nder majjum.",
+    "CATEGORY_IN_USE": "Cette catégorie ne peut pas être supprimée car des prestataires y sont rattachés.",
     "DATABASE_UNAVAILABLE": "Kuugal ngal ɗon nder caɗeele jooni. Eto fahin.",
     "DATA_TOO_LONG": "Binndol ngol ɗon ɓuri ko jaɓaa.",
+    "DOWNGRADE_NOT_ALLOWED": "Seuls les changements vers un forfait supérieur sont autorisés.",
     "DUPLICATE": "Ɗum ɗon woodi kadi.",
     "EMAIL_EXISTS": "Iimeel ɗon huutoree jooni.",
     "EMAIL_SEND_FAILED": "Iimeel neldaaka.",
@@ -711,6 +736,7 @@
     "INVALID_REFERENCE": "Ko tefetee heɓaaka.",
     "INVALID_REFRESH_TOKEN": "Sahaa ma bonii. Nastit fahin.",
     "INVALID_TARGET": "Ko tefetee ngam kuuɗe ɗe laaɓaa.",
+    "INVALID_TOKEN": "Votre session est invalide. Veuillez vous reconnecter.",
     "INVALID_TYPE": "Iri ɗaɓɓol ngol laaɓaa.",
     "LIMIT_FILE_SIZE": "Fiil ɗon ɓuri ko jaɓaa (5 Mo).",
     "LIMIT_UNEXPECTED_FILE": "Mbaydi fiil jaɓaaka.",

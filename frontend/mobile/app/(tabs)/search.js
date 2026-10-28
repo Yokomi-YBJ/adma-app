@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, Modal, ScrollView, Linking,
+  TextInput, ActivityIndicator, Modal, ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import { ProviderCard }       from '../../components/cards/ProviderCard';
 import { EmptyState }         from '../../components/ui/EmptyState';
 import { SkeletonProviderCard } from '../../components/ui/Skeleton';
 import { Select }             from '../../components/ui/Select';
+import { showAppModal }       from '../../components/ui/AppModal';
 
 const PAGE_SIZE = 20;
 
@@ -35,7 +36,12 @@ function LocationPermissionBanner({ onDismiss }) {
       <TouchableOpacity
         style={banner.btn}
         onPress={() => {
-          Linking.openSettings();
+          showAppModal({
+            title: t('search.locationDisabled'),
+            message: t('search.locationDisabledBody'),
+            confirmText: t('common.openSettings'),
+            variant: 'permission',
+          });
           onDismiss();
         }}
       >
@@ -180,18 +186,18 @@ const fm = StyleSheet.create({
   body:           { flex:1, padding:20 },
   label:          { fontSize:13, fontWeight:'700', color:colors.text, marginBottom:10, marginTop:16 },
   chips:          { marginBottom:4 },
-  chip:           { paddingHorizontal:14, paddingVertical:9, borderRadius:20, backgroundColor:colors.surface, marginRight:8, borderWidth:1.5, borderColor:colors.border },
-  chipActive:     { backgroundColor:colors.primary, borderColor:colors.primary },
+  chip:           { minHeight:44, paddingHorizontal:14, paddingVertical:9, borderRadius:20, backgroundColor:colors.surface, marginRight:8, borderWidth:1.5, borderColor:colors.border },
+  chipActive:     { backgroundColor:colors.primaryText, borderColor:colors.primaryText },
   chipText:       { fontSize:13, color:colors.textSecondary, fontWeight:'600' },
   chipTextActive: { color:colors.white },
   toggle:         { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingVertical:14, borderBottomWidth:1, borderBottomColor:colors.borderLight },
   toggleLabel:    { fontSize:15, color:colors.text, fontWeight:'500' },
   checkbox:       { width:24, height:24, borderRadius:7, borderWidth:2, borderColor:colors.border, justifyContent:'center', alignItems:'center' },
-  checkboxActive: { backgroundColor:colors.primary, borderColor:colors.primary },
+  checkboxActive: { backgroundColor:colors.primaryText, borderColor:colors.primaryText },
   actions:        { flexDirection:'row', gap:12, padding:20, borderTopWidth:1, borderTopColor:colors.borderLight },
   resetBtn:       { flex:1, paddingVertical:14, borderRadius:12, borderWidth:1.5, borderColor:colors.border, alignItems:'center' },
   resetText:      { fontSize:15, fontWeight:'700', color:colors.text },
-  applyBtn:       { flex:2, paddingVertical:14, borderRadius:12, backgroundColor:colors.primary, alignItems:'center' },
+  applyBtn:       { flex:2, paddingVertical:14, borderRadius:12, backgroundColor:colors.primaryText, alignItems:'center' },
   applyText:      { fontSize:15, fontWeight:'700', color:colors.white },
 });
 
@@ -224,6 +230,7 @@ export default function SearchScreen() {
   const [hasMore,     setHasMore]     = useState(true);
   const [loading,     setLoading]     = useState(false);
   const [initLoading, setInitLoading] = useState(true);
+  const [searchError, setSearchError] = useState(null);
   const [total,       setTotal]       = useState(0);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -268,7 +275,9 @@ export default function SearchScreen() {
       setCities(meta.cities);
       setNeighborhoods(meta.neighborhoods);
       setCache('search_meta', meta, CACHE_TTL.categories);
-    } catch {}
+    } catch {
+      // Metadata is cached; its preload is optional and search requests report failures separately.
+    }
   }
 
   async function enableNearbyMode() {
@@ -279,7 +288,19 @@ export default function SearchScreen() {
       return;
     }
 
-    const coords = await requestLocation();
+    let coords;
+    try {
+      coords = await requestLocation();
+    } catch (error) {
+      showAppModal({
+        title: t('common.error'),
+        message: error.userMessage || t('errors.generic'),
+        confirmText: t('common.retry'),
+        variant: 'network',
+        onConfirm: enableNearbyMode,
+      });
+      return;
+    }
 
     if (!coords) {
       setShowPermBanner(true);
@@ -294,6 +315,7 @@ export default function SearchScreen() {
   const search = useCallback(async (reset = true) => {
     if (loading && !reset) return;
     setLoading(true);
+    if (reset) setSearchError(null);
     const currentPage = reset ? 1 : page;
 
     try {
@@ -314,15 +336,18 @@ export default function SearchScreen() {
 
       setHasMore(list.length === PAGE_SIZE);
       setTotal(tot);
-    } catch { if (reset) setProviders([]); }
-
-    setLoading(false);
-    setInitLoading(false);
-  }, [query, filters, page, loading]);
+    } catch (error) {
+      setSearchError(error.userMessage || t('errors.generic'));
+    } finally {
+      setLoading(false);
+      setInitLoading(false);
+    }
+  }, [query, filters, page, loading, t]);
 
   const searchNearby = useCallback(async (reset = true) => {
     if (!userCoords || (loading && !reset)) return;
     setLoading(true);
+    if (reset) setSearchError(null);
     const currentPage = reset ? 1 : page;
 
     try {
@@ -343,13 +368,16 @@ export default function SearchScreen() {
 
       setHasMore(list.length === PAGE_SIZE);
       setTotal(tot);
-    } catch { if (reset) setProviders([]); }
-
-    setLoading(false);
-    setInitLoading(false);
-  }, [userCoords, filters, page, loading]);
+    } catch (error) {
+      setSearchError(error.userMessage || t('errors.generic'));
+    } finally {
+      setLoading(false);
+      setInitLoading(false);
+    }
+  }, [userCoords, filters, page, loading, t]);
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
+  const retrySearch = () => nearbyMode && userCoords ? searchNearby(true) : search(true);
 
   const myRadius = provider?.plan ? PLAN_RADIUS[provider.plan] : null;
 
@@ -388,8 +416,8 @@ export default function SearchScreen() {
             activeOpacity={0.8}
           >
             {geoLoading
-              ? <ActivityIndicator size="small" color={nearbyMode ? colors.white : colors.primary} />
-              : <LocateFixed size={18} color={nearbyMode ? colors.white : colors.primary} strokeWidth={2.5} />
+              ? <ActivityIndicator size="small" color={nearbyMode ? colors.white : colors.primaryDark} />
+              : <LocateFixed size={18} color={nearbyMode ? colors.white : colors.primaryDark} strokeWidth={2.5} />
             }
           </TouchableOpacity>
 
@@ -397,16 +425,16 @@ export default function SearchScreen() {
             style={[styles.filterBtn, hasActiveFilters && styles.filterBtnActive]}
             onPress={() => setShowFilters(true)}
           >
-            <SlidersHorizontal size={18} color={hasActiveFilters ? colors.white : colors.primary} strokeWidth={2} />
+            <SlidersHorizontal size={18} color={hasActiveFilters ? colors.white : colors.primaryDark} strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
         {nearbyMode && userCoords && (
           <View style={styles.nearbyBadge}>
-            <MapPin size={12} color={colors.primary} />
+            <MapPin size={12} color={colors.primaryDark} />
             <Text style={styles.nearbyText}>{t('search.nearbyBadge')}</Text>
             <TouchableOpacity onPress={enableNearbyMode}>
-              <X size={14} color={colors.primary} />
+              <X size={14} color={colors.primaryDark} />
             </TouchableOpacity>
           </View>
         )}
@@ -440,6 +468,16 @@ export default function SearchScreen() {
             />
           )}
           contentContainerStyle={[styles.list, showMapFab && { paddingBottom: 100 }]}
+          ListHeaderComponent={
+            searchError && providers.length > 0 ? (
+              <View style={styles.errorHeader}>
+                <Text style={styles.errorText}>{searchError}</Text>
+                <TouchableOpacity onPress={retrySearch} activeOpacity={0.75}>
+                  <Text style={styles.retryText}>{t('common.retry')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
           onEndReached={() => {
             if (hasMore && !loading) {
               if (nearbyMode && userCoords) searchNearby(false);
@@ -449,18 +487,28 @@ export default function SearchScreen() {
           onEndReachedThreshold={0.4}
           ListEmptyComponent={
             !loading ? (
-              <EmptyState
-                icon={nearbyMode ? LocateFixed : Search}
-                title={nearbyMode ? t('search.emptyNearbyTitle') : t('search.emptyTitle')}
-                message={nearbyMode ? t('search.emptyNearbyMessage') : t('search.emptyMessage')}
-                action={nearbyMode ? enableNearbyMode : () => setFilters({ categoryId:null, cityId:null, neighborhoodId:null, verified:false, available:false })}
-                actionLabel={nearbyMode ? t('search.switchToClassic') : t('search.clearFilters')}
-              />
+              searchError ? (
+                <EmptyState
+                  icon={AlertCircle}
+                  title={t('common.error')}
+                  message={searchError}
+                  action={retrySearch}
+                  actionLabel={t('common.retry')}
+                />
+              ) : (
+                <EmptyState
+                  icon={nearbyMode ? LocateFixed : Search}
+                  title={nearbyMode ? t('search.emptyNearbyTitle') : t('search.emptyTitle')}
+                  message={nearbyMode ? t('search.emptyNearbyMessage') : t('search.emptyMessage')}
+                  action={nearbyMode ? enableNearbyMode : () => setFilters({ categoryId:null, cityId:null, neighborhoodId:null, verified:false, available:false })}
+                  actionLabel={nearbyMode ? t('search.switchToClassic') : t('search.clearFilters')}
+                />
+              )
             ) : null
           }
           ListFooterComponent={
             loading && providers.length > 0
-              ? <ActivityIndicator style={{ margin:20 }} color={colors.primary} />
+              ? <ActivityIndicator style={{ margin:20 }} color={colors.primaryDark} />
               : null
           }
         />
@@ -501,13 +549,26 @@ const styles = StyleSheet.create({
   searchBox:     { flex:1, flexDirection:'row', alignItems:'center', gap:10, backgroundColor:colors.surface, borderRadius:14, paddingHorizontal:14, height:46, borderWidth:1.5, borderColor:colors.border },
   searchInput:   { flex:1, fontSize:15, color:colors.text },
   geoBtn:        { width:46, height:46, borderRadius:14, backgroundColor:colors.surface, justifyContent:'center', alignItems:'center', borderWidth:1.5, borderColor:colors.border },
-  geoBtnActive:  { backgroundColor:colors.primary, borderColor:colors.primary },
+  geoBtnActive:  { backgroundColor:colors.primaryText, borderColor:colors.primaryText },
   filterBtn:     { width:46, height:46, borderRadius:14, backgroundColor:colors.surface, justifyContent:'center', alignItems:'center', borderWidth:1.5, borderColor:colors.border },
-  filterBtnActive: { backgroundColor:colors.primary, borderColor:colors.primary },
-  nearbyBadge:   { flexDirection:'row', alignItems:'center', gap:6, backgroundColor:colors.primaryBg, borderRadius:10, paddingHorizontal:12, paddingVertical:7, marginTop:10, borderWidth:1, borderColor:colors.primary+'40' },
-  nearbyText:    { flex:1, fontSize:11, color:colors.primary, fontWeight:'600' },
+  filterBtnActive: { backgroundColor:colors.primaryText, borderColor:colors.primaryText },
+  nearbyBadge:   { flexDirection:'row', alignItems:'center', gap:6, backgroundColor:colors.primaryBg, borderRadius:10, paddingHorizontal:12, paddingVertical:7, marginTop:10, borderWidth:1, borderColor:colors.primaryDark },
+  nearbyText:    { flex:1, fontSize:11, color:colors.primaryText, fontWeight:'600' },
   resultsCount:  { fontSize:12, color:colors.textMuted, marginTop:8, fontWeight:'500' },
   list:          { paddingTop:10, paddingBottom:24, flexGrow:1 },
+  errorHeader: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.dangerBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  errorText: { flex: 1, color: colors.danger, fontSize: 13 },
+  retryText: { color: colors.navy, fontSize: 13, fontWeight: '700' },
   mapFab: {
     position: 'absolute',
     alignSelf: 'center',

@@ -2,10 +2,10 @@ export const API_URL = 'https://adma-app.onrender.com/api/v1';
 export const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '';
 
 export const PLANS = {
-  free:         { id:'free',         label_fr:'Gratuit',       label_en:'Free',         price:0,    color:'#6B7B8F' },
-  premium:      { id:'premium',      label_fr:'Premium',       label_en:'Premium',      price:1000, color:'#5FC2BA' },
-  professional: { id:'professional', label_fr:'Professionnel', label_en:'Professional', price:2500, color:'#3B556D' },
-  enterprise:   { id:'enterprise',   label_fr:'Entreprise',    label_en:'Enterprise',   price:5000, color:'#0B162C' },
+  free:         { id:'free',         label_fr:'Gratuit',       label_en:'Free',         color:'#6B7B8F' },
+  premium:      { id:'premium',      label_fr:'Premium',       label_en:'Premium',      color:'#5FC2BA' },
+  professional: { id:'professional', label_fr:'Professionnel', label_en:'Professional', color:'#3B556D' },
+  enterprise:   { id:'enterprise',   label_fr:'Entreprise',    label_en:'Enterprise',   color:'#0B162C' },
 };
 
 // Rayon de détectabilité géographique par plan (en km)

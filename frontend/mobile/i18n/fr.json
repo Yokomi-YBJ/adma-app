@@ -416,6 +416,10 @@
   },
   "plans": {
     "title": "Forfaits",
+    "loadError": "Impossible de charger les tarifs. Vérifiez votre connexion et réessayez.",
+    "pendingError": "Impossible de vérifier le changement programmé.",
+    "scheduledTitle": "Changement programmé",
+    "scheduledBody": "Passage au plan {{plan}} le {{date}}.",
     "noProvider": {
       "title": "Aucune fiche prestataire",
       "body": "Créez votre fiche prestataire pour accéder aux forfaits."
@@ -457,6 +461,21 @@
     "phoneLabel": "Numéro à débiter",
     "note": "Vous recevrez une notification sur votre téléphone pour valider le paiement.",
     "payButton": "Payer {{amount}} FCFA",
+    "processing": "Traitement du paiement...",
+    "opening": "Ouverture de la page de paiement...",
+    "awaitingConfirmation": "En attente de la confirmation...",
+    "waiting": "En attente de confirmation... ({{seconds}} s)",
+    "waitingHint": "Suivez les instructions sur la page de paiement ou la notification mobile money.",
+    "resuming": "Reprise de la vérification du paiement...",
+    "statusCheckFailed": "Vérification temporairement indisponible. Nouvelle tentative en cours...",
+    "timeoutMessage": "La confirmation prend plus de temps que prévu. Vous pouvez relancer la vérification sans recommencer le paiement.",
+    "pendingTitle": "Paiement en attente",
+    "checkAgain": "Vérifier à nouveau",
+    "storageUnavailable": "Le suivi local du paiement est indisponible. Gardez cette page ouverte jusqu'à la confirmation.",
+    "storageInvalid": "L'ancien suivi du paiement était invalide et a été effacé.",
+    "browserError": "La page de paiement n'a pas pu s'ouvrir. Vérifiez la notification mobile money.",
+    "linkExpired": "Le lien semble expiré. Nous vérifions tout de même si le paiement a été confirmé.",
+    "invalidRequest": "Les informations du forfait sont invalides. Revenez à la liste des forfaits.",
     "error": {
       "operator": "Choisissez un opérateur",
       "phone": "Numéro camerounais invalide",
@@ -643,7 +662,11 @@
       "paymentQ": "Comment payer un abonnement ?",
       "paymentA": "Depuis la page Abonnements, choisissez votre plan, puis réglez simplement par Orange Money ou MTN Mobile Money via notre passerelle sécurisée KPay.",
       "notificationsQ": "Pourquoi je ne reçois pas de notifications ?",
-      "notificationsA": "Vérifiez que les notifications sont autorisées dans les réglages de votre téléphone et dans 'Paramètres > Notifications' de l'application."
+      "notificationsA": "Vérifiez que les notifications sont autorisées dans les réglages de votre téléphone et dans 'Paramètres > Notifications' de l'application.",
+      "reviewsQ": "Comment laisser un avis sur un prestataire ?",
+      "reviewsA": "Ouvrez la fiche du prestataire, choisissez l'action pour ajouter un avis, puis indiquez votre expérience.",
+      "reportQ": "Comment signaler une fiche ou un contenu ?",
+      "reportA": "Ouvrez la fiche concernée, choisissez « Signaler », sélectionnez un motif et ajoutez des précisions si nécessaire."
     }
   },
   "legal": {
@@ -687,8 +710,10 @@
     "CANNOT_DEACTIVATE_SELF": "Vous ne pouvez pas désactiver votre propre compte.",
     "CANT_REVIEW_OWN": "Vous ne pouvez pas noter votre propre fiche.",
     "CATEGORY_HAS_CHILDREN": "Cette catégorie contient des sous-catégories.",
+    "CATEGORY_IN_USE": "Cette catégorie ne peut pas être supprimée car des prestataires y sont rattachés.",
     "DATABASE_UNAVAILABLE": "Service temporairement indisponible. Réessayez dans un instant.",
     "DATA_TOO_LONG": "Le texte saisi dépasse la longueur autorisée.",
+    "DOWNGRADE_NOT_ALLOWED": "Seuls les changements vers un forfait supérieur sont autorisés.",
     "DUPLICATE": "Cet élément existe déjà.",
     "EMAIL_EXISTS": "Cette adresse email est déjà utilisée.",
     "EMAIL_SEND_FAILED": "Échec de l'envoi de l'email.",
@@ -712,6 +737,7 @@
     "INVALID_REFRESH_TOKEN": "Session invalide. Veuillez vous reconnecter.",
     "INVALID_TARGET": "Cible invalide pour cette action.",
     "INVALID_TYPE": "Type de requête non valide.",
+    "INVALID_TOKEN": "Votre session est invalide. Veuillez vous reconnecter.",
     "LIMIT_FILE_SIZE": "Le fichier dépasse la taille maximale autorisée (5 Mo).",
     "LIMIT_UNEXPECTED_FILE": "Format de fichier non pris en charge.",
     "MISSING_ACTION": "Action requise.",

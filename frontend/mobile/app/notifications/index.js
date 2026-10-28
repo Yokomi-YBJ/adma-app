@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Check, ChevronLeft } from 'lucide-react-native';
+import { AlertCircle, Bell, Check, ChevronLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { colors } from '../../constants/colors';
@@ -40,13 +40,13 @@ export default function NotificationsScreen() {
   const { t }       = useTranslation();
   const insets      = useSafeAreaInsets();
   const router      = useRouter();
-  const { notifications, loading, load, markRead, markAllRead } = useNotificationStore();
+  const { notifications, loading, error, load, markRead, markAllRead } = useNotificationStore();
 
   useEffect(() => {
     async function init() {
-      await load();
+      const loaded = await load();
       // Marquer automatiquement comme lu dès l'accès à l'écran
-      await markAllRead();
+      if (loaded) await markAllRead();
     }
     init();
   }, []);
@@ -60,7 +60,7 @@ export default function NotificationsScreen() {
         <Text style={styles.title}>{t('notifications.title', 'Notifications')}</Text>
         {notifications.some((n) => !n.is_read) ? (
           <TouchableOpacity style={styles.markAllBtn} onPress={markAllRead} activeOpacity={0.7}>
-            <Check size={14} color={colors.primary} />
+            <Check size={14} color={colors.primaryDark} />
             <Text style={styles.markAllText}>{t('notifications.markAllRead', 'Tout lire')}</Text>
           </TouchableOpacity>
         ) : (
@@ -71,15 +71,27 @@ export default function NotificationsScreen() {
         data={notifications}
         keyExtractor={(n) => n.id.toString()}
         renderItem={({ item }) => <NotifItem notif={item} onRead={markRead} />}
+        ListHeaderComponent={
+          error && notifications.length > 0 ? (
+            <View style={styles.errorHeader}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={load} activeOpacity={0.75}>
+                <Text style={styles.retryText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           !loading ? (
             <EmptyState
-              icon={Bell}
-              title={t('notifications.empty', 'Aucune notification')}
-              message={t(
+              icon={error ? AlertCircle : Bell}
+              title={error ? t('common.error') : t('notifications.empty', 'Aucune notification')}
+              message={error || t(
                 'notifications.emptyMessage',
                 'Vous serez notifié des nouveaux avis, vérifications et rappels d\'abonnement.'
               )}
+              action={error ? load : null}
+              actionLabel={error ? t('common.retry') : null}
             />
           ) : null
         }
@@ -121,6 +133,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   markAllText: { fontSize: 12, color: colors.primaryDark, fontWeight: '700' },
+  errorHeader: {
+    padding: 16,
+    backgroundColor: colors.dangerBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  errorText: { flex: 1, color: colors.danger, fontSize: 13 },
+  retryText: { color: colors.navy, fontSize: 13, fontWeight: '700' },
   item: {
     flexDirection: 'row',
     gap: 12,
@@ -130,7 +152,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderLight,
   },
   itemUnread: { backgroundColor: colors.primaryBg + '40' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginTop: 6 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primaryDark, marginTop: 6 },
   dotRead: { backgroundColor: colors.border },
   itemTitle: { fontSize: 14, fontWeight: '700', color: colors.navy, marginBottom: 4 },
   itemBody: { fontSize: 13, color: colors.textSecondary, lineHeight: 18, marginBottom: 6 },

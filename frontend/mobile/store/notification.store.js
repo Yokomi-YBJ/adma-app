@@ -1,31 +1,50 @@
 import { create } from 'zustand';
 import api from '../services/api';
+import i18n from '../i18n';
 
 export const useNotificationStore = create((set, get) => ({
   notifications: [],
   unreadCount:   0,
   loading:       false,
+  error:         null,
 
   load: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const res = await api.get('/notifications?limit=50');
       const notifs = res.data.data || [];
       set({ notifications: notifs, unreadCount: notifs.filter(n => !n.is_read).length, loading: false });
-    } catch { set({ loading: false }); }
+      return true;
+    } catch (error) {
+      set({ loading: false, error: error.userMessage || i18n.t('errors.generic') });
+      return false;
+    }
   },
 
   markRead: async (id) => {
-    await api.patch(`/notifications/${id}/read`).catch(() => {});
-    set((s) => ({
-      notifications: s.notifications.map(n => n.id === id ? { ...n, is_read: true } : n),
-      unreadCount:   Math.max(0, s.unreadCount - 1),
-    }));
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      set((s) => ({
+        notifications: s.notifications.map(n => n.id === id ? { ...n, is_read: true } : n),
+        unreadCount: Math.max(0, s.unreadCount - 1),
+        error: null,
+      }));
+    } catch (error) {
+      set({ error: error.userMessage || i18n.t('errors.generic') });
+    }
   },
 
   markAllRead: async () => {
-    await api.patch('/notifications/read-all').catch(() => {});
-    set((s) => ({ notifications: s.notifications.map(n => ({ ...n, is_read: true })), unreadCount: 0 }));
+    try {
+      await api.patch('/notifications/read-all');
+      set((s) => ({
+        notifications: s.notifications.map(n => ({ ...n, is_read: true })),
+        unreadCount: 0,
+        error: null,
+      }));
+    } catch (error) {
+      set({ error: error.userMessage || i18n.t('errors.generic') });
+    }
   },
 
   addNotification: (notif) => {

@@ -89,7 +89,15 @@ export default function CreateProviderScreen() {
       setAllCategories(cRes.data.data || []);
       setCities(ciRes.data.data || []);
       setNeighborhoods(nRes.data.data || []);
-    } catch {}
+    } catch (error) {
+      showAppModal({
+        title: t('common.error'),
+        message: error.userMessage || t('errors.generic'),
+        confirmText: t('common.retry'),
+        variant: 'network',
+        onConfirm: loadMetaData,
+      });
+    }
   }
 
   // Catégories filtrées (sous-catégories) formatées pour le composant Select
@@ -158,10 +166,9 @@ export default function CreateProviderScreen() {
         showAppModal({
           title: t('create.geoPermDenied', 'Localisation désactivée'),
           message: t('create.geoPermDeniedMsg', 'Activez la localisation dans les paramètres pour définir votre zone de service.'),
-          confirmText: 'OK',
-          variant: 'warning',
+          confirmText: t('common.openSettings'),
+          variant: 'permission',
         });
-        setGeoLoading(false);
         return;
       }
 
@@ -170,15 +177,17 @@ export default function CreateProviderScreen() {
       });
       set('latitude',  pos.coords.latitude);
       set('longitude', pos.coords.longitude);
-    } catch {
+    } catch (error) {
       showAppModal({
         title: t('common.error', 'Erreur'),
-        message: t('create.geoError', 'Impossible d\'obtenir votre position. Réessayez.'),
-        confirmText: 'OK',
-        variant: 'warning',
+        message: error.userMessage || t('create.geoError', 'Impossible d\'obtenir votre position. Réessayez.'),
+        confirmText: t('common.retry'),
+        variant: 'network',
+        onConfirm: captureGeoLocation,
       });
+    } finally {
+      setGeoLoading(false);
     }
-    setGeoLoading(false);
   }
 
   function removeGeoLocation() {
@@ -211,23 +220,32 @@ export default function CreateProviderScreen() {
   }
 
   async function pickPhoto() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showAppModal({
+          title: t('common.error', 'Erreur'),
+          message: t('create.permPhoto', 'Autorisez l\'accès à vos photos.'),
+          confirmText: t('common.openSettings'),
+          variant: 'permission',
+        });
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!res.canceled) setPhoto(res.assets[0]);
+    } catch (error) {
       showAppModal({
         title: t('common.error', 'Erreur'),
-        message: t('create.permPhoto', 'Autorisez l\'accès à vos photos.'),
+        message: error.userMessage || t('errors.generic'),
         confirmText: 'OK',
-        variant: 'warning',
+        variant: 'error',
       });
-      return;
     }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (!res.canceled) setPhoto(res.assets[0]);
   }
 
   async function submit() {
@@ -397,8 +415,8 @@ export default function CreateProviderScreen() {
                   activeOpacity={0.8}
                 >
                   {geoLoading
-                    ? <ActivityIndicator size="small" color={colors.primary} />
-                    : <Navigation size={20} color={colors.primary} />
+                    ? <ActivityIndicator size="small" color={colors.primaryDark} />
+                    : <Navigation size={20} color={colors.primaryDark} />
                   }
                   <Text style={styles.geoBtnText}>
                     {geoLoading ? t('create.geoSetting', 'Localisation...') : t('create.geoSet', 'Définir ma zone de service ici')}
@@ -411,7 +429,7 @@ export default function CreateProviderScreen() {
                 <Text style={styles.radiusTitle}>{t('create.geoRadiusTitle', 'Rayon selon votre plan')}</Text>
                 {[
                   { plan: t('plans.free', 'Gratuit'),            radius: PLAN_RADIUS.free,     color: colors.textMuted },
-                  { plan: t('plans.premium', 'Premium'),          radius: PLAN_RADIUS.premium,  color: colors.primary   },
+                  { plan: t('plans.premium', 'Premium'),          radius: PLAN_RADIUS.premium,  color: colors.primaryText },
                   { plan: t('plans.professional', 'Professionnel'), radius: PLAN_RADIUS.professional, color: colors.navyMid },
                   { plan: t('plans.enterprise', 'Entreprise'),     radius: PLAN_RADIUS.enterprise, color: colors.navy },
                 ].map(r => (
@@ -478,7 +496,7 @@ export default function CreateProviderScreen() {
                 <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <Camera size={40} color={colors.primary} />
+                  <Camera size={40} color={colors.primaryDark} />
                   <Text style={styles.photoHint}>{t('create.addPhoto', 'Appuyez pour choisir une photo')}</Text>
                   <Text style={styles.photoFormatHint}>JPEG, PNG — max 5 Mo</Text>
                 </View>
@@ -579,15 +597,15 @@ const styles = StyleSheet.create({
   fieldLabel:     { fontSize:13, fontWeight:'600', color:colors.text, marginBottom:8 },
   optionGrid:     { gap:8, marginBottom:16 },
   optionBtn:      { padding:14, borderRadius:12, backgroundColor:colors.white, borderWidth:1.5, borderColor:colors.border },
-  optionBtnActive:{ borderColor:colors.primary, backgroundColor:colors.primaryBg },
+  optionBtnActive:{ borderColor:colors.primaryDark, backgroundColor:colors.primaryBg },
   optionText:     { fontSize:14, color:colors.textSecondary, fontWeight:'500' },
-  optionTextActive:{ color:colors.primary, fontWeight:'700' },
+  optionTextActive:{ color:colors.primaryText, fontWeight:'700' },
 
   // Géolocalisation
   geoSection:     { backgroundColor:colors.surface, borderRadius:16, padding:16, marginTop:8, marginBottom:16 },
   geoHint:        { fontSize:13, color:colors.textMuted, lineHeight:18, marginBottom:14 },
-  geoBtn:         { flexDirection:'row', alignItems:'center', gap:10, backgroundColor:colors.white, borderWidth:1.5, borderColor:colors.primary, borderRadius:12, padding:14 },
-  geoBtnText:     { fontSize:14, color:colors.primary, fontWeight:'600', flex:1 },
+  geoBtn:         { flexDirection:'row', alignItems:'center', gap:10, backgroundColor:colors.white, borderWidth:1.5, borderColor:colors.primaryDark, borderRadius:12, padding:14 },
+  geoBtnText:     { fontSize:14, color:colors.primaryText, fontWeight:'600', flex:1 },
   geoSuccess:     { flexDirection:'row', alignItems:'center', gap:10, backgroundColor:colors.successBg, borderRadius:12, padding:14, borderWidth:1, borderColor:colors.success+'40' },
   geoSuccessText: { fontSize:14, fontWeight:'700', color:colors.success },
   geoCoords:      { fontSize:11, color:colors.textMuted, marginTop:2 },
@@ -600,13 +618,13 @@ const styles = StyleSheet.create({
   radiusKm:       { fontSize:13, fontWeight:'700' },
 
   // Photo
-  photoBox:        { height:220, borderRadius:20, borderWidth:2, borderColor:colors.primary+'50', borderStyle:'dashed', overflow:'hidden', marginBottom:12 },
+  photoBox:        { height:220, borderRadius:20, borderWidth:2, borderColor:colors.primaryDark, borderStyle:'dashed', overflow:'hidden', marginBottom:12 },
   photoPreview:    { width:'100%', height:'100%' },
   photoPlaceholder:{ flex:1, justifyContent:'center', alignItems:'center', gap:10, backgroundColor:colors.primaryBg },
-  photoHint:       { fontSize:15, color:colors.primary, fontWeight:'600' },
+  photoHint:       { fontSize:15, color:colors.primaryText, fontWeight:'600' },
   photoFormatHint: { fontSize:12, color:colors.textMuted },
   changePhotoBtn:  { alignItems:'center', padding:10 },
-  changePhotoText: { fontSize:14, color:colors.primary, fontWeight:'600' },
+  changePhotoText: { fontSize:14, color:colors.primaryText, fontWeight:'600' },
   tipsBox:         { backgroundColor:colors.surface, borderRadius:14, padding:16, marginTop:16 },
   tipsTitle:       { fontSize:13, fontWeight:'700', color:colors.text, marginBottom:10 },
   tipItem:         { fontSize:13, color:colors.textSecondary, marginBottom:4 },

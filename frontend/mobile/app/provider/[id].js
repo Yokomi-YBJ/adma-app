@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft, TrendingUp, Eye, MapPin, Star, Phone, MessageCircle,
-  ChevronRight, Share2, Flag, Heart,
+  ChevronRight, Share2, Flag, Heart, AlertCircle,
   ThumbsUp, ThumbsDown, Minus, Edit3, X,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
@@ -25,6 +25,7 @@ import VerifiedBadge from '../../components/ui/VerifiedBadge';
 import { showAppModal } from '../../components/ui/AppModal';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 // ─── TrustMeter ──────────────────────────────────────────────────
 function TrustMeter({ score, reviewCount }) {
@@ -164,7 +165,7 @@ const rv = StyleSheet.create({
     borderColor: colors.borderLight,
   },
   ownReview: {
-    borderColor: colors.primary,
+    borderColor: colors.primaryDark,
     backgroundColor: colors.primaryBg + '30',
   },
 
@@ -225,7 +226,7 @@ const rv = StyleSheet.create({
     flexShrink: 1,
   },
   ownBadge: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryText,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
@@ -254,7 +255,7 @@ const rv = StyleSheet.create({
   responseLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.primaryText,
     marginBottom: 4,
   },
   responseText: {
@@ -381,6 +382,8 @@ export default function ProviderDetailScreen() {
   const [favLoading, setFavLoading]     = useState(false);
   const [contactInfo, setContactInfo]   = useState(null);
   const [userReview, setUserReview]     = useState(null);
+  const [reviewLoadError, setReviewLoadError] = useState(false);
+  const [providerLoadError, setProviderLoadError] = useState(null);
   const [editModalVisible, setEditModal] = useState(false);
 
   const isOwnProfile = userProvider?.id === parseInt(providerId);
@@ -389,10 +392,14 @@ export default function ProviderDetailScreen() {
 
   async function loadProvider(force = false) {
     const cacheKey = `provider_${providerId}`;
+    let hasCachedProvider = false;
+    if (!provider) setLoading(true);
+    setProviderLoadError(null);
     try {
       if (!force) {
         const cached = await getCache(cacheKey);
         if (cached) {
+          hasCachedProvider = true;
           setProvider(cached);
           setIsFavorite(cached.isFavorite);
           setLoading(false);
@@ -404,6 +411,9 @@ export default function ProviderDetailScreen() {
       const data = res.data.data;
       setProvider(data);
       setIsFavorite(data.isFavorite);
+      setProviderLoadError(null);
+      setReviewLoadError(false);
+      setUserReview(null);
       await setCache(cacheKey, data, CACHE_TTL.providerDetail);
 
       if (user) {
@@ -411,18 +421,22 @@ export default function ProviderDetailScreen() {
           const reviewRes = await api.get(`/reviews?providerId=${providerId}&userId=${user.id}`);
           const reviewsData = reviewRes.data.data || [];
           setUserReview(reviewsData.length > 0 ? reviewsData[0] : null);
+          setReviewLoadError(false);
         } catch {
-          setUserReview(null);
+          setReviewLoadError(true);
         }
       }
-    } catch {
-      if (!provider) {
+    } catch (error) {
+      const message = error.userMessage || t('errors.generic');
+      if (!hasCachedProvider && !provider) {
+        setProviderLoadError(message);
+      } else {
         showAppModal({
           title: t('common.error'),
-          message: t('provider.notFound'),
-          confirmText: t('common.ok'),
-          variant: 'danger',
-          onConfirm: () => router.back(),
+          message,
+          confirmText: t('common.retry'),
+          variant: 'network',
+          onConfirm: () => loadProvider(true),
         });
       }
     } finally {
@@ -448,7 +462,9 @@ export default function ProviderDetailScreen() {
         await api.post('/contacts', { providerId: parseInt(pid), eventType: 'profile_view' });
         await AsyncStorage.setItem(storageKey, now.toString());
       }
-    } catch {}
+    } catch {
+      // View tracking is best-effort analytics and does not affect the provider profile.
+    }
   }
 
   async function toggleFavorite() {
@@ -472,7 +488,7 @@ export default function ProviderDetailScreen() {
       }
       await setCache(`provider_${providerId}`, { ...provider, isFavorite: !isFavorite }, CACHE_TTL.providerDetail);
     } catch (error) {
-      const msg = error.response?.data?.message || t('common.error');
+      const msg = error.userMessage || t('errors.generic');
       showAppModal({ title: t('common.error'), message: msg, confirmText: t('common.ok'), variant: 'danger' });
     } finally {
       setFavLoading(false);
@@ -484,23 +500,25 @@ export default function ProviderDetailScreen() {
       try {
         const res = await api.get(`/providers/${providerId}/contact`);
         setContactInfo(res.data.data);
+        // Contact events are best-effort analytics; they must not block opening the contact method.
         api.post('/contacts', { providerId: parseInt(providerId), eventType: `${type}_click` }).catch(() => {});
-        openContact(res.data.data, type);
-      } catch {
+        await openContact(res.data.data, type);
+      } catch (error) {
         showAppModal({
           title: t('common.error'),
-          message: t('provider.contactInfo'),
+          message: error.userMessage || t('errors.generic'),
           confirmText: t('common.ok'),
           variant: 'danger',
         });
       }
     } else {
+      // Contact events are best-effort analytics; they must not block opening the contact method.
       api.post('/contacts', { providerId: parseInt(providerId), eventType: `${type}_click` }).catch(() => {});
-      openContact(contactInfo, type);
+      await openContact(contactInfo, type);
     }
   }
 
-  function openContact(info, type) {
+  async function openContact(info, type) {
     const rawPhone = type === 'whatsapp' ? info.whatsappNumber : info.phoneNumber;
     if (!rawPhone) {
       showAppModal({
@@ -512,12 +530,23 @@ export default function ProviderDetailScreen() {
       return;
     }
     let phone = String(rawPhone).replace(/\s/g, '');
-    if (type === 'whatsapp') {
-      const digits = phone.replace(/\D/g, '');
-      const international = digits.startsWith('237') ? digits : `237${digits}`;
-      Linking.openURL(`https://wa.me/${international}`).catch(() => {});
-    } else {
-      Linking.openURL(`tel:${phone.replace(/\D/g, '')}`).catch(() => {});
+    const isWhatsApp = type === 'whatsapp';
+    const digits = phone.replace(/\D/g, '');
+    const url = isWhatsApp
+      ? `https://wa.me/${digits.startsWith('237') ? digits : `237${digits}`}`
+      : `tel:${digits}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      const alternativeType = isWhatsApp ? 'phone' : 'whatsapp';
+      const alternativePhone = isWhatsApp ? info.phoneNumber : info.whatsappNumber;
+      showAppModal({
+        title: t('common.error'),
+        message: t(isWhatsApp ? 'common.whatsappUnavailable' : 'common.callUnavailable'),
+        confirmText: alternativePhone ? t(alternativeType === 'phone' ? 'provider.call' : 'provider.whatsapp') : t('common.ok'),
+        onConfirm: alternativePhone ? () => openContact(info, alternativeType) : null,
+        variant: 'warning',
+      });
     }
   }
 
@@ -533,7 +562,14 @@ export default function ProviderDetailScreen() {
         `${provider.name} — ${provider.specialty}${locationText ? ` (${locationText})` : ''}\n\n` +
         `https://adma.app/download\n${deepLink}`;
       await Share.share({ message, title: provider.name, url: deepLink });
-    } catch {}
+    } catch {
+      showAppModal({
+        title: t('common.error'),
+        message: t('errors.generic'),
+        confirmText: t('common.ok'),
+        variant: 'error',
+      });
+    }
   }
 
   function reportProvider() {
@@ -557,7 +593,7 @@ export default function ProviderDetailScreen() {
     } catch (err) {
       showAppModal({
         title: t('common.error'),
-        message: err.response?.data?.message || t('common.saveError'),
+        message: err.userMessage || t('common.saveError'),
         confirmText: t('common.ok'),
         variant: 'danger',
       });
@@ -565,7 +601,19 @@ export default function ProviderDetailScreen() {
   }
 
   if (loading) return <SkeletonProviderDetail />;
-  if (!provider) return null;
+  if (!provider) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <EmptyState
+          icon={AlertCircle}
+          title={providerLoadError ? t('common.error') : t('provider.notFound')}
+          message={providerLoadError || t('provider.notFound')}
+          action={providerLoadError ? () => loadProvider(true) : null}
+          actionLabel={providerLoadError ? t('common.retry') : null}
+        />
+      </SafeAreaView>
+    );
+  }
 
   const method    = provider.contactMethod || provider.contact_method || 'both';
   const showPhone = method === 'phone' || method === 'both';
@@ -624,6 +672,10 @@ export default function ProviderDetailScreen() {
         <View style={styles.photoArea}>
           {provider.photoUrl || provider.photo_url ? (
             <Image source={{ uri: provider.photoUrl || provider.photo_url }} style={styles.mainPhoto} />
+          ) : reviewLoadError ? (
+            <TouchableOpacity style={styles.addReviewBtn} onPress={() => loadProvider(true)}>
+              <Text style={styles.addReviewText}>{t('common.retry')}</Text>
+            </TouchableOpacity>
           ) : (
             <View style={[styles.mainPhoto, styles.photoPlaceholder]}>
               <Text style={styles.photoInitial}>{provider.name?.charAt(0).toUpperCase()}</Text>
@@ -647,7 +699,7 @@ export default function ProviderDetailScreen() {
           </View>
           {provider.plan && provider.plan !== 'free' && (
             <View style={styles.planChip}>
-              <Star size={12} color={colors.primary} fill={colors.primary} />
+              <Star size={12} color={colors.primaryDark} fill={colors.primaryDark} />
               <Text style={styles.planText}>{provider.plan.charAt(0).toUpperCase() + provider.plan.slice(1)}</Text>
             </View>
           )}
@@ -684,7 +736,7 @@ export default function ProviderDetailScreen() {
           <Text style={styles.sectionTitle}>{statsTitle}</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Eye size={18} color={colors.primary} />
+              <Eye size={18} color={colors.primaryDark} />
               <Text style={styles.statValue}>{provider.viewsThisMonth || 0}</Text>
               <Text style={styles.statLabel}>{t('provider.viewsThisMonth')}</Text>
             </View>
@@ -713,15 +765,22 @@ export default function ProviderDetailScreen() {
               {t('provider.reviews')} ({reviewCount})
             </Text>
             {!isOwnProfile && user && (
-              userReview ? (
+              reviewLoadError ? (
+                <View style={styles.reviewLoadError}>
+                  <Text style={styles.reviewLoadErrorText}>{t('errors.generic')}</Text>
+                  <TouchableOpacity onPress={() => loadProvider(true)} accessibilityRole="button">
+                    <Text style={styles.addReviewText}>{t('common.retry')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : userReview ? (
                 <TouchableOpacity style={styles.addReviewBtn} onPress={() => setEditModal(true)}>
-                  <Edit3 size={14} color={colors.primary} />
+                  <Edit3 size={14} color={colors.primaryDark} />
                   <Text style={styles.addReviewText}>{t('provider.editMyReview')}</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity style={styles.addReviewBtn} onPress={() => router.push(`/reviews/${providerId}`)}>
                   <Text style={styles.addReviewText}>{t('provider.leaveReview')}</Text>
-                  <ChevronRight size={14} color={colors.primary} />
+                  <ChevronRight size={14} color={colors.primaryDark} />
                 </TouchableOpacity>
               )
             )}
@@ -807,7 +866,7 @@ const styles = StyleSheet.create({
   photoArea: { position: 'relative' },
   mainPhoto: { width: '100%', height: 280, backgroundColor: colors.surface },
   photoPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryBg },
-  photoInitial: { fontSize: 80, fontWeight: '900', color: colors.primary },
+  photoInitial: { fontSize: 80, fontWeight: '900', color: colors.primaryText },
   availBadge: {
     position: 'absolute', bottom: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -830,7 +889,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
     alignSelf: 'flex-start', marginTop: 10,
   },
-  planText: { fontSize: 11, fontWeight: '700', color: colors.primary, textTransform: 'uppercase' },
+  planText: { fontSize: 11, fontWeight: '700', color: colors.primaryText, textTransform: 'uppercase' },
 
   card: {
     margin: 16, padding: 16,
@@ -854,10 +913,12 @@ const styles = StyleSheet.create({
 
   reviewsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   addReviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  addReviewText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  addReviewText: { fontSize: 13, color: colors.primaryText, fontWeight: '600' },
+  reviewLoadError: { alignItems: 'flex-end' },
+  reviewLoadErrorText: { fontSize: 11, color: colors.danger, textAlign: 'right', maxWidth: 140 },
   noReviews: { fontSize: 14, color: colors.textMuted, textAlign: 'center', paddingVertical: 24 },
   seeMoreBtn: { padding: 14, alignItems: 'center' },
-  seeMoreText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
+  seeMoreText: { fontSize: 14, color: colors.primaryText, fontWeight: '600' },
 
   reportBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center',

@@ -10,6 +10,7 @@ import {
   AlertTriangle, ExternalLink, Lock, Eye, Trash2,
 } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
+import { showAppModal } from '../../components/ui/AppModal';
 
 // Les données de sections sont calculées à l'intérieur du composant
 // pour avoir accès à t() (les traductions doivent être dynamiques)
@@ -35,7 +36,7 @@ export default function LegalScreen() {
   const { t }  = useTranslation();
 
   const SECTIONS = [
-    { id: 'data',           icon: Lock,           color: colors.primary, bg: colors.primaryBg, label: t('legal.dataTitle'),           text: t('legal.dataText') },
+    { id: 'data',           icon: Lock,           color: colors.primaryText, bg: colors.primaryBg, label: t('legal.dataTitle'),           text: t('legal.dataText') },
     { id: 'usage',          icon: UserCheck,      color: '#22C55E',      bg: '#ECFDF5',         label: t('legal.usageTitle'),          text: t('legal.usageText') },
     { id: 'responsibility', icon: AlertTriangle,  color: '#F59E0B',      bg: '#FFFBEB',         label: t('legal.responsibilityTitle'), text: t('legal.responsibilityText') },
     { id: 'access',         icon: Eye,            color: '#8B5CF6',      bg: '#F5F3FF',         label: t('legal.rightsTitle'),         text: t('legal.rightsText') },
@@ -47,7 +48,14 @@ export default function LegalScreen() {
     ];
 
   const openDocument = (url) => {
-    Linking.openURL(url).catch(() => {});
+    Linking.openURL(url).catch(() => {
+      showAppModal({
+        title: t('common.error'),
+        message: t('errors.generic'),
+        confirmText: t('common.ok'),
+        variant: 'error',
+      });
+    });
   };
 
   return (
@@ -134,7 +142,7 @@ const styles = StyleSheet.create({
   },
   heroIconWrap: {
     width: 72, height: 72, borderRadius: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryText,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 18,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
@@ -169,7 +177,7 @@ const styles = StyleSheet.create({
 
   linkCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primary, borderRadius: 20, padding: 18,
+    backgroundColor: colors.primaryText, borderRadius: 20, padding: 18,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
   },

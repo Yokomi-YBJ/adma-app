@@ -1,8 +1,9 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import { BadgeCheck } from 'lucide-react-native';
+import { colors } from '../../constants/colors';
 
 const BADGE_COLORS = {
-  verified_id: '#1D9BF0',
-  verified:    '#FFD400',
+  verified_id: colors.infoDark,
+  verified:    colors.warningDark,
 };
 
 export function getBadgeColor(type) {
@@ -13,5 +14,5 @@ export default function VerifiedBadge({ type, size = 16, style }) {
   if (!type || type === 'none' || type === 'pending') return null;
   const color = BADGE_COLORS[type];
   if (!color) return null;
-  return <MaterialIcons name="verified" size={size} color={color} style={style} />;
+  return <BadgeCheck size={size} color={color} style={style} />;
 }

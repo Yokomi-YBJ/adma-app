@@ -20,9 +20,7 @@
       "bundleIdentifier": "cm.adma.app",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Adma utilise votre caméra pour prendre une photo de profil.",
         "NSPhotoLibraryUsageDescription": "Adma accède à vos photos pour votre fiche prestataire.",
-        "NSPhotoLibraryAddUsageDescription": "Adma peut enregistrer des photos.",
         "NSLocationWhenInUseUsageDescription": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous."
       }
     },
@@ -35,14 +33,17 @@
       "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
         "INTERNET",
         "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
       ]
     },
     "web": {
@@ -83,13 +84,14 @@
         "expo-image-picker",
         {
           "photosPermission": "Adma accède à vos photos pour votre fiche prestataire.",
-          "cameraPermission": "Adma utilise votre caméra."
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous.",
+          "locationAlwaysAndWhenInUsePermission": false,
           "locationWhenInUsePermission": "Adma utilise votre localisation pour définir votre zone de service et trouver des prestataires autour de vous."
         }
       ],

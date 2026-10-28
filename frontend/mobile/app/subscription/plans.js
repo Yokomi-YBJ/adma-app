@@ -3,7 +3,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, Platform, Dimensions,
+  View, Text, StyleSheet, Pressable, Platform, useWindowDimensions,
   ActivityIndicator,
 } from 'react-native';
 import Animated, {
@@ -15,8 +15,6 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, Calendar } from 'lucide-react-native';
 import api from '../../services/api';
 import { useModalStore } from '../../store/modal.store';
-
-const { width } = Dimensions.get('window');
 
 const COLORS = {
   bg:        '#FAFBFC',
@@ -35,45 +33,87 @@ const PLAN_KEYS = ['premium', 'professional', 'enterprise'];
 
 const RADIUS_SCALES = { premium: 1, professional: 1.6, enterprise: 2.5 };
 
-const SEGMENT_WIDTH = (width - 48 - 8) / 3;
-
 export default function PlansScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const segmentWidth = (width - 56) / 3;
 
   const [loading, setLoading]             = useState(true);
   const [data, setData]                   = useState(null);
+  const [loadError, setLoadError]         = useState('');
   const [selectedPlan, setSelected]       = useState('premium');
   const [pendingChange, setPendingChange] = useState(null);
+  const [pendingError, setPendingError]   = useState('');
+  const [pendingLoading, setPendingLoading] = useState(false);
   const [cancelling, setCancelling]       = useState(false);
 
   const indicatorPosition = useSharedValue(0);
   const radiusScale       = useSharedValue(1);
   const planIndex         = useSharedValue(0);
 
-  const loadData = async () => {
-    try {
-      const res = await api.get('/providers/me/pricing');
-      const d = res.data.data;
-      setData(d);
-      const initial = d?.plan === 'free' || !d?.plan ? 'premium' : d.plan;
-      setSelected(initial);
-      const idx = PLAN_KEYS.indexOf(initial);
-      indicatorPosition.value = idx;
-      planIndex.value = idx;
-      radiusScale.value = RADIUS_SCALES[initial];
-    } catch {
-      setData(null);
-    }
-
+  const loadPendingChange = async () => {
+    setPendingLoading(true);
     try {
       const res = await api.get('/payments/pending-plan');
-      setPendingChange(res.data.data);
-    } catch {
-      setPendingChange(null);
+      if (res.data?.success !== true || !Object.prototype.hasOwnProperty.call(res.data, 'data')) {
+        throw new Error('Invalid pending plan response');
+      }
+      const pending = res.data.data;
+      if (pending !== null && (
+        !PLAN_KEYS.includes(pending?.newPlan) ||
+        typeof pending?.effectiveAt !== 'string' ||
+        !Number.isFinite(Date.parse(pending.effectiveAt))
+      )) {
+        throw new Error('Invalid pending plan response');
+      }
+      setPendingChange(pending);
+      setPendingError('');
+    } catch (err) {
+      setPendingError(err.userMessage || t('plans.pendingError'));
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const res = await api.get('/providers/me/pricing');
+      if (res.data?.success !== true || !Object.prototype.hasOwnProperty.call(res.data, 'data')) {
+        throw new Error('Invalid pricing response');
+      }
+      const d = res.data.data;
+      if (d !== null && (
+        !['free', ...PLAN_KEYS].includes(d?.plan) ||
+        !d?.plans ||
+        PLAN_KEYS.some((key) => (
+          !Array.isArray(d.plans[key]?.prices) ||
+          d.plans[key].prices.length !== 3 ||
+          !d.plans[key].prices.every((price) => Number.isFinite(price) && price > 0) ||
+          !(d.plans[key].radius === null || Number.isFinite(d.plans[key].radius))
+        ))
+      )) {
+        throw new Error('Invalid pricing response');
+      }
+      setData(d);
+      if (d) {
+        const initial = d.plan === 'free' ? 'premium' : d.plan;
+        setSelected(initial);
+        const idx = PLAN_KEYS.indexOf(initial);
+        indicatorPosition.value = idx;
+        planIndex.value = idx;
+        radiusScale.value = RADIUS_SCALES[initial];
+      }
+    } catch (err) {
+      setData(null);
+      setLoadError(err.userMessage || t('plans.loadError'));
+    } finally {
+      setLoading(false);
     }
 
-    setLoading(false);
+    await loadPendingChange();
   };
 
   useEffect(() => {
@@ -88,7 +128,7 @@ export default function PlansScreen() {
   }, [selectedPlan]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorPosition.value * SEGMENT_WIDTH }],
+    transform: [{ translateX: indicatorPosition.value * segmentWidth }],
   }));
 
   const radiusStyle = useAnimatedStyle(() => {
@@ -117,8 +157,12 @@ export default function PlansScreen() {
       onConfirm: async () => {
         setCancelling(true);
         try {
-          await api.delete('/payments/pending-plan');
+          const res = await api.delete('/payments/pending-plan');
+          if (res.data?.success !== true || res.data.cancelled !== true) {
+            throw new Error(t('common.cancelChangeError'));
+          }
           setPendingChange(null);
+          setPendingError('');
         } catch (err) {
           useModalStore.getState().show({
             type: 'error',
@@ -150,8 +194,20 @@ export default function PlansScreen() {
           </Pressable>
         </View>
         <View style={styles.center}>
-          <Text style={styles.emptyTitle}>{t('plans.noProvider.title')}</Text>
-          <Text style={styles.emptyBody}>{t('plans.noProvider.body')}</Text>
+          {loadError ? (
+            <>
+              <Text style={styles.emptyTitle}>{t('common.error')}</Text>
+              <Text style={styles.emptyBody}>{loadError}</Text>
+              <Pressable style={styles.retryButton} onPress={loadData}>
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.emptyTitle}>{t('plans.noProvider.title')}</Text>
+              <Text style={styles.emptyBody}>{t('plans.noProvider.body')}</Text>
+            </>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -159,7 +215,7 @@ export default function PlansScreen() {
 
   const currentPlanData = data.plans[selectedPlan];
   const isActivePlan    = data.plan === selectedPlan;
-  const currentStep     = isActivePlan ? Math.min(data.loyaltyMonths || 0, 2) : 0;
+  const currentStep     = isActivePlan ? Math.min(Math.max(data.loyaltyMonths || 0, 0), 2) : 0;
   const immediatePrice  = currentPlanData.prices[currentStep];
 
   const handlePay = () => {
@@ -179,19 +235,30 @@ export default function PlansScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {pendingError ? (
+        <View style={styles.pendingError}>
+          <Text style={styles.pendingErrorText}>{pendingError}</Text>
+          <Pressable onPress={loadPendingChange} disabled={pendingLoading}>
+            {pendingLoading
+              ? <ActivityIndicator size="small" color={COLORS.dark} />
+              : <Text style={styles.pendingRetry}>{t('common.retry')}</Text>}
+          </Pressable>
+        </View>
+      ) : null}
+
       {/* 🆕 Bandeau programmation */}
       {pendingChange && (
         <View style={styles.scheduledBanner}>
           <View style={styles.scheduledHeader}>
             <Calendar size={18} color={COLORS.warning} strokeWidth={2.5} />
-            <Text style={styles.scheduledTitle}>Changement programmé</Text>
+            <Text style={styles.scheduledTitle}>{t('plans.scheduledTitle')}</Text>
           </View>
           <Text style={styles.scheduledText}>
-            Passage au plan <Text style={styles.scheduledPlan}>
-              {pendingChange.newPlan}
-            </Text>{' '}le{' '}
-            {new Date(pendingChange.effectiveAt).toLocaleDateString('fr-FR', {
-              day: '2-digit', month: 'long', year: 'numeric',
+            {t('plans.scheduledBody', {
+              plan: t(`plans.${pendingChange.newPlan}.name`),
+              date: new Date(pendingChange.effectiveAt).toLocaleDateString(t('common.locale', 'fr-FR'), {
+                day: '2-digit', month: 'long', year: 'numeric',
+              }),
             })}
           </Text>
           <Pressable
@@ -201,7 +268,7 @@ export default function PlansScreen() {
           >
             {cancelling
               ? <ActivityIndicator size="small" color={COLORS.white} />
-              : <Text style={styles.cancelBtnText}>Annuler le changement</Text>
+              : <Text style={styles.cancelBtnText}>{t('common.cancelChange')}</Text>
             }
           </Pressable>
         </View>
@@ -310,6 +377,18 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '600', color: COLORS.dark, letterSpacing: 0.2 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginBottom: 8, textAlign: 'center' },
   emptyBody:  { fontSize: 14, color: COLORS.muted, textAlign: 'center', lineHeight: 20 },
+  retryButton: {
+    marginTop: 16, paddingHorizontal: 20, paddingVertical: 11,
+    backgroundColor: COLORS.dark, borderRadius: 10,
+  },
+  retryButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
+  pendingError: {
+    marginHorizontal: 24, marginTop: 8, padding: 12, borderRadius: 10,
+    backgroundColor: COLORS.warningBg, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', gap: 12,
+  },
+  pendingErrorText: { flex: 1, color: '#78350F', fontSize: 12, lineHeight: 17 },
+  pendingRetry: { color: COLORS.dark, fontSize: 12, fontWeight: '700' },
 
   scheduledBanner: {
     marginHorizontal: 24, marginTop: 8, marginBottom: 4,
@@ -322,10 +401,9 @@ const styles = StyleSheet.create({
   },
   scheduledTitle: { fontSize: 13, fontWeight: '700', color: '#92400E' },
   scheduledText:  { fontSize: 13, color: '#78350F', lineHeight: 19, marginBottom: 12 },
-  scheduledPlan:  { fontWeight: '700', color: COLORS.warning },
   cancelBtn: {
-    alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14,
-    backgroundColor: COLORS.warning, borderRadius: 8, minWidth: 80,
+    alignSelf: 'flex-start', minHeight: 44, paddingVertical: 8, paddingHorizontal: 14,
+    backgroundColor: '#92400E', borderRadius: 8, minWidth: 80,
     alignItems: 'center',
   },
   cancelBtnText: { color: COLORS.white, fontSize: 12, fontWeight: '600' },
@@ -336,12 +414,13 @@ const styles = StyleSheet.create({
   },
   activeIndicator: {
     position: 'absolute', top: 4, left: 4, bottom: 4,
-    width: SEGMENT_WIDTH, backgroundColor: COLORS.white, borderRadius: 8,
+    width: segmentWidth, backgroundColor: COLORS.white, borderRadius: 8,
     shadowColor: COLORS.dark, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 2, elevation: 2,
   },
   segmentBtn: {
-    flex: 1, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', zIndex: 1,
+    flex: 1, minHeight: 44, paddingVertical: 8, paddingHorizontal: 2,
+    alignItems: 'center', justifyContent: 'center', zIndex: 1,
   },
   segmentText:       { fontSize: 13, fontWeight: '500', color: COLORS.muted, letterSpacing: 0.3 },
   segmentTextActive: { color: COLORS.dark, fontWeight: '600' },

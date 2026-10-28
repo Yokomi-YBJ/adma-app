@@ -416,6 +416,10 @@
   },
   "plans": {
     "title": "Plans",
+    "loadError": "Unable to load prices. Check your connection and try again.",
+    "pendingError": "Unable to check the scheduled plan change.",
+    "scheduledTitle": "Scheduled change",
+    "scheduledBody": "Switch to the {{plan}} plan on {{date}}.",
     "noProvider": {
       "title": "No provider profile",
       "body": "Create your provider profile to access plans."
@@ -457,6 +461,21 @@
     "phoneLabel": "Number to debit",
     "note": "You will receive a notification on your phone to confirm the payment.",
     "payButton": "Pay {{amount}} FCFA",
+    "processing": "Processing payment...",
+    "opening": "Opening the payment page...",
+    "awaitingConfirmation": "Waiting for confirmation...",
+    "waiting": "Waiting for confirmation... ({{seconds}}s)",
+    "waitingHint": "Follow the instructions on the payment page or in your mobile money notification.",
+    "resuming": "Resuming payment verification...",
+    "statusCheckFailed": "Verification is temporarily unavailable. Retrying...",
+    "timeoutMessage": "Confirmation is taking longer than expected. You can resume checking without starting another payment.",
+    "pendingTitle": "Payment pending",
+    "checkAgain": "Check again",
+    "storageUnavailable": "Local payment tracking is unavailable. Keep this page open until the payment is confirmed.",
+    "storageInvalid": "The previous payment tracking data was invalid and has been cleared.",
+    "browserError": "The payment page could not be opened. Check your mobile money notification.",
+    "linkExpired": "The payment link appears to have expired. We will still check whether the payment was confirmed.",
+    "invalidRequest": "The plan information is invalid. Return to the plans list.",
     "error": {
       "operator": "Choose an operator",
       "phone": "Invalid Cameroonian number",
@@ -643,7 +662,11 @@
       "paymentQ": "How to pay for a plan?",
       "paymentA": "From the Subscription screen, pick your plan, then pay securely using Orange Money or MTN Mobile Money with KPay.",
       "notificationsQ": "Why am I not receiving notifications?",
-      "notificationsA": "Ensure notifications are enabled in your phone system settings and under 'Settings > Notifications' inside the app."
+      "notificationsA": "Ensure notifications are enabled in your phone system settings and under 'Settings > Notifications' inside the app.",
+      "reviewsQ": "How do I leave a review for a provider?",
+      "reviewsA": "Open the provider's profile, choose the option to add a review, and describe your experience.",
+      "reportQ": "How do I report a profile or content?",
+      "reportA": "Open the relevant profile, choose 'Report', select a reason, and add details if needed."
     }
   },
   "legal": {
@@ -687,8 +710,10 @@
     "CANNOT_DEACTIVATE_SELF": "You cannot deactivate your own account.",
     "CANT_REVIEW_OWN": "You cannot review your own listing.",
     "CATEGORY_HAS_CHILDREN": "This category contains subcategories.",
+    "CATEGORY_IN_USE": "This category cannot be deleted because providers are assigned to it.",
     "DATABASE_UNAVAILABLE": "Service temporarily unavailable. Please try again shortly.",
     "DATA_TOO_LONG": "The entered text exceeds the maximum allowed length.",
+    "DOWNGRADE_NOT_ALLOWED": "Only upgrades to a higher plan are allowed.",
     "DUPLICATE": "This item already exists.",
     "EMAIL_EXISTS": "This email address is already in use.",
     "EMAIL_SEND_FAILED": "Failed to send email.",
@@ -712,6 +737,7 @@
     "INVALID_REFRESH_TOKEN": "Invalid session. Please log in again.",
     "INVALID_TARGET": "Invalid target for this action.",
     "INVALID_TYPE": "Invalid request type.",
+    "INVALID_TOKEN": "Your session is invalid. Please log in again.",
     "LIMIT_FILE_SIZE": "File exceeds maximum allowed size (5 MB).",
     "LIMIT_UNEXPECTED_FILE": "Unsupported file format.",
     "MISSING_ACTION": "Required action is missing.",

@@ -61,7 +61,7 @@ export default function ReportScreen() {
 
   if (done) {
     return (
-      <View style={styles.doneWrap}>
+      <View style={[styles.doneWrap, { paddingBottom: 40 + insets.bottom }]}>
         <View style={styles.doneIcon}><Check size={40} color={colors.success} /></View>
         <Text style={styles.doneTitle}>{t('report.sentTitle', 'Signalement envoyé')}</Text>
         <Text style={styles.doneDesc}>{t('report.sentDesc', 'Notre équipe examinera votre signalement dans les meilleurs délais. Merci de contribuer à la sécurité d\'Adma.')}</Text>
@@ -79,7 +79,10 @@ export default function ReportScreen() {
         <Text style={styles.title}>{t('provider.report', 'Signaler')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.subtitle}>{t('report.whySubtitle', 'Pourquoi signalez-vous cette fiche ?')}</Text>
 
         <View style={styles.reasons}>
@@ -91,7 +94,7 @@ export default function ReportScreen() {
               activeOpacity={0.8}
             >
               <Text style={[styles.reasonLabel, reason === r.id && styles.reasonLabelActive]}>{r.label}</Text>
-              {reason === r.id && <Check size={16} color={colors.primary} strokeWidth={3} />}
+              {reason === r.id && <Check size={16} color={colors.primaryDark} strokeWidth={3} />}
             </TouchableOpacity>
           ))}
         </View>
@@ -129,9 +132,9 @@ const styles = StyleSheet.create({
   subtitle:       { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 16 },
   reasons:        { gap: 8, marginBottom: 24 },
   reasonBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 14, backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.border },
-  reasonBtnActive:{ borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  reasonBtnActive:{ borderColor: colors.primaryDark, backgroundColor: colors.primaryBg },
   reasonLabel:    { fontSize: 15, color: colors.text },
-  reasonLabelActive: { color: colors.primary, fontWeight: '600' },
+  reasonLabelActive: { color: colors.primaryText, fontWeight: '600' },
   doneWrap:       { flex: 1, backgroundColor: colors.white, justifyContent: 'center', alignItems: 'center', padding: 40 },
   doneIcon:       { width: 80, height: 80, borderRadius: 24, backgroundColor: colors.successBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   doneTitle:      { fontSize: 22, fontWeight: '800', color: colors.navy, marginBottom: 10 },

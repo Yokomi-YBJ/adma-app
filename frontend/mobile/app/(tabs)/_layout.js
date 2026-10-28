@@ -47,7 +47,7 @@ export default function TabsLayout() {
           shadowOpacity: 0.08,
           shadowRadius: 12,
         },
-        tabBarActiveTintColor:   colors.primary,
+        tabBarActiveTintColor:   colors.primaryText,
         tabBarInactiveTintColor: colors.textMuted,
         headerStyle:             { backgroundColor: colors.white },
         headerTitleStyle:        { color: colors.navy, fontWeight: '700', fontSize: 18 },
