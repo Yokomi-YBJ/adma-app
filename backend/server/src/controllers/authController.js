@@ -8,7 +8,7 @@ import { v4 as uuid } from 'uuid';
 import { validationResult } from 'express-validator';
 import { query, transaction } from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { sendOTPSms } from '../services/smsService.js';
+import { sendOTPSms } from '../services/smsService.js'; // On garde MboaSMS
 import { config }     from '../config/env.js';
 import { logger }     from '../utils/logger.js';
 
@@ -74,9 +74,14 @@ export const sendOTP = asyncHandler(async (req, res) => {
     [phone, hash, expires]
   );
 
-  await sendOTPSms(phone, code, config.otpExpiresMinutes);
+  // ✅ MODIFICATION ICI : Bypass si on est en mode développement
+  if (process.env.NODE_ENV === 'development') {
+    logger.warn(`[DEV] Code OTP pour ${phone} : ${code}`);
+  } else {
+    await sendOTPSms(phone, code, config.otpExpiresMinutes);
+  }
 
-  logger.info('sendOTP: OTP envoyé', {
+  logger.info('sendOTP: OTP généré', {
     phone,
     expiresInMinutes: config.otpExpiresMinutes,
     expiresAt: expires.toISOString(),
