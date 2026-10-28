@@ -75,11 +75,13 @@ export const sendOTP = asyncHandler(async (req, res) => {
   );
 
   // ✅ MODIFICATION ICI : Bypass si on est en mode développement
+    // ✅ MODIFICATION ICI
   if (process.env.NODE_ENV === 'development') {
     logger.warn(`[DEV] Code OTP pour ${phone} : ${code}`);
-  } else {
-    await sendOTPSms(phone, code, config.otpExpiresMinutes);
   }
+  
+  // On envoie toujours le SMS, peu importe l'environnement
+  await sendOTPSms(phone, code, config.otpExpiresMinutes);
 
   logger.info('sendOTP: OTP généré', {
     phone,
