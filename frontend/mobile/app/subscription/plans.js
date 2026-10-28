@@ -30,14 +30,13 @@ const COLORS = {
 };
 
 const PLAN_KEYS = ['premium', 'professional', 'enterprise'];
-
 const RADIUS_SCALES = { premium: 1, professional: 1.6, enterprise: 2.5 };
 
 export default function PlansScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const segmentWidth = (width - 56) / 3;
+  const segmentWidth = (width - 56) / 3; // ✅ Défini ici
 
   const [loading, setLoading]             = useState(true);
   const [data, setData]                   = useState(null);
@@ -246,7 +245,6 @@ export default function PlansScreen() {
         </View>
       ) : null}
 
-      {/* 🆕 Bandeau programmation */}
       {pendingChange && (
         <View style={styles.scheduledBanner}>
           <View style={styles.scheduledHeader}>
@@ -275,7 +273,8 @@ export default function PlansScreen() {
       )}
 
       <View style={styles.segmentedControl}>
-        <Animated.View style={[styles.activeIndicator, indicatorStyle]} />
+        {/* ✅ Ajout de width: segmentWidth ici */}
+        <Animated.View style={[styles.activeIndicator, { width: segmentWidth }, indicatorStyle]} />
         {PLAN_KEYS.map((key) => {
           const isSelected = selectedPlan === key;
           return (
@@ -414,7 +413,8 @@ const styles = StyleSheet.create({
   },
   activeIndicator: {
     position: 'absolute', top: 4, left: 4, bottom: 4,
-    width: segmentWidth, backgroundColor: COLORS.white, borderRadius: 8,
+    // width: segmentWidth a été retiré d'ici
+    backgroundColor: COLORS.white, borderRadius: 8,
     shadowColor: COLORS.dark, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 2, elevation: 2,
   },

@@ -1,14 +1,11 @@
 /**
  * ADMA — Client API sécurisé
- * Axios avec intercepteurs, refresh token automatique, queue de retry,
- * gestion du démarrage à froid Render et traduction systématique des erreurs.
  */
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../constants/config';
 import { getLocalizedErrorMessage } from './apiErrors';
 import { useModalStore } from '../store/modal.store';
-import { useAuthStore } from '../store/auth.store';
 import i18n from '../i18n';
 
 const ACCESS_KEY  = 'adma_access_token';
@@ -16,11 +13,10 @@ const REFRESH_KEY = 'adma_refresh_token';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 45000, // 45s pour tolérer le démarrage à froid Render (Cold Start)
+  timeout: 45000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ── Requête : injecter le token ───────────────────────────────────
 api.interceptors.request.use(async (config) => {
   const token = await SecureStore.getItemAsync(ACCESS_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -28,7 +24,6 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// ── Réponse : refresh automatique sur 401 TOKEN_EXPIRED & retry ──
 let isRefreshing = false;
 let failedQueue  = [];
 
@@ -42,16 +37,13 @@ function processQueue(error, token = null) {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    // 1. Normalisation systématique du message utilisateur (i18n, zéro texte brut)
     err.userMessage = getLocalizedErrorMessage(err);
-
     const original = err.config;
     if (!original) return Promise.reject(err);
 
     const status = err.response?.status;
     const code = err.response?.data?.code;
 
-    // 2. Retry automatique unique sur requêtes GET (Réseau/5xx/Timeout)
     const isGet = original.method?.toLowerCase() === 'get';
     const isNetworkOrServerDown = !err.response || status >= 500 || err.code === 'ECONNABORTED';
 
@@ -60,7 +52,6 @@ api.interceptors.response.use(
       return api(original);
     }
 
-    // 3. Gestion du refresh token sur 401 TOKEN_EXPIRED
     if (status === 401 && (code === 'TOKEN_EXPIRED' || code === 'INVALID_TOKEN') && !original._refreshRetried) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -98,15 +89,14 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(refreshErr, null);
 
-        // Nettoyer les tokens
-        // Continue local sign-out even if a token was already removed from SecureStore.
         await SecureStore.deleteItemAsync(ACCESS_KEY).catch(() => {});
         await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
         delete api.defaults.headers.common.Authorization;
 
+        // ✅ FIX REQUIRE CYCLE : Import dynamique du store ici
+        const { useAuthStore } = await import('../store/auth.store');
         await useAuthStore.getState().logout();
 
-        // Afficher le modal bloquant de session expirée
         useModalStore.getState().show({
           type: 'session',
           title: i18n.t('common.info', 'Information'),
@@ -132,7 +122,6 @@ api.interceptors.response.use(
   }
 );
 
-// ── Helpers publics ───────────────────────────────────────────────
 export async function saveTokens(accessToken, refreshToken) {
   await SecureStore.setItemAsync(ACCESS_KEY, accessToken);
   if (refreshToken) await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
@@ -140,7 +129,6 @@ export async function saveTokens(accessToken, refreshToken) {
 }
 
 export async function clearTokens() {
-  // Token deletion is idempotent; continue clearing the other key and in-memory header if one is absent.
   await SecureStore.deleteItemAsync(ACCESS_KEY).catch(() => {});
   await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
   delete api.defaults.headers.common.Authorization;
