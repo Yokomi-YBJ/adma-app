@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Platform, Dimensions,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming,
@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Calendar } from 'lucide-react-native';
 import api from '../../services/api';
+import { useModalStore } from '../../store/modal.store';
 
 const { width } = Dimensions.get('window');
 
@@ -102,29 +103,34 @@ export default function PlansScreen() {
     };
   });
 
-  const handleCancelPending = async () => {
-    Alert.alert(
-      'Annuler le changement',
-      `Voulez-vous annuler le passage au plan ${pendingChange?.newPlan} ?`,
-      [
-        { text: 'Non', style: 'cancel' },
-        {
-          text: 'Oui, annuler',
-          style: 'destructive',
-          onPress: async () => {
-            setCancelling(true);
-            try {
-              await api.delete('/payments/pending-plan');
-              setPendingChange(null);
-            } catch (err) {
-              Alert.alert('Erreur', "Impossible d'annuler le changement.");
-            } finally {
-              setCancelling(false);
-            }
-          },
-        },
-      ]
-    );
+  const handleCancelPending = () => {
+    const targetPlanKey = pendingChange?.newPlan ? String(pendingChange.newPlan).toLowerCase() : '';
+    const targetPlanName = targetPlanKey ? t(`plans.${targetPlanKey}.name`, pendingChange.newPlan) : '';
+
+    useModalStore.getState().show({
+      type: 'warning',
+      title: t('common.cancelChange', 'Annuler le changement'),
+      message: t('common.cancelChangeConfirm', { plan: targetPlanName }),
+      confirmText: t('common.yes', 'Oui, annuler'),
+      cancelText: t('common.no', 'Non'),
+      destructive: true,
+      onConfirm: async () => {
+        setCancelling(true);
+        try {
+          await api.delete('/payments/pending-plan');
+          setPendingChange(null);
+        } catch (err) {
+          useModalStore.getState().show({
+            type: 'error',
+            title: t('common.error', 'Erreur'),
+            message: err.userMessage || t('common.cancelChangeError', "Impossible d'annuler le changement."),
+            confirmText: t('common.ok', 'OK'),
+          });
+        } finally {
+          setCancelling(false);
+        }
+      },
+    });
   };
 
   if (loading) {

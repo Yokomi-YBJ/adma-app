@@ -377,10 +377,32 @@
     "perMonth": "/mois",
     "free": "Gratuit",
     "features": {
-      "free": ["Fiche de base", "Visible dans les résultats", "Contacté par clients"],
-      "premium": ["Tout du gratuit", "Photo de profil HD", "Galerie 3 photos", "Score mis en avant", "Statistiques de base"],
-      "professional": ["Tout du Premium", "Galerie 10 photos", "Lien site web", "Statistiques avancées", "Badge Premium"],
-      "enterprise": ["Tout du Pro", "Galerie illimitée", "Support prioritaire", "Fiche multi-services", "Badge Entreprise"]
+      "free": [
+        "Fiche de base",
+        "Visible dans les résultats",
+        "Contacté par clients"
+      ],
+      "premium": [
+        "Tout du gratuit",
+        "Photo de profil HD",
+        "Galerie 3 photos",
+        "Score mis en avant",
+        "Statistiques de base"
+      ],
+      "professional": [
+        "Tout du Premium",
+        "Galerie 10 photos",
+        "Lien site web",
+        "Statistiques avancées",
+        "Badge Premium"
+      ],
+      "enterprise": [
+        "Tout du Pro",
+        "Galerie illimitée",
+        "Support prioritaire",
+        "Fiche multi-services",
+        "Badge Entreprise"
+      ]
     },
     "pay": "Payer",
     "payWith": "Payer avec",
@@ -398,9 +420,15 @@
       "title": "Aucune fiche prestataire",
       "body": "Créez votre fiche prestataire pour accéder aux forfaits."
     },
-    "premium": { "name": "Premium" },
-    "professional": { "name": "Professional" },
-    "enterprise": { "name": "Enterprise" },
+    "premium": {
+      "name": "Premium"
+    },
+    "professional": {
+      "name": "Professional"
+    },
+    "enterprise": {
+      "name": "Enterprise"
+    },
     "radius": {
       "km": "Visibilité à {{val}} km",
       "unlimited": "Visibilité illimitée"
@@ -416,7 +444,10 @@
     "currentBadge": "Plan actuel",
     "selectBtn": "Sélectionner ce plan",
     "keepBtn": "Conserver mon plan",
-    "free": { "label": "Gratuit", "radius": "3 km" },
+    "free": {
+      "label": "Gratuit",
+      "radius": "3 km"
+    },
     "unlimited": "Illimité"
   },
   "payment": {
@@ -491,7 +522,21 @@
     "distanceKm": "{{km}} km de vous",
     "back": "Retour",
     "saveError": "La mise à jour a échoué.",
-    "deleteError": "Échec de la suppression."
+    "deleteError": "Échec de la suppression.",
+    "openSettings": "Ouvrir les paramètres",
+    "reconnect": "Se reconnecter",
+    "scheduledChange": "Changement programmé",
+    "cancelChange": "Annuler le changement",
+    "cancelChangeConfirm": "Voulez-vous annuler le passage au plan {{plan}} ?",
+    "cancelChangeError": "Impossible d'annuler le changement.",
+    "effectiveDate": "Prendra effet le {{date}}",
+    "appCrashTitle": "Une interruption est survenue",
+    "appCrashBody": "L'application a rencontré un incident. Vos données sont préservées.",
+    "restartApp": "Relancer l'application",
+    "offlineNotice": "Connexion internet interrompue. Données hors-ligne.",
+    "backOnline": "Connexion internet rétablie.",
+    "callUnavailable": "Impossible de lancer l'appel. Vérifiez votre téléphone.",
+    "whatsappUnavailable": "WhatsApp n'est pas installé sur cet appareil."
   },
   "settings": {
     "title": "Paramètres",
@@ -551,12 +596,30 @@
     "savedSuccess": "Préférences enregistrées avec succès.",
     "centerTitle": "Centre de notifications",
     "centerSubtitle": "Contrôlez les alertes qui vous intéressent.",
-    "new_review": { "title": "Nouveaux avis", "desc": "Soyez alerté lorsqu'un client laisse une évaluation sur votre fiche." },
-    "review_response": { "title": "Réponses aux avis", "desc": "Recevez une notification quand un prestataire répond à votre avis." },
-    "verification_update": { "title": "Statut de vérification", "desc": "Suivez l'avancement de votre demande de badge officiel." },
-    "subscription_reminder": { "title": "Rappels d'abonnement", "desc": "Soyez averti avant l'expiration de votre forfait." },
-    "favorite_update": { "title": "Mises à jour des favoris", "desc": "Recevez les nouveautés concernant vos prestataires enregistrés." },
-    "contact_reminder": { "title": "Rappels et conseils", "desc": "Conseils pour développer votre activité et rappels utiles." }
+    "new_review": {
+      "title": "Nouveaux avis",
+      "desc": "Soyez alerté lorsqu'un client laisse une évaluation sur votre fiche."
+    },
+    "review_response": {
+      "title": "Réponses aux avis",
+      "desc": "Recevez une notification quand un prestataire répond à votre avis."
+    },
+    "verification_update": {
+      "title": "Statut de vérification",
+      "desc": "Suivez l'avancement de votre demande de badge officiel."
+    },
+    "subscription_reminder": {
+      "title": "Rappels d'abonnement",
+      "desc": "Soyez averti avant l'expiration de votre forfait."
+    },
+    "favorite_update": {
+      "title": "Mises à jour des favoris",
+      "desc": "Recevez les nouveautés concernant vos prestataires enregistrés."
+    },
+    "contact_reminder": {
+      "title": "Rappels et conseils",
+      "desc": "Conseils pour développer votre activité et rappels utiles."
+    }
   },
   "support": {
     "title": "Centre d'aide & FAQ",
@@ -606,5 +669,83 @@
     "cniText": "Les documents d'identité transmis pour vérification sont chiffrés et stockés sur un espace sécurisé. Ils sont supprimés de nos serveurs 24h après validation ou rejet de la demande.",
     "rightsTitle": "Vos droits",
     "rightsText": "Conformément à la réglementation sur la protection des données, vous disposez d'un droit d'accès, de rectification et de suppression de vos données personnelles."
+  },
+  "errors": {
+    "generic": "Une erreur inattendue est survenue.",
+    "network": "Connexion internet interrompue. Vérifiez votre réseau.",
+    "timeout": "Le délai d'attente a expiré. Veuillez réessayer.",
+    "serverWakingUp": "Connexion au serveur... Le serveur se réveille, merci de patienter.",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "ACCOUNT_DELETED": "Ce compte a été supprimé.",
+    "ACCOUNT_SUSPENDED": "Votre compte est suspendu. Veuillez contacter le support.",
+    "ADMIN_EXISTS": "Un compte administrateur existe déjà avec cet email.",
+    "ADMIN_LOCKED_OUT": "Compte administrateur temporairement verrouillé.",
+    "ADMIN_NOT_FOUND": "Compte administrateur introuvable.",
+    "ALREADY_FAVORITE": "Ce prestataire est déjà dans vos favoris.",
+    "ALREADY_RESPONDED": "Une réponse a déjà été apportée.",
+    "ALREADY_REVIEWED": "Vous avez déjà laissé un avis pour ce prestataire.",
+    "CANNOT_DEACTIVATE_SELF": "Vous ne pouvez pas désactiver votre propre compte.",
+    "CANT_REVIEW_OWN": "Vous ne pouvez pas noter votre propre fiche.",
+    "CATEGORY_HAS_CHILDREN": "Cette catégorie contient des sous-catégories.",
+    "DATABASE_UNAVAILABLE": "Service temporairement indisponible. Réessayez dans un instant.",
+    "DATA_TOO_LONG": "Le texte saisi dépasse la longueur autorisée.",
+    "DUPLICATE": "Cet élément existe déjà.",
+    "EMAIL_EXISTS": "Cette adresse email est déjà utilisée.",
+    "EMAIL_SEND_FAILED": "Échec de l'envoi de l'email.",
+    "FEATURE_NOT_ALLOWED": "Cette fonctionnalité n'est pas disponible pour votre forfait.",
+    "FORBIDDEN": "Accès non autorisé.",
+    "INTERNAL_ERROR": "Une erreur interne est survenue. Veuillez réessayer.",
+    "INVALID_ACTION": "Action non valide.",
+    "INVALID_ADMIN_TOKEN": "Session administrateur invalide ou expirée.",
+    "INVALID_AMOUNT": "Le montant spécifié est invalide.",
+    "INVALID_BOUNDS": "Zone géographique invalide.",
+    "INVALID_COORDS": "Coordonnées GPS invalides.",
+    "INVALID_CREDENTIALS": "Identifiants incorrects.",
+    "INVALID_DATE": "Date non valide.",
+    "INVALID_DAYS": "Nombre de jours invalide.",
+    "INVALID_OPERATOR": "Opérateur de paiement non pris en charge.",
+    "INVALID_PASSWORD": "Mot de passe incorrect.",
+    "INVALID_PAYLOAD": "Format de données invalide.",
+    "INVALID_PHONE": "Numéro de téléphone camerounais invalide (ex: 6XX XXX XXX).",
+    "INVALID_PLAN": "Forfait sélectionné invalide.",
+    "INVALID_REFERENCE": "Référence introuvable.",
+    "INVALID_REFRESH_TOKEN": "Session invalide. Veuillez vous reconnecter.",
+    "INVALID_TARGET": "Cible invalide pour cette action.",
+    "INVALID_TYPE": "Type de requête non valide.",
+    "LIMIT_FILE_SIZE": "Le fichier dépasse la taille maximale autorisée (5 Mo).",
+    "LIMIT_UNEXPECTED_FILE": "Format de fichier non pris en charge.",
+    "MISSING_ACTION": "Action requise.",
+    "MISSING_CNI": "La pièce d'identité (recto) est obligatoire.",
+    "MISSING_COORDS": "Coordonnées de géolocalisation manquantes.",
+    "MISSING_FIELDS": "Veuillez renseigner tous les champs obligatoires.",
+    "MISSING_PARAM": "Paramètre requis manquant.",
+    "MISSING_REFRESH_TOKEN": "Session introuvable. Veuillez vous reconnecter.",
+    "MISSING_TARGET_VALUE": "Valeur cible manquante.",
+    "NOT_FOUND": "Élément introuvable.",
+    "NO_DATA": "Aucune donnée fournie.",
+    "NO_FILE": "Aucun fichier sélectionné.",
+    "NO_PROVIDER": "Aucune fiche prestataire associée à ce compte.",
+    "OTP_EXPIRED": "Le code de vérification a expiré. Veuillez en demander un nouveau.",
+    "OTP_INVALID": "Code de vérification incorrect.",
+    "OTP_MAX_ATTEMPTS": "Trop de tentatives erronées. Veuillez patienter 10 minutes.",
+    "PAST_DATE": "La date ne peut pas être dans le passé.",
+    "PAYLOAD_TOO_LARGE": "Données trop volumineuses.",
+    "PAYMENT_EXPIRED": "La session de paiement a expiré. Veuillez recommencer.",
+    "PAYMENT_FAILED": "Le paiement n'a pas pu être validé. Veuillez réessayer.",
+    "PAYMENT_NOT_FOUND": "Transaction de paiement introuvable.",
+    "PROVIDER_EXISTS": "Vous possédez déjà une fiche prestataire.",
+    "PROVIDER_NOT_FOUND": "Prestataire introuvable.",
+    "RATE_LIMIT": "Trop de requêtes. Veuillez patienter quelques instants.",
+    "RATE_LIMIT_EXCEEDED": "Trop de tentatives. Veuillez patienter 10 minutes.",
+    "REPORT_NOT_FOUND": "Signalement introuvable.",
+    "REQUEST_PENDING": "Une demande est déjà en cours de traitement.",
+    "RESOURCE_LOCKED": "Cet élément ne peut pas être supprimé car il est utilisé.",
+    "TOKEN_EXPIRED": "Votre session a expiré. Veuillez vous reconnecter.",
+    "UNAUTHORIZED": "Veuillez vous connecter pour continuer.",
+    "UPLOAD_ERROR": "Erreur lors du téléversement du fichier.",
+    "USER_NOT_FOUND": "Utilisateur introuvable.",
+    "VALIDATION_ERROR": "Certaines informations saisies sont incorrectes.",
+    "VERIFICATION_NOT_FOUND": "Demande de vérification introuvable.",
+    "WEAK_PASSWORD": "Le mot de passe doit comporter au moins 8 caractères."
   }
 }

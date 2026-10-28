@@ -377,10 +377,32 @@
     "perMonth": "/month",
     "free": "Free",
     "features": {
-      "free": ["Basic profile", "Visible in results", "Contact from clients"],
-      "premium": ["Everything in Free", "HD profile photo", "3-photo gallery", "Highlighted score", "Basic stats"],
-      "professional": ["Everything in Premium", "10-photo gallery", "Website link", "Advanced stats", "Premium badge"],
-      "enterprise": ["Everything in Pro", "Unlimited gallery", "Priority support", "Multi-service profile", "Enterprise badge"]
+      "free": [
+        "Basic profile",
+        "Visible in results",
+        "Contact from clients"
+      ],
+      "premium": [
+        "Everything in Free",
+        "HD profile photo",
+        "3-photo gallery",
+        "Highlighted score",
+        "Basic stats"
+      ],
+      "professional": [
+        "Everything in Premium",
+        "10-photo gallery",
+        "Website link",
+        "Advanced stats",
+        "Premium badge"
+      ],
+      "enterprise": [
+        "Everything in Pro",
+        "Unlimited gallery",
+        "Priority support",
+        "Multi-service profile",
+        "Enterprise badge"
+      ]
     },
     "pay": "Pay",
     "payWith": "Pay with",
@@ -398,9 +420,15 @@
       "title": "No provider profile",
       "body": "Create your provider profile to access plans."
     },
-    "premium": { "name": "Premium" },
-    "professional": { "name": "Professional" },
-    "enterprise": { "name": "Enterprise" },
+    "premium": {
+      "name": "Premium"
+    },
+    "professional": {
+      "name": "Professional"
+    },
+    "enterprise": {
+      "name": "Enterprise"
+    },
     "radius": {
       "km": "Visible within {{val}} km",
       "unlimited": "Unlimited visibility"
@@ -416,7 +444,10 @@
     "currentBadge": "Current plan",
     "selectBtn": "Choose this plan",
     "keepBtn": "Keep my plan",
-    "free": { "label": "Free", "radius": "3 km" },
+    "free": {
+      "label": "Free",
+      "radius": "3 km"
+    },
     "unlimited": "Unlimited"
   },
   "payment": {
@@ -491,7 +522,21 @@
     "distanceKm": "{{km}} km from you",
     "back": "Back",
     "saveError": "Update failed.",
-    "deleteError": "Delete failed."
+    "deleteError": "Delete failed.",
+    "openSettings": "Open settings",
+    "reconnect": "Log in again",
+    "scheduledChange": "Scheduled change",
+    "cancelChange": "Cancel change",
+    "cancelChangeConfirm": "Do you want to cancel switching to {{plan}} plan?",
+    "cancelChangeError": "Unable to cancel plan change.",
+    "effectiveDate": "Effective on {{date}}",
+    "appCrashTitle": "An unexpected error occurred",
+    "appCrashBody": "The application encountered an issue. Your data is safe.",
+    "restartApp": "Restart app",
+    "offlineNotice": "No internet connection. Offline mode.",
+    "backOnline": "Internet connection restored.",
+    "callUnavailable": "Unable to place call. Check your phone.",
+    "whatsappUnavailable": "WhatsApp is not installed on this device."
   },
   "settings": {
     "title": "Settings",
@@ -551,12 +596,30 @@
     "savedSuccess": "Preferences saved successfully.",
     "centerTitle": "Notification center",
     "centerSubtitle": "Control the alerts that matter to you.",
-    "new_review": { "title": "New reviews", "desc": "Get notified when a client leaves a review on your profile." },
-    "review_response": { "title": "Review responses", "desc": "Get notified when a provider replies to your review." },
-    "verification_update": { "title": "Verification status", "desc": "Track updates regarding your verification request." },
-    "subscription_reminder": { "title": "Subscription reminders", "desc": "Get notified before your plan expires." },
-    "favorite_update": { "title": "Favorite updates", "desc": "Get notified when your saved providers update their profile." },
-    "contact_reminder": { "title": "Reminders & tips", "desc": "Helpful tips to grow your activity and follow-ups." }
+    "new_review": {
+      "title": "New reviews",
+      "desc": "Get notified when a client leaves a review on your profile."
+    },
+    "review_response": {
+      "title": "Review responses",
+      "desc": "Get notified when a provider replies to your review."
+    },
+    "verification_update": {
+      "title": "Verification status",
+      "desc": "Track updates regarding your verification request."
+    },
+    "subscription_reminder": {
+      "title": "Subscription reminders",
+      "desc": "Get notified before your plan expires."
+    },
+    "favorite_update": {
+      "title": "Favorite updates",
+      "desc": "Get notified when your saved providers update their profile."
+    },
+    "contact_reminder": {
+      "title": "Reminders & tips",
+      "desc": "Helpful tips to grow your activity and follow-ups."
+    }
   },
   "support": {
     "title": "Help Center & FAQ",
@@ -606,5 +669,83 @@
     "cniText": "ID documents submitted for verification are encrypted, securely stored, and deleted within 24 hours of approval or rejection.",
     "rightsTitle": "Your Rights",
     "rightsText": "In accordance with data protection regulations, you have the right to access, rectify and delete your personal data at any time."
+  },
+  "errors": {
+    "generic": "An unexpected error occurred.",
+    "network": "Internet connection interrupted. Check your network.",
+    "timeout": "Request timed out. Please try again.",
+    "serverWakingUp": "Connecting to server... Server is waking up, please wait.",
+    "sessionExpired": "Your session has expired. Please log in again.",
+    "ACCOUNT_DELETED": "This account has been deleted.",
+    "ACCOUNT_SUSPENDED": "Your account is suspended. Please contact support.",
+    "ADMIN_EXISTS": "An administrator already exists with this email.",
+    "ADMIN_LOCKED_OUT": "Administrator account temporarily locked.",
+    "ADMIN_NOT_FOUND": "Administrator not found.",
+    "ALREADY_FAVORITE": "This provider is already in your favorites.",
+    "ALREADY_RESPONDED": "A response has already been provided.",
+    "ALREADY_REVIEWED": "You have already left a review for this provider.",
+    "CANNOT_DEACTIVATE_SELF": "You cannot deactivate your own account.",
+    "CANT_REVIEW_OWN": "You cannot review your own listing.",
+    "CATEGORY_HAS_CHILDREN": "This category contains subcategories.",
+    "DATABASE_UNAVAILABLE": "Service temporarily unavailable. Please try again shortly.",
+    "DATA_TOO_LONG": "The entered text exceeds the maximum allowed length.",
+    "DUPLICATE": "This item already exists.",
+    "EMAIL_EXISTS": "This email address is already in use.",
+    "EMAIL_SEND_FAILED": "Failed to send email.",
+    "FEATURE_NOT_ALLOWED": "This feature is not available for your subscription plan.",
+    "FORBIDDEN": "Access denied.",
+    "INTERNAL_ERROR": "An internal error occurred. Please try again.",
+    "INVALID_ACTION": "Invalid action.",
+    "INVALID_ADMIN_TOKEN": "Admin session invalid or expired.",
+    "INVALID_AMOUNT": "The specified amount is invalid.",
+    "INVALID_BOUNDS": "Invalid geographic area.",
+    "INVALID_COORDS": "Invalid GPS coordinates.",
+    "INVALID_CREDENTIALS": "Incorrect credentials.",
+    "INVALID_DATE": "Invalid date.",
+    "INVALID_DAYS": "Invalid number of days.",
+    "INVALID_OPERATOR": "Unsupported payment operator.",
+    "INVALID_PASSWORD": "Incorrect password.",
+    "INVALID_PAYLOAD": "Invalid data format.",
+    "INVALID_PHONE": "Invalid Cameroonian phone number (e.g. 6XX XXX XXX).",
+    "INVALID_PLAN": "Selected plan is invalid.",
+    "INVALID_REFERENCE": "Reference not found.",
+    "INVALID_REFRESH_TOKEN": "Invalid session. Please log in again.",
+    "INVALID_TARGET": "Invalid target for this action.",
+    "INVALID_TYPE": "Invalid request type.",
+    "LIMIT_FILE_SIZE": "File exceeds maximum allowed size (5 MB).",
+    "LIMIT_UNEXPECTED_FILE": "Unsupported file format.",
+    "MISSING_ACTION": "Required action is missing.",
+    "MISSING_CNI": "ID document (front) is required.",
+    "MISSING_COORDS": "Location coordinates are missing.",
+    "MISSING_FIELDS": "Please fill in all required fields.",
+    "MISSING_PARAM": "Required parameter is missing.",
+    "MISSING_REFRESH_TOKEN": "Session not found. Please log in again.",
+    "MISSING_TARGET_VALUE": "Target value missing.",
+    "NOT_FOUND": "Item not found.",
+    "NO_DATA": "No data provided.",
+    "NO_FILE": "No file selected.",
+    "NO_PROVIDER": "No provider listing associated with this account.",
+    "OTP_EXPIRED": "Verification code has expired. Please request a new one.",
+    "OTP_INVALID": "Incorrect verification code.",
+    "OTP_MAX_ATTEMPTS": "Too many incorrect attempts. Please wait 10 minutes.",
+    "PAST_DATE": "Date cannot be in the past.",
+    "PAYLOAD_TOO_LARGE": "Payload too large.",
+    "PAYMENT_EXPIRED": "Payment session has expired. Please start again.",
+    "PAYMENT_FAILED": "Payment could not be verified. Please try again.",
+    "PAYMENT_NOT_FOUND": "Payment transaction not found.",
+    "PROVIDER_EXISTS": "You already have a provider listing.",
+    "PROVIDER_NOT_FOUND": "Provider not found.",
+    "RATE_LIMIT": "Too many requests. Please wait a moment.",
+    "RATE_LIMIT_EXCEEDED": "Too many attempts. Please wait 10 minutes.",
+    "REPORT_NOT_FOUND": "Report not found.",
+    "REQUEST_PENDING": "A request is already pending.",
+    "RESOURCE_LOCKED": "This item cannot be deleted because it is in use.",
+    "TOKEN_EXPIRED": "Your session has expired. Please log in again.",
+    "UNAUTHORIZED": "Please log in to continue.",
+    "UPLOAD_ERROR": "Error uploading file.",
+    "USER_NOT_FOUND": "User not found.",
+    "VALIDATION_ERROR": "Some entered information is invalid.",
+    "VERIFICATION_NOT_FOUND": "Verification request not found.",
+    "WEAK_PASSWORD": "Password must be at least 8 characters long."
   }
 }

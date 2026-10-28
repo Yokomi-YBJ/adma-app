@@ -15,8 +15,13 @@ import { useAuthStore }    from '../store/auth.store';
 import { useNetworkStore } from '../store/network.store';
 import { registerForPushNotifications, setupNotificationListeners } from '../services/notifications';
 import { colors } from '../constants/colors';
-import { LoadingScreen } from '../components/ui/LoadingScreen'; // On garde ton LoadingScreen
+import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { AppModalProvider } from '../components/ui/AppModal';
+import { NetworkBanner } from '../components/ui/NetworkBanner';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+
+// Export conventionnel Expo Router pour attraper les crashs
+export { ErrorBoundary };
 
 // Empêche le splash natif de disparaître tout seul
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -50,7 +55,7 @@ export default function RootLayout() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   useEffect(() => {
-    // 1. On cache le splash natif IMMÉDIATEMENT
+    // Masquage du splash screen natif
     SplashScreen.hideAsync().catch(() => {});
 
     (async () => {
@@ -82,46 +87,48 @@ export default function RootLayout() {
   if (!ready) return <LoadingScreen />;
 
   return (
-    <GestureHandlerRootView style={styles.flex}>
-      <SafeAreaProvider>
-        <StatusBar style="dark" backgroundColor={colors.white} />
-        <AuthGuard>
-          <AppModalProvider />
-          <Stack
-            screenOptions={{
-              headerStyle:      { backgroundColor: colors.white },
-              headerTintColor:  colors.navy,
-              headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-              headerShadowVisible: false,
-              contentStyle:     { backgroundColor: colors.background },
-              animation:        'slide_from_right',
-              headerBackTitleVisible: false,
-            }}
-          >
-            {/* ... Tes Stack.Screen restent identiques ... */}
-            <Stack.Screen name="(auth)"                    options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)"                    options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding/index"          options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="provider/[id]"             options={{ headerShown: false }} />
-            <Stack.Screen name="provider/create"           options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="provider/edit"             options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="reviews/[id]"              options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="verification/index"        options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="subscription/plans"        options={{ headerShown: false }} />
-            <Stack.Screen name="subscription/payment"      options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="subscription/success"      options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="notifications/index"       options={{ headerShown: false }} />
-            <Stack.Screen name="settings/index"            options={{ headerShown: false }} />
-            <Stack.Screen name="settings/edit-profile"     options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="settings/notifications"    options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="settings/legal"            options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="settings/support"          options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="report"                    options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen name="map"                       options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-          </Stack>
-        </AuthGuard>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={styles.flex}>
+        <SafeAreaProvider>
+          <StatusBar style="dark" backgroundColor={colors.white} />
+          <AuthGuard>
+            <NetworkBanner />
+            <AppModalProvider />
+            <Stack
+              screenOptions={{
+                headerStyle:      { backgroundColor: colors.white },
+                headerTintColor:  colors.navy,
+                headerTitleStyle: { fontWeight: '700', fontSize: 17 },
+                headerShadowVisible: false,
+                contentStyle:     { backgroundColor: colors.background },
+                animation:        'slide_from_right',
+                headerBackTitleVisible: false,
+              }}
+            >
+              <Stack.Screen name="(auth)"                    options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)"                    options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding/index"          options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen name="provider/[id]"             options={{ headerShown: false }} />
+              <Stack.Screen name="provider/create"           options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="provider/edit"             options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="reviews/[id]"              options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="verification/index"        options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="subscription/plans"        options={{ headerShown: false }} />
+              <Stack.Screen name="subscription/payment"      options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="subscription/success"      options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen name="notifications/index"       options={{ headerShown: false }} />
+              <Stack.Screen name="settings/index"            options={{ headerShown: false }} />
+              <Stack.Screen name="settings/edit-profile"     options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="settings/notifications"    options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="settings/legal"            options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="settings/support"          options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="report"                    options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="map"                       options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+            </Stack>
+          </AuthGuard>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput,
-  ActivityIndicator, Platform, KeyboardAvoidingView, ScrollView, Alert,
+  ActivityIndicator, Platform, KeyboardAvoidingView, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -16,6 +16,7 @@ import { ChevronLeft, Check } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { colors } from '../../constants/colors';
 import api from '../../services/api';
+import { useModalStore } from '../../store/modal.store';
 
 const OPERATORS = [
   { id: 'orange_cmr',   label: 'Orange Money', color: '#FF7900' },
@@ -63,11 +64,22 @@ export default function PaymentScreen() {
       if (res.status === 202 || res.data.scheduled) {
         setLoading(false);
         setStatusText('');
-        Alert.alert(
-          'Changement programmé',
-          res.data.message,
-          [{ text: 'Compris', onPress: () => router.back() }]
-        );
+        const effectiveDate = res.data.effectiveAt
+          ? new Date(res.data.effectiveAt).toLocaleDateString(t('common.locale', 'fr-FR'), {
+              day: '2-digit', month: 'long', year: 'numeric',
+            })
+          : '';
+        const scheduledMessage = effectiveDate
+          ? `${t('common.effectiveDate', { date: effectiveDate })}.`
+          : (res.data.message || t('common.scheduledChange'));
+
+        useModalStore.getState().show({
+          type: 'info',
+          title: t('common.scheduledChange', 'Changement programmé'),
+          message: scheduledMessage,
+          confirmText: t('common.ok', 'Compris'),
+          onConfirm: () => router.back(),
+        });
         return;
       }
 

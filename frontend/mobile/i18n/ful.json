@@ -377,10 +377,32 @@
     "perMonth": "/lewru",
     "free": "Meere",
     "features": {
-      "free": ["Karɗi arandeje", "Wurtugol nder yiytugol", "Noddol diga yimɓe"],
-      "premium": ["Fuu nder Meere", "Foto HD", "Fotooji 3", "Jimmre mawnde", "Limmle arandeje"],
-      "professional": ["Fuu nder Premium", "Fotooji 10", "Lien site web", "Limmle mawɗe", "Maande Pro"],
-      "enterprise": ["Fuu nder Pro", "Fotooji keewɗi", "Walligo jaawngo", "Karɗi kuuje ɗuuɗɗe", "Maande Enterprise"]
+      "free": [
+        "Karɗi arandeje",
+        "Wurtugol nder yiytugol",
+        "Noddol diga yimɓe"
+      ],
+      "premium": [
+        "Fuu nder Meere",
+        "Foto HD",
+        "Fotooji 3",
+        "Jimmre mawnde",
+        "Limmle arandeje"
+      ],
+      "professional": [
+        "Fuu nder Premium",
+        "Fotooji 10",
+        "Lien site web",
+        "Limmle mawɗe",
+        "Maande Pro"
+      ],
+      "enterprise": [
+        "Fuu nder Pro",
+        "Fotooji keewɗi",
+        "Walligo jaawngo",
+        "Karɗi kuuje ɗuuɗɗe",
+        "Maande Enterprise"
+      ]
     },
     "pay": "Yoɓu",
     "payWith": "Yoɓ bee",
@@ -398,9 +420,15 @@
       "title": "Alaa fiisgol golloowo",
       "body": "Sosu fiisgol maa ngam heɓde ceɗe."
     },
-    "premium": { "name": "Premium" },
-    "professional": { "name": "Professional" },
-    "enterprise": { "name": "Enterprise" },
+    "premium": {
+      "name": "Premium"
+    },
+    "professional": {
+      "name": "Professional"
+    },
+    "enterprise": {
+      "name": "Enterprise"
+    },
     "radius": {
       "km": "Heeɓotoo e {{val}} km",
       "unlimited": "Heeɓotoo tawa alaa keerol"
@@ -416,7 +444,10 @@
     "currentBadge": "Plan jooni",
     "selectBtn": "Suɓo plan o",
     "keepBtn": "Heɗɗo e plan am",
-    "free": { "label": "Meere", "radius": "3 km" },
+    "free": {
+      "label": "Meere",
+      "radius": "3 km"
+    },
     "unlimited": "Tawa alaa keerol"
   },
   "payment": {
@@ -491,7 +522,21 @@
     "distanceKm": "{{km}} km daga maa",
     "back": "Rutto",
     "saveError": "Hesɗitinol heɓaani.",
-    "deleteError": "Momtugol heɓaani."
+    "deleteError": "Momtugol heɓaani.",
+    "openSettings": "Majjit cuɓe",
+    "reconnect": "Nastit",
+    "scheduledChange": "Waylude heɓaama",
+    "cancelChange": "Haaytinde waylude",
+    "cancelChangeConfirm": "A yiɗi haaytinde waylude yahde {{plan}} na?",
+    "cancelChangeError": "Wawaa haaytinde waylude.",
+    "effectiveDate": "Fuɗɗoto ñannde {{date}}",
+    "appCrashTitle": "Kuje goɗɗum boni",
+    "appCrashBody": "Kuugal ngal heɓi caɗeele. Keɓe ma aɗa ɗoo.",
+    "restartApp": "Fuɗɗit kuugal ngal",
+    "offlineNotice": "Ceŋol intarneet walaa. Keɓe suuɗaaɗe.",
+    "backOnline": "Ceŋol intarneet heɓtitaama.",
+    "callUnavailable": "Waawaa noddugo. Ƴeewto telefoŋ ma.",
+    "whatsappUnavailable": "WhatsApp walaa nder telefoŋ o."
   },
   "settings": {
     "title": "Teeltanɗe",
@@ -551,12 +596,30 @@
     "savedSuccess": "Suɓanɗe maa resndaama jam.",
     "centerTitle": "Suudu kaaɗunde",
     "centerSubtitle": "Toppit kaaɗunde ɗe njiɗ-ɗaa.",
-    "new_review": { "title": "Miijooji kesi", "desc": "Heɓ tinndinoore to neɗɗo waɗi miijo dow karɗi maa." },
-    "review_response": { "title": "Jaabawol miijo", "desc": "Heɓ tinndinoore to jofniido jaabi miijo maa." },
-    "verification_update": { "title": "Darnde tellemgol", "desc": "Hakkil e ɗaɓɓirgal maa ngam heɓugo maande." },
-    "subscription_reminder": { "title": "Siftorgo plan", "desc": "Heɓ tinndinoore ko plan maa timma." },
-    "favorite_update": { "title": "Keeje muuɗɗinaaɓe", "desc": "Tinndinoore to jofniiɓe maa muuɗɗinaaɓe mbaylii kuuje." },
-    "contact_reminder": { "title": "Siftorgo e sawri", "desc": "Sawriiji ngam ɓeydugo golle maa e siftorɗe." }
+    "new_review": {
+      "title": "Miijooji kesi",
+      "desc": "Heɓ tinndinoore to neɗɗo waɗi miijo dow karɗi maa."
+    },
+    "review_response": {
+      "title": "Jaabawol miijo",
+      "desc": "Heɓ tinndinoore to jofniido jaabi miijo maa."
+    },
+    "verification_update": {
+      "title": "Darnde tellemgol",
+      "desc": "Hakkil e ɗaɓɓirgal maa ngam heɓugo maande."
+    },
+    "subscription_reminder": {
+      "title": "Siftorgo plan",
+      "desc": "Heɓ tinndinoore ko plan maa timma."
+    },
+    "favorite_update": {
+      "title": "Keeje muuɗɗinaaɓe",
+      "desc": "Tinndinoore to jofniiɓe maa muuɗɗinaaɓe mbaylii kuuje."
+    },
+    "contact_reminder": {
+      "title": "Siftorgo e sawri",
+      "desc": "Sawriiji ngam ɓeydugo golle maa e siftorɗe."
+    }
   },
   "support": {
     "title": "Suudu ballal e FAQ",
@@ -606,5 +669,83 @@
     "cniText": "Fotooji CNI maa ɗon reenaa nder sirri. Ɗi momtete nder balɗe 24 ɓaawo tellemgol ngol.",
     "rightsTitle": "Hakkeeji maa",
     "rightsText": "A woodi hakke yiygo, waylugo e momtugo keeje maa fuu saanga nde a yidi."
+  },
+  "errors": {
+    "generic": "Kuje goɗɗum boni.",
+    "network": "Ceŋol intarneet ta'i. Ƴeewto ceŋol ma.",
+    "timeout": "Sahaa waɗi. Eto fahin.",
+    "serverWakingUp": "Ɗon ceŋoo e sarwordu... Sarwordu ɗon ummoo, muñño seɗɗa.",
+    "sessionExpired": "Sahaa ma gasii. Nastit fahin.",
+    "ACCOUNT_DELETED": "Konte nde maasama.",
+    "ACCOUNT_SUSPENDED": "Konte ma dartaama. Haaldu e ballal.",
+    "ADMIN_EXISTS": "Ardiiɗo goɗɗo ɗon e ngol iimeel.",
+    "ADMIN_LOCKED_OUT": "Konte ardiiɗo ɗon uddaa ko seɗɗi.",
+    "ADMIN_NOT_FOUND": "Ardiiɗo heɓaaka.",
+    "ALREADY_FAVORITE": "Gollotooɗo o ɗon nder cuɓaaɗi ma.",
+    "ALREADY_RESPONDED": "Jaabawol heɓaama.",
+    "ALREADY_REVIEWED": "A hokkiino miijo ma dow gollotooɗo o.",
+    "CANNOT_DEACTIVATE_SELF": "A waawaa nyiffude konte ma hoore ma.",
+    "CANT_REVIEW_OWN": "A waawaa hokkude miijo dow kuugal ma hoore ma.",
+    "CATEGORY_HAS_CHILDREN": "Fedde nde ɗon mari felle nder majjum.",
+    "DATABASE_UNAVAILABLE": "Kuugal ngal ɗon nder caɗeele jooni. Eto fahin.",
+    "DATA_TOO_LONG": "Binndol ngol ɗon ɓuri ko jaɓaa.",
+    "DUPLICATE": "Ɗum ɗon woodi kadi.",
+    "EMAIL_EXISTS": "Iimeel ɗon huutoree jooni.",
+    "EMAIL_SEND_FAILED": "Iimeel neldaaka.",
+    "FEATURE_NOT_ALLOWED": "Kuje nde walaa nder doole ma.",
+    "FORBIDDEN": "A woodaa laawol nastugo.",
+    "INTERNAL_ERROR": "Kuje boni nder sarwordu. Eto fahin.",
+    "INVALID_ACTION": "Kuuɗe ɗe laaɓaa.",
+    "INVALID_ADMIN_TOKEN": "Dokkal ardiiɗo ɗon boni.",
+    "INVALID_AMOUNT": "Ceede ɗe laaɓaa.",
+    "INVALID_BOUNDS": "Nokkuure nde laaɓaa.",
+    "INVALID_COORDS": "Nokkuure GPS laaɓaa.",
+    "INVALID_CREDENTIALS": "Kuje nastugo laaɓaa.",
+    "INVALID_DATE": "Ñannde nde laaɓaa.",
+    "INVALID_DAYS": "Limre balɗe laaɓaa.",
+    "INVALID_OPERATOR": "Laawol yoɓugo ceede ngol jaɓaaka.",
+    "INVALID_PASSWORD": "Pasiwordi laaɓaa.",
+    "INVALID_PAYLOAD": "Mbaydi keɓe laaɓaa.",
+    "INVALID_PHONE": "Lamba telefoŋ Kamarun laaɓaa (misal: 6XX XXX XXX).",
+    "INVALID_PLAN": "Doole suɓaande nde laaɓaa.",
+    "INVALID_REFERENCE": "Ko tefetee heɓaaka.",
+    "INVALID_REFRESH_TOKEN": "Sahaa ma bonii. Nastit fahin.",
+    "INVALID_TARGET": "Ko tefetee ngam kuuɗe ɗe laaɓaa.",
+    "INVALID_TYPE": "Iri ɗaɓɓol ngol laaɓaa.",
+    "LIMIT_FILE_SIZE": "Fiil ɗon ɓuri ko jaɓaa (5 Mo).",
+    "LIMIT_UNEXPECTED_FILE": "Mbaydi fiil jaɓaaka.",
+    "MISSING_ACTION": "Kuuɗe ɗon tefee.",
+    "MISSING_CNI": "Kaye CNI (yeeso) ɗon tefee.",
+    "MISSING_COORDS": "Nokkuure GPS ɗon ŋaɓɓi.",
+    "MISSING_FIELDS": "Hebbintu pelle ɗon tefee fuu.",
+    "MISSING_PARAM": "Ko tefetee ɗon ŋaɓɓi.",
+    "MISSING_REFRESH_TOKEN": "Sahaa heɓaaka. Nastit fahin.",
+    "MISSING_TARGET_VALUE": "Ko tefetee ɗon ŋaɓɓi.",
+    "NOT_FOUND": "Heɓaaka.",
+    "NO_DATA": "Keɓe ngalaa.",
+    "NO_FILE": "Fiil suɓaaka.",
+    "NO_PROVIDER": "Kaye gollotooɗo walaa nder konte nde.",
+    "OTP_EXPIRED": "Lamba seedamɗal sahaa mum gasii. Ɗaɓɓitu lamba keso.",
+    "OTP_INVALID": "Lamba seedamɗal laaɓaa.",
+    "OTP_MAX_ATTEMPTS": "A etake ɗuuɗum. Sabbo minti 10.",
+    "PAST_DATE": "Ñannde waawaa wonde ko ɓaawi.",
+    "PAYLOAD_TOO_LARGE": "Keɓe ɗon ɓuri ɗuuɗugo.",
+    "PAYMENT_EXPIRED": "Sahaa yoɓugo ceede gasii. Fuɗɗit fahin.",
+    "PAYMENT_FAILED": "Yoɓugo ceede heɓaaka. Eto fahin.",
+    "PAYMENT_NOT_FOUND": "Ceede yoɓaande heɓaaka.",
+    "PROVIDER_EXISTS": "A ɗon mari kaye gollotooɗo kadi.",
+    "PROVIDER_NOT_FOUND": "Gollotooɗo heɓaaka.",
+    "RATE_LIMIT": "Ɗaɓɓol ɗon ɗuuɗi. Sabbo seɗɗa.",
+    "RATE_LIMIT_EXCEEDED": "A etake ɗuuɗum. Sabbo minti 10.",
+    "REPORT_NOT_FOUND": "Wullitaango heɓaaka.",
+    "REQUEST_PENDING": "Ɗaɓɓol ɗon huutoree jooni.",
+    "RESOURCE_LOCKED": "Waawaa maasugo ngam ɗum ɗon huutoree.",
+    "TOKEN_EXPIRED": "Sahaa ma gasii. Nastit fahin.",
+    "UNAUTHORIZED": "Nastit ko a yaha yeeso.",
+    "UPLOAD_ERROR": "Fiil waawaano ƴeeŋtineego.",
+    "USER_NOT_FOUND": "Huutoroowo heɓaaka.",
+    "VALIDATION_ERROR": "Keɓe naatnaaɗe ɗon ngardi seɗɗa.",
+    "VERIFICATION_NOT_FOUND": "Ɗaɓɓol seedamɗal heɓaaka.",
+    "WEAK_PASSWORD": "Pasiwordi haani hewtugo harfeere 8."
   }
 }
