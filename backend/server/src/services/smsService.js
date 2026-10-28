@@ -5,8 +5,7 @@
  * ✅ Utilisé UNIQUEMENT pour les OTP mobiles (utilisateurs finaux)
  * ❌ N'est PAS utilisé pour l'auth admin (qui passe par Resend/email)
  *
- * ✅ Envoi OTP sans senderId (utilise le sender par défaut du compte MboaSMS)
- * ✅ Support optionnel de senderId si configuré
+ * ✅ Envoi OTP avec senderId (récupéré depuis la config)
  * ✅ Idempotency-Key pour éviter les doublons
  */
 import crypto from 'crypto';
@@ -22,8 +21,8 @@ const OTP_ENDPOINT     = '/api/v1/developer/sms/send-otp';
  * @param {string} to - Numéro destinataire (+237XXXXXXXXX)
  * @param {string} message - Contenu du SMS
  * @param {Object} [options]
- * @param {string} [options.senderId]        - Sender ID personnalisé (optionnel)
- * @param {string} [options.idempotencyKey]  - Clé d'idempotence (optionnel)
+ * @param {string} [options.senderId]        - Sender ID personnalisé
+ * @param {string} [options.idempotencyKey]  - Clé d'idempotence
  */
 export async function sendSMS(to, message, options = {}) {
   const { senderId, idempotencyKey } = options;
@@ -44,12 +43,12 @@ export async function sendSMS(to, message, options = {}) {
     : `+237${cleanPhone.replace(/^237/, '')}`;
 
   // ── 3. Construire le payload ───────────────────────────────────
-  // ⚠️ senderId est OPTIONNEL — si absent, MboaSMS utilise le sender par défaut du compte
   const payload = {
     phoneNumbers: [finalPhone],
     message,
   };
 
+  // ✅ On ajoute le senderId s'il est fourni
   if (senderId) {
     payload.senderId = senderId;
   }
@@ -112,8 +111,8 @@ export async function sendSMS(to, message, options = {}) {
     }
   }
 
-  // ── 8. Erreurs HTTP ────────────────────────────────────────────
-  if (!res.ok) {
+  // ── 8. Erreurs HTTP ET erreurs logiques (HTTP 200 mais success: false) ──
+  if (!res.ok || (data && data.success === false)) {
     logger.error('MboaSMS — erreur API', { status: res.status, data });
 
     if (res.status === 429) {
@@ -157,6 +156,11 @@ export async function sendOTPSms(phone, code, expiresMinutes = 10) {
 
   const idempotencyKey = `otp-${phone}-${code}-${Date.now()}`;
 
-  // ⚠️ Pas de senderId → MboaSMS utilise le sender par défaut du compte
-  return sendSMS(phone, message, { idempotencyKey });
+  // ✅ On récupère le senderId depuis le fichier .env
+  const senderId = config.mboaSMS?.senderId;
+
+  return sendSMS(phone, message, { 
+    idempotencyKey, 
+    senderId 
+  });
 }
