@@ -110,7 +110,7 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
         <ScrollView style={fm.body} showsVerticalScrollIndicator={false}>
 
           <Select
-            label={t('search.category')}
+            label={t('search.filterCategory')} // ✅ CORRIGÉ
             value={draft.categoryId}
             options={categoryOptionsWithAll}
             onSelect={(id) => setDraft(d => ({ ...d, categoryId: id }))}
@@ -121,7 +121,7 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
           />
 
           <Select
-            label={t('search.city')}
+            label={t('search.filterCity')} // ✅ CORRIGÉ
             value={draft.cityId}
             options={cityOptionsWithAll}
             onSelect={(id) => setDraft(d => ({ ...d, cityId: id, neighborhoodId: null }))}
@@ -133,7 +133,7 @@ function FilterModal({ visible, onClose, filters, setFilters, categories, cities
 
           {draft.cityId && (
             <>
-              <Text style={fm.label}>{t('search.neighborhood')}</Text>
+              <Text style={fm.label}>{t('search.filterNeighborhood')}</Text> {/* ✅ CORRIGÉ */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fm.chips}>
                 {[{ id: null, name: t('search.all') }, ...safeNeighborhoods.filter(n => n.city_id === draft.cityId)].map(n => (
                   <TouchableOpacity
