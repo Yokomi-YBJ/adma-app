@@ -8,7 +8,8 @@ import { v4 as uuid } from 'uuid';
 import { validationResult } from 'express-validator';
 import { query, transaction } from '../config/database.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { sendOTPSms } from '../services/smsService.js'; // On garde MboaSMS
+import { sendOTPSms } from '../services/smsService.js'; // MboaSMS (Production)
+import { sendAdminAlert } from '../services/mailService.js'; // Email admin (Développement)
 import { config }     from '../config/env.js';
 import { logger }     from '../utils/logger.js';
 
@@ -74,14 +75,22 @@ export const sendOTP = asyncHandler(async (req, res) => {
     [phone, hash, expires]
   );
 
-  // ✅ MODIFICATION ICI : Bypass si on est en mode développement
-    // ✅ MODIFICATION ICI
+  // ✅ LOGIQUE DE TEST vs PRODUCTION
   if (process.env.NODE_ENV === 'development') {
+    // En développement : on n'appelle pas MboaSMS, on envoie un email à l'admin
     logger.warn(`[DEV] Code OTP pour ${phone} : ${code}`);
+    
+    await sendAdminAlert({
+      subject: `[ADMA DEV] Code OTP pour ${phone}`,
+      body: `Un code OTP a été généré en mode développement.\n\nNuméro : ${phone}\nCode : ${code}\n\nValable pendant ${config.otpExpiresMinutes} minutes.`
+    }).catch(err => {
+      logger.error('Échec de l\'envoi de l\'email OTP admin', { error: err.message });
+    });
+
+  } else {
+    // En production : on envoie le vrai SMS via MboaSMS
+    await sendOTPSms(phone, code, config.otpExpiresMinutes);
   }
-  
-  // On envoie toujours le SMS, peu importe l'environnement
-  await sendOTPSms(phone, code, config.otpExpiresMinutes);
 
   logger.info('sendOTP: OTP généré', {
     phone,
@@ -111,7 +120,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
   });
 
   // ── Transaction atomique : SELECT FOR UPDATE + UPDATE ──
-  // Empêche deux requêtes concurrentes de traiter le même OTP
   const result = await transaction(async (conn) => {
     const [rows] = await conn.execute(
       `SELECT id, code_hash, attempts, expires_at, created_at
@@ -131,7 +139,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     const otp = rows[0];
 
-    // OTP déjà bloqué (attempts atteint le max lors d'un précédent appel)
     if (otp.attempts >= config.otpMaxAttempts) {
       await conn.execute('UPDATE otp_codes SET used_at = NOW() WHERE id = ?', [otp.id]);
       return { ok: false, reason: 'MAX_ATTEMPTS', otpId: otp.id };
@@ -140,12 +147,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     const codeStr = String(code || '').trim();
     const valid   = await bcrypt.compare(codeStr, otp.code_hash);
 
-    // ── Code incorrect ──
     if (!valid) {
       await conn.execute('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [otp.id]);
       const remaining = config.otpMaxAttempts - otp.attempts - 1;
 
-      // Si c'était la dernière tentative, on invalide tout de suite
       if (remaining <= 0) {
         await conn.execute('UPDATE otp_codes SET used_at = NOW() WHERE id = ?', [otp.id]);
       }
@@ -159,12 +164,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       };
     }
 
-    // ── Code valide ──
     await conn.execute('UPDATE otp_codes SET used_at = NOW() WHERE id = ?', [otp.id]);
     return { ok: true, otpId: otp.id };
   });
 
-  // ── Gestion des cas d'échec ──
   if (!result.ok) {
     switch (result.reason) {
       case 'NO_OTP':
@@ -173,11 +176,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
       case 'MAX_ATTEMPTS':
         logger.warn('verifyOTP: OTP déjà bloqué, invalidé', { phone, otpId: result.otpId });
-        throw new AppError(
-          'Trop de tentatives. Demandez un nouveau code.',
-          429,
-          'OTP_MAX_ATTEMPTS'
-        );
+        throw new AppError('Trop de tentatives. Demandez un nouveau code.', 429, 'OTP_MAX_ATTEMPTS');
 
       case 'INVALID':
         logger.info('verifyOTP: code incorrect', {
@@ -198,10 +197,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     }
   }
 
-  // ── Succès ──
   logger.info('verifyOTP: succès', { phone, otpId: result.otpId });
 
-  // Trouver ou créer l'utilisateur
   const [existing] = await query('SELECT * FROM users WHERE phone = ?', [phone]);
   let user;
   let isNew = false;
@@ -211,15 +208,9 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     if (user.status === 'suspended') throw new AppError('Compte suspendu', 403, 'ACCOUNT_SUSPENDED');
     if (user.status === 'deleted')   throw new AppError('Compte supprimé', 403, 'ACCOUNT_DELETED');
 
-    await query(
-      'UPDATE users SET phone_verified = TRUE, last_seen_at = NOW() WHERE id = ?',
-      [user.id]
-    );
+    await query('UPDATE users SET phone_verified = TRUE, last_seen_at = NOW() WHERE id = ?', [user.id]);
   } else {
-    const [insertResult] = await query(
-      'INSERT INTO users (phone, phone_verified) VALUES (?, TRUE)',
-      [phone]
-    );
+    const [insertResult] = await query('INSERT INTO users (phone, phone_verified) VALUES (?, TRUE)', [phone]);
     await query('INSERT INTO notification_preferences (user_id) VALUES (?)', [insertResult.insertId]);
 
     const [newUser] = await query('SELECT * FROM users WHERE id = ?', [insertResult.insertId]);
@@ -257,7 +248,6 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
   const shaHash = hashRefreshToken(raw);
 
-  // Recherche directe indexée O(1) < 1ms
   const [rows] = await query(
     'SELECT * FROM refresh_tokens WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1',
     [shaHash]
@@ -265,7 +255,6 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
   let found = rows[0] || null;
 
-  // Fallback rétrocompatible pour les tokens legacy créés avant la migration SHA-256
   if (!found) {
     const [legacyRows] = await query(
       'SELECT * FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() AND token_hash LIKE "$2%" LIMIT 20'
@@ -280,10 +269,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
   if (!found) throw new AppError('Session expirée ou invalide. Veuillez vous reconnecter.', 401, 'INVALID_REFRESH_TOKEN');
 
-  const [users] = await query(
-    'SELECT id, status FROM users WHERE id = ? AND status = "active"',
-    [found.user_id]
-  );
+  const [users] = await query('SELECT id, status FROM users WHERE id = ? AND status = "active"', [found.user_id]);
   if (!users.length) throw new AppError('Compte introuvable ou suspendu', 401, 'USER_NOT_FOUND');
 
   await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?', [found.id]);
@@ -299,13 +285,9 @@ export const logout = asyncHandler(async (req, res) => {
   const raw = req.headers['x-refresh-token'] || req.body?.refreshToken;
   if (raw) {
     const shaHash = hashRefreshToken(raw);
-    const [result] = await query(
-      'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = ?',
-      [shaHash]
-    );
+    const [result] = await query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = ?', [shaHash]);
 
     if (result.affectedRows === 0) {
-      // Fallback legacy bcrypt
       const [legacyRows] = await query(
         'SELECT id, token_hash FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW() AND token_hash LIKE "$2%" LIMIT 20'
       );
