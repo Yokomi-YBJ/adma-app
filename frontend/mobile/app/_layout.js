@@ -2,7 +2,7 @@
  * ADMA — Layout racine
  */
 import { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,18 +20,13 @@ import { AppModalProvider } from '../components/ui/AppModal';
 import { NetworkBanner } from '../components/ui/NetworkBanner';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
-// Export conventionnel Expo Router pour attraper les crashs
 export { ErrorBoundary };
 
-// Empêche le splash natif de disparaître tout seul
-// Expo peut rejeter cet appel si le splash natif a déjà été empêché ; le layout garde le rendu de secours.
 SplashScreen.preventAutoHideAsync().catch((error) => {
   console.warn('[ADMA] Impossible de maintenir le splash natif.', error);
 });
 
-// Réveille Render en arrière-plan
 if (process.env.EXPO_PUBLIC_API_URL) {
-  // Best-effort warm-up only; normal API requests provide user-visible errors and retries.
   fetch(`${process.env.EXPO_PUBLIC_API_URL}/health`).catch(() => {});
 }
 
@@ -47,6 +42,9 @@ function AuthGuard({ children }) {
     if (!isLoggedIn && !inAuth) router.replace('/(auth)/login');
     if (isLoggedIn && inAuth)  router.replace('/(tabs)');
   }, [isLoggedIn, isLoading, segments]);
+
+  // ✅ On bloque le rendu des enfants tant que l'auth n'est pas prête
+  if (isLoading) return null;
 
   return children;
 }
@@ -88,7 +86,6 @@ export default function RootLayout() {
     return cleanup;
   }, [ready]);
 
-  // Tant que l'app n'est pas prête, on affiche notre écran simple
   if (!ready) return <LoadingScreen />;
 
   return (
@@ -110,6 +107,9 @@ export default function RootLayout() {
                 headerBackTitleVisible: false,
               }}
             >
+              {/* ✅ LIGNE CRUCIALE AJOUTÉE ICI */}
+              <Stack.Screen name="index"                    options={{ headerShown: false }} />
+              
               <Stack.Screen name="(auth)"                    options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)"                    options={{ headerShown: false }} />
               <Stack.Screen name="onboarding/index"          options={{ headerShown: false, gestureEnabled: false }} />
