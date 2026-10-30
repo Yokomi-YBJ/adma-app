@@ -13,7 +13,7 @@ const REFRESH_KEY = 'adma_refresh_token';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 45000,
+  timeout: 45000, // 45s pour les requêtes normales
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -71,7 +71,7 @@ api.interceptors.response.use(
 
         const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, {
           headers: { 'X-Refresh-Token': refresh },
-          timeout: 20000,
+          timeout: 90000, // ✅ 1 minute 30 secondes (90 000 ms) pour le réveil de Render
         });
 
         const newAccess  = data.data?.accessToken;
@@ -86,14 +86,24 @@ api.interceptors.response.use(
         processQueue(null, newAccess);
         original.headers.Authorization = `Bearer ${newAccess}`;
         return api(original);
+
       } catch (refreshErr) {
+        // ✅ On ne déconnecte QUE si le serveur renvoie une vraie erreur d'authentification
+        const isRealAuthError = refreshErr.response?.status === 401 || refreshErr.response?.status === 403;
+
+        if (!isRealAuthError) {
+          // Si c'est un problème réseau (Render endormi, timeout), on ne déconnecte PAS !
+          processQueue(refreshErr, null);
+          return Promise.reject(refreshErr); 
+        }
+
+        // Si c'est un vrai 401 (token invalide ou expiré), on déconnecte proprement
         processQueue(refreshErr, null);
 
         await SecureStore.deleteItemAsync(ACCESS_KEY).catch(() => {});
         await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
         delete api.defaults.headers.common.Authorization;
 
-        // ✅ FIX REQUIRE CYCLE : Import dynamique du store ici
         const { useAuthStore } = await import('../store/auth.store');
         await useAuthStore.getState().logout();
 
