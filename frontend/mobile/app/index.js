@@ -3,12 +3,16 @@ import { useAuthStore } from '../store/auth.store';
 
 export default function Index() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const isLoading  = useAuthStore((s) => s.isLoading); // ✅ Ajout de isLoading
 
-  // Si l'utilisateur est connecté, on l'envoie sur l'accueil
+  // ✅ On attend que le store ait fini de charger avant de rediriger
+  if (isLoading) {
+    return null;
+  }
+
   if (isLoggedIn) {
     return <Redirect href="/(tabs)" />;
   }
 
-  // Sinon, on l'envoie sur la page de connexion
   return <Redirect href="/(auth)/login" />;
 }
