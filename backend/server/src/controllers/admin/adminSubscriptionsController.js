@@ -1,7 +1,7 @@
 /**
  * ADMA — Contrôleur Abonnements Admin
  */
-import { query } from '../../config/database.js';
+import { query, transaction } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { computeNewLoyaltyMonths } from '../../services/pricingService.js';
 
@@ -57,7 +57,7 @@ export async function getSubscriptions(req, res) {
     params
   );
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       subscriptions,
@@ -69,10 +69,6 @@ export async function getSubscriptions(req, res) {
   });
 }
 
-/**
- * Liste des prestataires éligibles à un upgrade depuis l'admin.
- * Renvoie : liste avec plan actuel, pour filtrer côté client.
- */
 export async function getUpgradableProviders(req, res) {
   const [rows] = await query(
     `SELECT p.id, p.name, p.plan, p.plan_expires_at,
@@ -88,7 +84,6 @@ export async function getUpgradableProviders(req, res) {
      LIMIT 500`
   );
 
-  // Enrichir avec la liste des plans supérieurs possibles
   const enriched = rows.map((p) => {
     const rank = PLAN_RANK[p.plan] ?? 0;
     const upgradablePlans = Object.entries(PLAN_RANK)
@@ -98,13 +93,12 @@ export async function getUpgradableProviders(req, res) {
     return { ...p, upgradablePlans };
   });
 
-  res.json({ success: true, data: enriched });
+  return res.json({ success: true, data: enriched });
 }
 
 export async function manualActivateSubscription(req, res) {
   const { providerId, plan, days = 30 } = req.body;
 
-  // Validation
   if (!providerId || !plan) {
     throw new AppError('Prestataire et plan requis', 400, 'MISSING_FIELDS');
   }
@@ -119,7 +113,7 @@ export async function manualActivateSubscription(req, res) {
   }
 
   const [prov] = await query(
-    'SELECT id, name, plan, loyalty_months, plan_expires_at FROM providers WHERE id = ?',
+    'SELECT id, name, plan, loyalty_months, plan_expires_at, last_renewal_at FROM providers WHERE id = ?',
     [providerId]
   );
   if (!prov.length) throw new AppError('Prestataire introuvable', 404, 'NOT_FOUND');
@@ -136,51 +130,53 @@ export async function manualActivateSubscription(req, res) {
     );
   }
 
-  // Calcul de la nouvelle date d'expiration
-  // Si un plan existe déjà et n'est pas expiré → on ajoute à la date d'expiration actuelle
   const now = new Date();
   const currentExpiry = prov[0].plan_expires_at ? new Date(prov[0].plan_expires_at) : null;
   const baseDate = currentExpiry && currentExpiry > now ? currentExpiry : now;
 
   const endDate = new Date(baseDate);
   endDate.setDate(endDate.getDate() + daysNum);
+  
   const endStr = endDate.toISOString().slice(0, 10);
 
-  // Clôturer les anciens abonnements actifs
-  await query(
-    "UPDATE subscriptions SET status = 'expired' WHERE provider_id = ? AND status = 'active'",
-    [providerId]
-  );
+  let newLoyaltyMonths = 1; 
+  if (currentPlan !== 'free' && currentExpiry && currentExpiry > now) {
+      newLoyaltyMonths = computeNewLoyaltyMonths(prov[0]);
+  }
 
-  // Créer le nouvel abonnement
-  await query(
-    `INSERT INTO subscriptions (provider_id, plan, amount, base_amount, discount_percent, start_date, end_date, status, activated_by)
-     VALUES (?, ?, 0, 0, 0, CURDATE(), ?, 'active', 'admin')`,
-    [providerId, plan, endStr]
-  );
+  await transaction(async (conn) => {
+    await conn.execute(
+      "UPDATE subscriptions SET status = 'expired' WHERE provider_id = ? AND status = 'active'",
+      [providerId]
+    );
 
-  // Nouveau compteur fidélité : on garde la logique existante
-  const newLoyaltyMonths = computeNewLoyaltyMonths(prov[0]);
+    await conn.execute(
+      `INSERT INTO subscriptions (provider_id, plan, amount, base_amount, discount_percent, start_date, end_date, status, activated_by)
+       VALUES (?, ?, 0, 0, 0, CURDATE(), ?, 'active', 'admin')`,
+      [providerId, plan, endStr]
+    );
 
-  await query(
-    `UPDATE providers
-     SET plan = ?, plan_expires_at = ?, loyalty_months = ?, last_renewal_at = NOW()
-     WHERE id = ?`,
-    [plan, endDate, newLoyaltyMonths, providerId]
-  );
+    await conn.execute(
+      `UPDATE providers
+       SET plan = ?, plan_expires_at = ?, loyalty_months = ?, last_renewal_at = NOW(),
+           pending_plan_change = NULL, pending_plan_effective_at = NULL
+       WHERE id = ?`,
+      [plan, endDate, newLoyaltyMonths, providerId]
+    );
 
-  await query(
-    'INSERT INTO admin_logs (admin_id, action, target_type, target_id, details) VALUES (?,?,?,?,?)',
-    [
-      req.admin.id, 'subscription_activate', 'provider', providerId,
-      JSON.stringify({ plan, days: daysNum, previousPlan: currentPlan, providerName: prov[0].name }),
-    ]
-  );
+    await conn.execute(
+      'INSERT INTO admin_logs (admin_id, action, target_type, target_id, details) VALUES (?,?,?,?,?)',
+      [
+        req.admin.id, 'subscription_activate', 'provider', providerId,
+        JSON.stringify({ plan, days: daysNum, previousPlan: currentPlan, providerName: prov[0].name }),
+      ]
+    );
+  });
 
-  res.json({
+  return res.json({
     success: true,
     message: `Plan ${plan} activé pour ${daysNum} jours (upgrade depuis ${currentPlan})`,
-    data: { plan, expiresAt: endDate },
+    data: { plan, expiresAt: endStr },
   });
 }
 
@@ -192,20 +188,29 @@ export async function cancelSubscription(req, res) {
 
   const currentSub = sub[0];
 
-  await query(
-    "UPDATE subscriptions SET status = 'cancelled', cancelled_at = NOW() WHERE id = ?",
-    [id]
-  );
+  await transaction(async (conn) => {
+    await conn.execute(
+      "UPDATE subscriptions SET status = 'cancelled', cancelled_at = NOW() WHERE id = ?",
+      [id]
+    );
 
-  await query(
-    "UPDATE providers SET plan = 'free', plan_expires_at = NULL WHERE id = ?",
-    [currentSub.provider_id]
-  );
+    await conn.execute(
+      `UPDATE providers 
+       SET plan = 'free', 
+           plan_expires_at = NULL,
+           loyalty_months = 0,
+           last_renewal_at = NULL,
+           pending_plan_change = NULL,
+           pending_plan_effective_at = NULL
+       WHERE id = ?`,
+      [currentSub.provider_id]
+    );
 
-  await query(
-    'INSERT INTO admin_logs (admin_id, action, target_type, target_id) VALUES (?,?,?,?)',
-    [req.admin.id, 'subscription_cancel', 'subscription', id]
-  );
+    await conn.execute(
+      'INSERT INTO admin_logs (admin_id, action, target_type, target_id) VALUES (?,?,?,?)',
+      [req.admin.id, 'subscription_cancel', 'subscription', id]
+    );
+  });
 
-  res.json({ success: true, message: 'Abonnement annulé avec succès' });
-}
+  return res.json({ success: true, message: 'Abonnement annulé avec succès' });
+                        }
