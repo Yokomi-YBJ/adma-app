@@ -1,7 +1,5 @@
 /**
  * ADMA — Webhooks GeniusPay
- * ✅ Annule toute programmation de downgrade en cas de renouvellement
- * ⚠️  Zéro migration sur payments : utilise kpay_external_id et kpay_payment_id
  */
 import { Router } from 'express';
 import { transaction } from '../config/database.js';
@@ -18,13 +16,11 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
   const timestamp = req.headers['x-webhook-timestamp'] || '';
   const rawBody   = req.body;
 
-  // 1. Vérifier la signature
   if (!verifyWebhookSignature(rawBody, signature, timestamp)) {
     logger.warn('Webhook GeniusPay: signature invalide');
     return res.status(401).json({ success: false, error: 'Signature invalide' });
   }
 
-  // 2. Parser
   let payload;
   try {
     payload = JSON.parse(rawBody.toString('utf8'));
@@ -40,10 +36,7 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
   });
 
   const handledEvents = [
-    'payment.success',
-    'payment.failed',
-    'payment.cancelled',
-    'payment.expired',
+    'payment.success', 'payment.failed', 'payment.cancelled', 'payment.expired',
   ];
   if (!handledEvents.includes(payload.event)) {
     return res.json({ received: true, ignored: true });
@@ -83,9 +76,7 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
 
     if (amount !== undefined && Number(amount) !== Number(payment.amount)) {
       logger.error('Webhook GeniusPay: montant mismatch', {
-        paymentId:      payment.id,
-        expectedAmount: payment.amount,
-        receivedAmount: amount,
+        paymentId: payment.id, expectedAmount: payment.amount, receivedAmount: amount,
       });
       await conn.execute(
         'UPDATE payments SET status="failed", failure_reason=? WHERE id=?',
@@ -94,7 +85,6 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
       return;
     }
 
-    // ── SUCCESS ────────────────────────────────────────────────
     if (payload.event === 'payment.success') {
       const planKey = plan || payment.plan_intent;
       if (!planKey) {
@@ -103,63 +93,48 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
       }
 
       await conn.execute(
-        `UPDATE payments
-            SET status="completed",
-                webhook_received_at=NOW(),
-                kpay_external_id = COALESCE(kpay_external_id, ?)
-          WHERE id=?`,
+        `UPDATE payments SET status="completed", webhook_received_at=NOW(), kpay_external_id = COALESCE(kpay_external_id, ?) WHERE id=?`,
         [reference, payment.id]
       );
 
+      // On récupère bien last_renewal_at et plan_expires_at
       const [[prov]] = await conn.execute(
-        `SELECT id, user_id, loyalty_months, plan_expires_at
-           FROM providers
-          WHERE id=?`,
+        `SELECT id, user_id, loyalty_months, plan_expires_at, last_renewal_at 
+           FROM providers WHERE id=?`,
         [payment.provider_id]
       );
 
       if (!prov) {
-        logger.error('Webhook GeniusPay: provider introuvable', {
-          providerId: payment.provider_id,
-        });
+        logger.error('Webhook GeniusPay: provider introuvable', { providerId: payment.provider_id });
         return;
       }
 
-      // 🆕 ANNULER toute programmation de downgrade en cours
       await conn.execute(
-        `UPDATE providers
-            SET pending_plan_change = NULL,
-                pending_plan_effective_at = NULL
-          WHERE id = ?`,
+        `UPDATE providers SET pending_plan_change = NULL, pending_plan_effective_at = NULL WHERE id = ?`,
         [payment.provider_id]
       );
 
       const newLoyaltyMonths = computeNewLoyaltyMonths(prov);
       const pricing          = computePrice(planKey, prov.loyalty_months || 0);
 
-      const days       = PLAN_DAYS[planKey] || 30;
-      const endDate    = new Date();
+      // ✅ CORRECTION DU BUG DE DATE : On ajoute les jours à la date d'expiration actuelle
+      const days = PLAN_DAYS[planKey] || 30;
+      const baseDate = prov.plan_expires_at && new Date(prov.plan_expires_at) > new Date()
+        ? new Date(prov.plan_expires_at) // Si l'abonnement est toujours actif, on ajoute à la fin
+        : new Date();                    // Sinon, on repart d'aujourd'hui
+      
+      const endDate = new Date(baseDate);
       endDate.setDate(endDate.getDate() + days);
       const endDateStr = endDate.toISOString().slice(0, 10);
 
       const [sub] = await conn.execute(
-        `INSERT INTO subscriptions
-           (provider_id, plan, amount, base_amount, discount_percent, start_date, end_date)
+        `INSERT INTO subscriptions (provider_id, plan, amount, base_amount, discount_percent, start_date, end_date)
          VALUES (?,?,?,?,?,CURDATE(),?)`,
-        [
-          payment.provider_id,
-          planKey,
-          payment.amount,
-          pricing.basePrice,
-          pricing.discountPercent,
-          endDateStr,
-        ]
+        [payment.provider_id, planKey, payment.amount, pricing.basePrice, pricing.discountPercent, endDateStr]
       );
 
       await conn.execute(
-        `UPDATE providers
-            SET plan=?, plan_expires_at=?, loyalty_months=?, last_renewal_at=NOW()
-          WHERE id=?`,
+        `UPDATE providers SET plan=?, plan_expires_at=?, loyalty_months=?, last_renewal_at=NOW() WHERE id=?`,
         [planKey, endDate, newLoyaltyMonths, payment.provider_id]
       );
 
@@ -171,16 +146,10 @@ router.post('/geniuspay', asyncHandler(async (req, res) => {
       shouldNotify = { userId: prov.user_id, plan: planKey };
     }
 
-    // ── FAILED / CANCELLED / EXPIRED ───────────────────────────
     if (['payment.failed', 'payment.cancelled', 'payment.expired'].includes(payload.event)) {
       const newStatus = payload.event === 'payment.cancelled' ? 'cancelled' : 'failed';
       await conn.execute(
-        `UPDATE payments
-            SET status=?,
-                failure_reason=?,
-                webhook_received_at=NOW(),
-                kpay_external_id = COALESCE(kpay_external_id, ?)
-          WHERE id=?`,
+        `UPDATE payments SET status=?, failure_reason=?, webhook_received_at=NOW(), kpay_external_id = COALESCE(kpay_external_id, ?) WHERE id=?`,
         [newStatus, `GeniusPay: ${payload.event}`, reference, payment.id]
       );
       logger.info('GeniusPay: paiement ' + newStatus, { paymentId: payment.id });
