@@ -15,23 +15,41 @@ export const useAuthStore = create((set, get) => ({
   initialize: async () => {
     try {
       const token = await loadStoredToken();
-      if (!token) { set({ isLoading: false }); return; }
+      
+      // Si aucun token, on s'arrête là.
+      if (!token) { 
+        set({ isLoading: false }); 
+        return; 
+      }
 
-      const res = await api.get('/auth/me');
-      if (res.data?.success) {
-        const user = res.data.data;
-        // Charger la fiche prestataire si elle existe
-        let provider = null;
-        try {
-          const pRes = await api.get('/providers/me');
-          if (pRes.data?.success) provider = pRes.data.data;
-        } catch {
-          // Profile screen re-fetches provider data and displays its own error state.
+      // ✅ CONNEXION OPTIMISTE : On a un token, on laisse l'utilisateur entrer.
+      // On passe isLoading à false immédiatement pour ne pas le bloquer.
+      set({ isLoggedIn: true, isLoading: false });
+
+      // On tente de récupérer les infos fraîches en arrière-plan
+      try {
+        const res = await api.get('/auth/me');
+        if (res.data?.success) {
+          const user = res.data.data;
+          let provider = null;
+          try {
+            const pRes = await api.get('/providers/me');
+            if (pRes.data?.success) provider = pRes.data.data;
+          } catch {
+            // Profile screen re-fetches provider data
+          }
+          set({ user, provider, isLoggedIn: true });
         }
-        set({ user, provider, isLoggedIn: true, isLoading: false });
-      } else {
-        await clearTokens();
-        set({ isLoading: false });
+      } catch (error) {
+        // ✅ Si le serveur répond 401, le token est vraiment mort -> Déconnexion
+        if (error.response?.status === 401) {
+          console.warn('[Auth] Token expiré, déconnexion.');
+          await clearTokens();
+          set({ user: null, provider: null, isLoggedIn: false });
+        } else {
+          // ✅ Si c'est une erreur réseau (hors-ligne), on GARDE la session !
+          console.warn('[Auth] Hors-ligne, conservation de la session locale.');
+        }
       }
     } catch (error) {
       console.warn('[Auth] Unable to restore the saved session:', error);
@@ -46,7 +64,7 @@ export const useAuthStore = create((set, get) => ({
       const pRes = await api.get('/providers/me');
       if (pRes.data?.success) provider = pRes.data.data;
     } catch {
-      // Provider lookup is optional at login; the profile screen retries it before offering creation.
+      // Provider lookup is optional at login
     }
     set({ user: userData, provider, isLoggedIn: true });
   },
@@ -56,7 +74,7 @@ export const useAuthStore = create((set, get) => ({
       const refresh = await import('expo-secure-store').then(m => m.getItemAsync('adma_refresh_token'));
       if (refresh) await api.post('/auth/logout', {}, { headers: { 'X-Refresh-Token': refresh } });
     } catch {
-      // Server-side logout is best-effort; local tokens and auth state are cleared below.
+      // Server-side logout is best-effort
     }
     await clearTokens();
     set({ user: null, provider: null, isLoggedIn: false });
