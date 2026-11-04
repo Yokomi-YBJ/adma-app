@@ -39,12 +39,11 @@ function AuthGuard({ children }) {
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === '(auth)';
+    
+    // Redirection basée sur l'état optimiste
     if (!isLoggedIn && !inAuth) router.replace('/(auth)/login');
     if (isLoggedIn && inAuth)  router.replace('/(tabs)');
   }, [isLoggedIn, isLoading, segments]);
-
-  // ✅ On bloque le rendu des enfants tant que l'auth n'est pas prête
-  if (isLoading) return null;
 
   return children;
 }
@@ -64,7 +63,7 @@ export default function RootLayout() {
     (async () => {
       try {
         await Promise.all([initI18n(), initCache()]);
-        await init();
+        await init(); // Va vérifier les tokens de manière optimiste
       } catch (e) {
         console.error("Erreur init:", e);
       } finally {
@@ -107,9 +106,7 @@ export default function RootLayout() {
                 headerBackTitleVisible: false,
               }}
             >
-              {/* ✅ LIGNE CRUCIALE AJOUTÉE ICI */}
               <Stack.Screen name="index"                    options={{ headerShown: false }} />
-              
               <Stack.Screen name="(auth)"                    options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)"                    options={{ headerShown: false }} />
               <Stack.Screen name="onboarding/index"          options={{ headerShown: false, gestureEnabled: false }} />
