@@ -1,10 +1,5 @@
 /**
  * ADMA — Service Email via Resend
- * Utilisé pour les alertes admin et les notifications système
- *
- * Templates inclus :
- *   - sendAdminAlert()  → Alertes serveur (erreurs, incidents)
- *   - sendAdminOTP()    → OTP de connexion admin
  */
 import { Resend } from 'resend';
 import { logger } from '../utils/logger.js';
@@ -29,7 +24,7 @@ const FROM_ADDRESS = process.env.MAIL_FROM
 let warnedMissingTo = false;
 
 // ────────────────────────────────────────────────────────────────
-// LAYOUT EMAIL COMMUN (header + footer)
+// LAYOUT EMAIL COMMUN
 // ────────────────────────────────────────────────────────────────
 function emailLayout({ headerColor = '#0B162C', accent = '#5FC2BA', title, subtitle, content }) {
   return `
@@ -39,11 +34,19 @@ function emailLayout({ headerColor = '#0B162C', accent = '#5FC2BA', title, subti
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="x-apple-disable-message-reformatting">
+  <style>
+    .select-all {
+      -webkit-user-select: all; /* Safari */
+      -moz-user-select: all;    /* Firefox */
+      -ms-user-select: all;     /* IE10+ */
+      user-select: all;         /* Standard */
+    }
+  </style>
   <title>${title}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
 
-  <!-- Preheader (texte affiché dans l'aperçu) -->
+  <!-- Preheader : Texte affiché dans la notification push -->
   <div style="display:none;font-size:1px;color:#F1F5F9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
     ${subtitle}
   </div>
@@ -51,11 +54,8 @@ function emailLayout({ headerColor = '#0B162C', accent = '#5FC2BA', title, subti
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#F1F5F9;">
     <tr>
       <td align="center" style="padding:40px 16px;">
-
-        <!-- Container principal -->
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(11,22,44,0.06);">
-
-          <!-- Header avec logo -->
+          
           <tr>
             <td style="background-color:${headerColor};padding:32px 40px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
@@ -72,14 +72,12 @@ function emailLayout({ headerColor = '#0B162C', accent = '#5FC2BA', title, subti
             </td>
           </tr>
 
-          <!-- Contenu -->
           <tr>
             <td style="padding:40px;">
               ${content}
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="background-color:#F8FAFC;padding:24px 40px;border-top:1px solid #E2E8F0;">
               <p style="margin:0 0 8px 0;font-size:12px;color:#94A3B8;line-height:18px;">
@@ -90,10 +88,7 @@ function emailLayout({ headerColor = '#0B162C', accent = '#5FC2BA', title, subti
               </p>
             </td>
           </tr>
-
         </table>
-        <!-- /Container principal -->
-
       </td>
     </tr>
   </table>
@@ -103,10 +98,9 @@ function emailLayout({ headerColor = '#0B162C', accent = '#5FC2BA', title, subti
 }
 
 // ────────────────────────────────────────────────────────────────
-// 1. ALERTE SYSTÈME (erreurs serveur)
+// 1. ALERTE SYSTÈME
 // ────────────────────────────────────────────────────────────────
 function buildAlertHtml({ subject, body }) {
-  // Extraire les infos du body si c'est un objet structuré
   const lines = body.split('\n').filter(Boolean);
   const rows = lines.map((line) => {
     const [key, ...rest] = line.split(':');
@@ -121,34 +115,23 @@ function buildAlertHtml({ subject, body }) {
   }).join('');
 
   const content = `
-    <!-- Badge d'alerte -->
     <div style="display:inline-block;background-color:#FEF2F2;color:#DC2626;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:20px;">
       ⚠️ Incident serveur
     </div>
-
-    <!-- Titre -->
     <h1 style="margin:0 0 12px 0;font-size:22px;font-weight:800;color:#0B162C;letter-spacing:-0.5px;line-height:1.3;">
       ${escapeHtml(subject.replace('[ADMA]', '').trim())}
     </h1>
-
     <p style="margin:0 0 28px 0;font-size:14px;color:#64748B;line-height:22px;">
       Une erreur a été détectée sur la plateforme Adma. Voici les détails techniques :
     </p>
-
-    <!-- Tableau des détails -->
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:28px;background-color:#F8FAFC;border-radius:12px;padding:8px;">
       ${rows}
     </table>
-
-    <!-- CTA -->
     <div style="text-align:center;">
-      <a href="https://adma-app.vercel.app"
-         style="display:inline-block;background-color:#0B162C;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:12px;letter-spacing:0.3px;">
-        Voir le dashboard admin
+      <a href="https://adma-app.vercel.app" style="display:inline-block;background-color:#0B162C;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:12px;letter-spacing:0.3px;">
+        Ouvrir le dashboard admin
       </a>
     </div>
-
-    <!-- Note -->
     <p style="margin:28px 0 0 0;font-size:12px;color:#94A3B8;line-height:18px;text-align:center;">
       Un rate limit interne limite ces alertes à 1 tous les 5 minutes.<br>
       Vous ne recevrez pas de doublons pour la même erreur.
@@ -156,7 +139,7 @@ function buildAlertHtml({ subject, body }) {
   `;
 
   return emailLayout({
-    headerColor: '#7F1D1D',  // rouge foncé pour alerte
+    headerColor: '#7F1D1D',
     accent:      '#DC2626',
     title:       subject,
     subtitle:    'Incident détecté sur le serveur Adma',
@@ -165,7 +148,7 @@ function buildAlertHtml({ subject, body }) {
 }
 
 // ────────────────────────────────────────────────────────────────
-// 2. OTP ADMIN (connexion)
+// 2. OTP ADMIN (optimisé détection OS)
 // ────────────────────────────────────────────────────────────────
 function buildAdminOTPHtml({ adminName, code, expiresMinutes = 10 }) {
   const codeDigits = code.split('').map((d) => `
@@ -175,26 +158,29 @@ function buildAdminOTPHtml({ adminName, code, expiresMinutes = 10 }) {
   `).join('');
 
   const content = `
-    <!-- Badge -->
     <div style="display:inline-block;background-color:#F0FDFA;color:#0D9488;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:20px;">
       🔐 Connexion sécurisée
     </div>
 
-    <!-- Titre -->
     <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:#0B162C;letter-spacing:-0.5px;line-height:1.3;">
       Vérification de connexion
     </h1>
 
-    <p style="margin:0 0 32px 0;font-size:15px;color:#64748B;line-height:24px;">
+    <p style="margin:0 0 24px 0;font-size:15px;color:#64748B;line-height:24px;">
       Bonjour <strong style="color:#0B162C;">${escapeHtml(adminName)}</strong>,<br>
       Utilisez le code ci-dessous pour accéder à votre tableau de bord Adma.
     </p>
 
-    <!-- Code OTP en boîtes -->
+    <!-- ✅ LIGNE MAGIQUE POUR LA DÉTECTION OS (iOS/Android) -->
+    <p style="text-align:center;font-size:15px;color:#64748B;margin:0 0 20px 0;">
+      Votre code de connexion : <strong style="font-family:'Courier New',monospace;font-size:22px;color:#0B162C;letter-spacing:4px;background-color:#F8FAFC;padding:4px 12px;border-radius:8px;border:1px solid #E2E8F0;">${escapeHtml(code)}</strong>
+    </p>
+
+    <!-- Bloc visuel -->
     <div style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-radius:20px;padding:32px 16px;text-align:center;margin-bottom:24px;">
       <div style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;">Votre code de vérification</div>
       
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;" class="select-all">
         <tr>
           ${codeDigits}
         </tr>
@@ -205,14 +191,6 @@ function buildAdminOTPHtml({ adminName, code, expiresMinutes = 10 }) {
       </div>
     </div>
 
-    <!-- Info -->
-    <div style="background-color:#EFF6FF;border-left:4px solid #3B82F6;border-radius:8px;padding:16px;margin-bottom:24px;">
-      <p style="margin:0;font-size:13px;color:#1E40AF;line-height:20px;">
-        <strong>💡 Astuce :</strong> Ne partagez jamais ce code. L'équipe Adma ne vous demandera jamais votre code par téléphone ou email.
-      </p>
-    </div>
-
-    <!-- Sécurité -->
     <p style="margin:0;font-size:12px;color:#94A3B8;line-height:18px;text-align:center;">
       Si vous n'avez pas initié cette demande, <strong style="color:#DC2626;">changez votre mot de passe immédiatement</strong>.
     </p>
@@ -222,7 +200,7 @@ function buildAdminOTPHtml({ adminName, code, expiresMinutes = 10 }) {
     headerColor: '#0B162C',
     accent:      '#5FC2BA',
     title:       'Code de connexion admin',
-    subtitle:    'Votre code de vérification Adma',
+    subtitle:    `Votre code de connexion Adma est : ${code}`,
     content,
   });
 }
@@ -263,7 +241,7 @@ export async function sendAdminAlert({ subject, body }) {
       to,
       subject,
       html,
-      text:    body,  // fallback texte
+      text:    body,
     });
     if (error) throw new Error(error.message);
     logger.info(`Alerte email envoyée à ${to}`);
@@ -284,11 +262,16 @@ export async function sendAdminOTP({ to, adminName, code, expiresMinutes = 10 })
 
   try {
     const html = buildAdminOTPHtml({ adminName, code, expiresMinutes });
+    
+    // ✅ Version texte brut (Crucial pour l'OS et les clients mail basiques)
+    const plainText = `Bonjour ${adminName},\n\nVotre code de connexion Adma est : ${code}\n\nCe code est valable ${expiresMinutes} minutes. Ne le partagez avec personne.\n\nSi vous n'avez pas demandé ce code, changez votre mot de passe immédiatement.`;
+
     const { data, error } = await resend.emails.send({
       from:    FROM_ADDRESS,
       to,
-      subject: `[Adma Admin] Code de connexion : ${code}`,
+      subject: `[Adma Admin] Code de connexion : ${code}`, 
       html,
+      text: plainText, 
     });
 
     if (error) {
@@ -305,7 +288,7 @@ export async function sendAdminOTP({ to, adminName, code, expiresMinutes = 10 })
 }
 
 // ────────────────────────────────────────────────────────────────
-// 3. EMAIL GÉNÉRIQUE (pour usages futurs)
+// 3. EMAIL GÉNÉRIQUE
 // ────────────────────────────────────────────────────────────────
 export async function sendEmail({ to, subject, text, html }) {
   const resend = getClient();
